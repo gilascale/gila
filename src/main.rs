@@ -1,9 +1,14 @@
+mod lex;
 mod ast;
 mod analyse;
 mod codegen;
 
 fn main() {
 
+    const source: &str = "print('hi')";
+
+    let lexer = lex::Lexer{};
+    lexer.lex(source);
 
     let ast = ast::Statement::PROGRAM(vec![
         ast::Statement::EXPRESSION(
@@ -13,7 +18,8 @@ fn main() {
             ast::Op::ADD)
         )
     ]);
-    let analyser = analyse::Analyser{}; 
+
+    let analyser = analyse::Analyser{};
     let code_generator = codegen::CodeGenerator{};
 
     analyser.analyse(&ast);
