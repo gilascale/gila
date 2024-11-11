@@ -1,0 +1,13 @@
+#import "vendor/opengl"
+
+
+#static 
+title :: "my cool game"
+
+
+main :: fn {
+    
+    #using "opengl"
+
+    create_window(title);
+}
