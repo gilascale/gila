@@ -4,11 +4,15 @@ mod codegen;
 mod lex;
 mod parse;
 
+use std::fs;
+
 fn main() {
-    const source: &str = "main fn 123 end";
+    // const source: &str = "main fn 123 end";
+    let source = fs::read_to_string("C:/Users/jking/dev/gila/example/minimal.gila")
+        .expect("Unable to read file");
 
     let lexer = lex::Lexer {};
-    let tokens = lexer.lex(source);
+    let tokens = lexer.lex(source.to_string());
     // println!("tokens {:?}", tokens);
 
     // let ast = ast::Statement::PROGRAM(vec![ast::Statement::EXPRESSION(ast::Expression::BIN_OP(

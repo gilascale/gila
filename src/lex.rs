@@ -32,7 +32,7 @@ pub struct Token {
 pub struct Lexer {}
 
 impl Lexer {
-    pub fn lex(&self, source: &str) -> std::vec::Vec<Token> {
+    pub fn lex(&self, source: std::string::String) -> std::vec::Vec<Token> {
         let mut v = vec![];
         let mut counter = 0;
         let mut index = 0;
