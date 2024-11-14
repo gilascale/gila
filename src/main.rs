@@ -5,7 +5,7 @@ mod lex;
 mod parse;
 
 fn main() {
-    const source: &str = "x = 32";
+    const source: &str = "main fn 123 end";
 
     let lexer = lex::Lexer {};
     let tokens = lexer.lex(source);
@@ -26,9 +26,10 @@ fn main() {
     };
     let ast = parser.parse();
 
-    let analyser = analyse::Analyser {};
-    let code_generator = codegen::CodeGenerator {};
+    println!("ast {:?}", ast);
+    // let analyser = analyse::Analyser {};
+    // let code_generator = codegen::CodeGenerator {};
 
-    analyser.analyse(&ast);
-    code_generator.generate(&ast);
+    // analyser.analyse(&ast);
+    // code_generator.generate(&ast);
 }

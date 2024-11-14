@@ -14,6 +14,10 @@ pub enum Type {
     ASSIGN,
     EQUALS,
     PASS,
+    FN,
+    DO,
+    THEN,
+    END,
     NUMBER(Rc<String>),
     IDENTIFIER(Rc<String>),
 }
@@ -52,6 +56,49 @@ impl Lexer {
             // potential identifier?
 
             match current {
+                'd' => {
+                    if chars[counter + 1] == 'o' {
+                        v.push(Token {
+                            typ: Type::DO,
+                            pos: Position { index, line },
+                        });
+                        counter += 1;
+                        index += 1;
+                    }
+                }
+                'f' => {
+                    if chars[counter + 1] == 'n' {
+                        v.push(Token {
+                            typ: Type::FN,
+                            pos: Position { index, line },
+                        });
+                        counter += 1;
+                        index += 1;
+                    }
+                }
+                'e' => {
+                    if chars[counter + 1] == 'n' && chars[counter + 2] == 'd' {
+                        v.push(Token {
+                            typ: Type::END,
+                            pos: Position { index, line },
+                        });
+                        counter += 2;
+                        index += 2;
+                    }
+                }
+                't' => {
+                    if chars[counter + 1] == 'h'
+                        && chars[counter + 2] == 'e'
+                        && chars[counter + 3] == 'n'
+                    {
+                        v.push(Token {
+                            typ: Type::THEN,
+                            pos: Position { index, line },
+                        });
+                        counter += 3;
+                        index += 3;
+                    }
+                }
                 'p' => {
                     if chars[counter + 1] == 'a'
                         && chars[counter + 2] == 's'

@@ -23,4 +23,5 @@ pub enum Statement {
     EXPRESSION(Expression),
     // todo should these tokens be references?
     DEFINE(Token, Expression),
+    NAMED_FUNCTION(Token, Box<Statement>),
 }

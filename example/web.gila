@@ -20,7 +20,7 @@ index fn(context web.RequestContext) -> string do
 end
 
 
-main fn do
+main fn
     server  = web.Server(8080)
     
     server.route "/<name>", 

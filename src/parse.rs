@@ -32,7 +32,7 @@ impl<'a> Parser<'a> {
         match current.typ {
             Type::RETURN => self.ret(),
             Type::IDENTIFIER(_) => self.identifier(),
-            _ => panic!(),
+            _ => Statement::EXPRESSION(self.expression()),
         }
     }
 
@@ -49,6 +49,15 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn block(&mut self) -> Statement {
+        let mut stms = vec![];
+        while !self.end() && self.tokens[self.counter].typ != Type::END {
+            stms.push(self.statement());
+        }
+        self.counter += 1;
+        return Statement::BLOCK(stms);
+    }
+
     fn ret(&mut self) -> Statement {
         self.counter += 1;
         return Statement::RETURN(None);
@@ -62,6 +71,13 @@ impl<'a> Parser<'a> {
 
         if self.end() {
             return Statement::EXPRESSION(Expression::VARIABLE(identifier.clone()));
+        }
+
+        // function
+        // todo deal with blocks?
+        if self.tokens[self.counter].typ == Type::FN {
+            self.counter += 1;
+            return Statement::NAMED_FUNCTION(identifier.clone(), Box::new(self.block()));
         }
 
         if self.tokens[self.counter].typ == Type::ASSIGN {
