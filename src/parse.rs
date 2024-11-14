@@ -39,7 +39,7 @@ impl<'a> Parser<'a> {
     fn expression(&mut self) -> Expression {
         // let higher_prece
 
-        return self.add();
+        return self.add_sub();
     }
 
     fn single(&mut self) -> Expression {
@@ -54,12 +54,30 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn add(&mut self) -> Expression {
-        let higher_precedence = self.single();
+    fn add_sub(&mut self) -> Expression {
+        let higher_precedence = self.mul_div();
         if self.tokens[self.counter].typ == Type::ADD {
             self.counter += 1;
             let rhs = self.expression();
             return Expression::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::ADD);
+        } else if self.tokens[self.counter].typ == Type::SUB {
+            self.counter += 1;
+            let rhs = self.expression();
+            return Expression::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::SUB);
+        }
+        return higher_precedence;
+    }
+
+    fn mul_div(&mut self) -> Expression {
+        let higher_precedence = self.single();
+        if self.tokens[self.counter].typ == Type::MUL {
+            self.counter += 1;
+            let rhs = self.expression();
+            return Expression::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::MUL);
+        } else if self.tokens[self.counter].typ == Type::DIV {
+            self.counter += 1;
+            let rhs = self.expression();
+            return Expression::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::DIV);
         }
         return higher_precedence;
     }
