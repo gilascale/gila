@@ -38,6 +38,11 @@ impl<'a> Parser<'a> {
 
     fn expression(&mut self) -> Expression {
         // let higher_prece
+
+        return self.add();
+    }
+
+    fn single(&mut self) -> Expression {
         let next = &self.tokens[self.counter];
         match (next.typ) {
             Type::NUMBER(_) => {
@@ -47,6 +52,16 @@ impl<'a> Parser<'a> {
             // _ => higher_precedence,
             _ => panic!(),
         }
+    }
+
+    fn add(&mut self) -> Expression {
+        let higher_precedence = self.single();
+        if self.tokens[self.counter].typ == Type::ADD {
+            self.counter += 1;
+            let rhs = self.expression();
+            return Expression::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::ADD);
+        }
+        return higher_precedence;
     }
 
     fn block(&mut self) -> Statement {

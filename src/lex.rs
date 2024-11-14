@@ -18,6 +18,10 @@ pub enum Type {
     DO,
     THEN,
     END,
+    ADD,
+    SUB,
+    MUL,
+    DIV,
     NUMBER(Rc<String>),
     IDENTIFIER(Rc<String>),
 }
@@ -56,6 +60,36 @@ impl Lexer {
             // potential identifier?
 
             match current {
+                '+' => {
+                    v.push(Token {
+                        typ: Type::ADD,
+                        pos: Position { index, line },
+                    });
+                }
+                '-' => {
+                    v.push(Token {
+                        typ: Type::SUB,
+                        pos: Position { index, line },
+                    });
+                }
+                '*' => {
+                    v.push(Token {
+                        typ: Type::MUL,
+                        pos: Position { index, line },
+                    });
+                }
+                '/' => {
+                    v.push(Token {
+                        typ: Type::DIV,
+                        pos: Position { index, line },
+                    });
+                }
+                '.' => {
+                    if chars[counter + 1] == '.' && chars[counter + 2] == '.' {
+                        counter += 2;
+                        index += 2;
+                    }
+                }
                 'd' => {
                     if chars[counter + 1] == 'o' {
                         v.push(Token {
@@ -172,7 +206,7 @@ impl Lexer {
                     if current.is_numeric() {
                         let mut identifier = "".to_string();
                         while counter < chars.len() {
-                            if chars[counter].is_whitespace() || chars[counter].is_alphabetic() {
+                            if chars[counter].is_whitespace() || !chars[counter].is_numeric() {
                                 break;
                             }
                             let next = chars[counter];
