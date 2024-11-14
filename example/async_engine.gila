@@ -1,0 +1,22 @@
+
+
+
+// this outlines how to implement an async runtime in gila
+
+
+
+type AsyncEngine =
+    task_queue Queue = []
+
+run fn (self AsyncEngine) =
+    
+
+
+my_task fn =
+    print "hi"
+
+
+
+
+
+

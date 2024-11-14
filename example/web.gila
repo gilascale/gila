@@ -1,0 +1,27 @@
+// Simple web server
+
+
+// imports everything in 'web' module into the current namespace
+
+
+import "std/templating"
+web = import "std/web"
+
+
+index = "<p>hi {name}<p>"
+
+index fn(context web.RequestContext) -> string =
+    print(f"got request {}", context)
+
+    name = context.path.get "name";
+
+    //=name means we want to add a named param the same as the variable name here
+    return Templater().template(index,=name)
+
+main fn =
+    server  = web.Server(8080)
+    
+    
+    server.route "/<name>", 
+    
+    server.serve()
