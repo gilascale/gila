@@ -1,24 +1,27 @@
-#[derive(Debug)]
+use std::rc::Rc;
+
+#[derive(Debug, Clone)]
 pub struct Position {
     index: u32, // 0-based
     line: u32,  // 0-based
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Type {
+    RETURN,
     LPAREN,
     RPAREN,
     ASSIGN,
     EQUALS,
     PASS,
-    NUMBER(String),
-    IDENTIFIER(String),
+    NUMBER(Rc<String>),
+    IDENTIFIER(Rc<String>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
-    pos: Position,
-    typ: Type,
+    pub pos: Position,
+    pub typ: Type,
 }
 
 #[derive(Debug)]
@@ -62,6 +65,21 @@ impl Lexer {
                         index += 3;
                     }
                 }
+                'r' => {
+                    if chars[counter + 1] == 'e'
+                        && chars[counter + 2] == 't'
+                        && chars[counter + 3] == 'u'
+                        && chars[counter + 4] == 'r'
+                        && chars[counter + 5] == 'n'
+                    {
+                        v.push(Token {
+                            typ: Type::RETURN,
+                            pos: Position { index, line },
+                        });
+                        counter += 5;
+                        index += 5;
+                    }
+                }
                 '(' => v.push(Token {
                     typ: Type::LPAREN,
                     pos: Position { index, line },
@@ -71,7 +89,7 @@ impl Lexer {
                     pos: Position { index, line },
                 }),
                 '=' => {
-                    if (chars[counter + 1] == '=') {
+                    if chars[counter + 1] == '=' {
                         v.push(Token {
                             typ: Type::EQUALS,
                             pos: Position { index, line },
@@ -99,7 +117,7 @@ impl Lexer {
                         }
                         // identifier
                         v.push(Token {
-                            typ: Type::IDENTIFIER(identifier),
+                            typ: Type::IDENTIFIER(identifier.into()),
                             pos: Position { index, line },
                         });
                         continue;
@@ -117,7 +135,7 @@ impl Lexer {
                         }
                         // identifier
                         v.push(Token {
-                            typ: Type::NUMBER(identifier),
+                            typ: Type::NUMBER(identifier.into()),
                             pos: Position { index, line },
                         });
                         continue;

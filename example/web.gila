@@ -10,18 +10,20 @@ web = import "std/web"
 
 index = "<p>hi {name}<p>"
 
-index fn(context web.RequestContext) -> string =
+index fn(context web.RequestContext) -> string do
     print(f"got request {}", context)
 
     name = context.path.get "name";
 
     //=name means we want to add a named param the same as the variable name here
     return Templater().template(index,=name)
+end
 
-main fn =
+
+main fn do
     server  = web.Server(8080)
-    
     
     server.route "/<name>", 
     
     server.serve()
+end
