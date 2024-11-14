@@ -4,7 +4,7 @@ mod codegen;
 mod lex;
 
 fn main() {
-    const source: &str = "main = pass";
+    const source: &str = "main = 123";
 
     let lexer = lex::Lexer {};
     let tokens = lexer.lex(source);

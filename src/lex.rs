@@ -104,6 +104,24 @@ impl Lexer {
                         });
                         continue;
                     }
+                    if current.is_numeric() {
+                        let mut identifier = "".to_string();
+                        while counter < chars.len() {
+                            if chars[counter].is_whitespace() || chars[counter].is_alphabetic() {
+                                break;
+                            }
+                            let next = chars[counter];
+                            identifier.push(next);
+                            index += 1;
+                            counter += 1;
+                        }
+                        // identifier
+                        v.push(Token {
+                            typ: Type::NUMBER(identifier),
+                            pos: Position { index, line },
+                        });
+                        continue;
+                    }
                 }
             }
 
