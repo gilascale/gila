@@ -2,8 +2,9 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Position {
-    index: u32, // 0-based
-    line: u32,  // 0-based
+    pub index: u32, // 0-based
+    pub line: u32,  // 0-based
+                    // todo add end
 }
 
 #[derive(PartialEq, Debug, Clone)]

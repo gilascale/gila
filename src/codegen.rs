@@ -1,7 +1,7 @@
 use std::vec;
 
 use crate::{
-    ast::Statement,
+    ast::{ASTNode, Op, Statement},
     execution::{FnObject, HeapObject, HeapObjectData, Object},
 };
 
@@ -73,7 +73,8 @@ impl BytecodeGenerator {
             },
         };
     }
-    pub fn generate(&mut self, ast: &Statement) -> Chunk {
+
+    pub fn generate(&mut self, ast: &ASTNode) -> Chunk {
         let mut print_chunk = Chunk {
             instructions: vec![Instruction {
                 op_instruction: OpInstruction::RETURN,
@@ -88,6 +89,8 @@ impl BytecodeGenerator {
             data: HeapObjectData::FN(FnObject { chunk: print_chunk }),
             is_marked: false,
         })));
+
+        self.visit(ast);
 
         self.push_instruction(
             Instruction {
@@ -128,5 +131,40 @@ impl BytecodeGenerator {
 
     fn push_constant(&mut self, constant: Object) {
         self.current_chunk.constant_pool.push(constant);
+    }
+
+    fn visit(&mut self, ast: &ASTNode) {
+        match &ast.statement {
+            Statement::PROGRAM(p) => self.gen_program(&p),
+            Statement::BLOCK(b) => self.gen_block(&b),
+            Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(&e1, &e2, &op),
+            _ => panic!(),
+        }
+    }
+
+    fn gen_program(&mut self, p: &Vec<ASTNode>) {
+        for instruction in p {
+            self.visit(instruction);
+        }
+    }
+
+    fn gen_block(&mut self, b: &Vec<ASTNode>) {
+        for instruction in b {
+            self.visit(instruction);
+        }
+    }
+
+    fn gen_bin_op(&mut self, e1: &Box<ASTNode>, e2: &Box<ASTNode>, op: &Op) {
+        // todo only do literals & we need to deal with slot allocation
+
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::ADDI,
+                arg_0: 0,
+                arg_1: 0,
+                arg_2: 0,
+            },
+            0,
+        );
     }
 }

@@ -1,4 +1,4 @@
-use crate::lex::Token;
+use crate::lex::{Position, Token};
 
 #[derive(Debug)]
 pub enum Op {
@@ -8,20 +8,28 @@ pub enum Op {
     DIV,
 }
 
-#[derive(Debug)]
-pub enum Expression {
-    VARIABLE(Token),
-    BIN_OP(Box<Expression>, Box<Expression>, Op),
-    LITERAL_NUM(Token),
-}
+// #[derive(Debug)]
+// pub enum Expression {
+//     VARIABLE(Token),
+//     BIN_OP(Box<Expression>, Box<Expression>, Op),
+//     LITERAL_NUM(Token),
+// }
 
 #[derive(Debug)]
 pub enum Statement {
-    RETURN(Option<Expression>),
-    PROGRAM(Vec<Statement>),
-    BLOCK(Vec<Statement>),
-    EXPRESSION(Expression),
+    VARIABLE(Token),
+    BIN_OP(Box<ASTNode>, Box<ASTNode>, Op),
+    LITERAL_NUM(Token),
+    RETURN(Option<Box<ASTNode>>),
+    PROGRAM(Vec<ASTNode>),
+    BLOCK(Vec<ASTNode>),
     // todo should these tokens be references?
-    DEFINE(Token, Expression),
-    NAMED_FUNCTION(Token, Box<Statement>),
+    DEFINE(Token, Box<ASTNode>),
+    NAMED_FUNCTION(Token, Box<ASTNode>),
+}
+
+#[derive(Debug)]
+pub struct ASTNode {
+    pub statement: Statement,
+    pub position: Position,
 }

@@ -56,6 +56,7 @@ fn main() {
             counter: 0,
         };
         let ast = parser.parse();
+        println!("ast {:#?}", ast);
         let mut bytecode_generator = BytecodeGenerator::new();
         let bytecode = bytecode_generator.generate(&ast);
         bytecode.print();
