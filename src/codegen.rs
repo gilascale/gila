@@ -13,6 +13,8 @@ pub enum OpInstruction {
     ADD,
     // ADDI i1 i2 <desination>
     ADDI,
+    // ADDI i1 i2 <desination>
+    SUBI,
     // NEW <location of fn> <args starting register> <number of args>
     CALL,
     // NEW <location of type> <args starting register> <number of args>
@@ -178,7 +180,12 @@ impl BytecodeGenerator {
             ) {
                 self.push_instruction(
                     Instruction {
-                        op_instruction: OpInstruction::ADDI,
+                        op_instruction: match op {
+                            Op::ADD => OpInstruction::ADDI,
+                            Op::SUB => OpInstruction::SUBI,
+                            Op::MUL => todo!(),
+                            Op::DIV => todo!(),
+                        },
                         arg_0: n1,
                         arg_1: n2,
                         arg_2: 0,

@@ -90,6 +90,7 @@ impl ExecutionEngine {
         match instr.op_instruction {
             OpInstruction::RETURN => self.exec_return(instr),
             OpInstruction::ADDI => self.exec_addi(instr),
+            OpInstruction::SUBI => self.exec_subi(instr),
             OpInstruction::ADD => self.exec_add(instr),
             OpInstruction::CALL => self.exec_call(instr),
             OpInstruction::NEW => self.exec_new(instr),
@@ -136,6 +137,12 @@ impl ExecutionEngine {
     }
 
     fn exec_addi(&mut self, addi: &Instruction) {
+        // self.stack[addi.arg_2 as usize]
+        //     .i_value
+        //     .replace(self.stack[addi.arg_0 as usize].i_value.unwrap() + addi.arg_1 as i64);
+        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+    }
+    fn exec_subi(&mut self, subi: &Instruction) {
         // self.stack[addi.arg_2 as usize]
         //     .i_value
         //     .replace(self.stack[addi.arg_0 as usize].i_value.unwrap() + addi.arg_1 as i64);
