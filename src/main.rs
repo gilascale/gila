@@ -44,7 +44,7 @@ fn main() {
     // analyser.analyse(&ast);
     // code_generator.generate(&ast);
 
-    while true {
+    loop {
         let lexer = lex::Lexer {};
         let mut line = String::new();
         print!(">>");
@@ -56,7 +56,7 @@ fn main() {
             counter: 0,
         };
         let ast = parser.parse();
-        let bytecode_generator = BytecodeGenerator {};
+        let mut bytecode_generator = BytecodeGenerator::new();
         let bytecode = bytecode_generator.generate(&ast);
         bytecode.print();
         let mut exec_engine = ExecutionEngine {

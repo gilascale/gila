@@ -1,6 +1,9 @@
 use std::vec;
 
-use crate::ast::Statement;
+use crate::{
+    ast::Statement,
+    execution::{FnObject, HeapObject, HeapObjectData, Object},
+};
 
 #[derive(Debug, Clone)]
 #[repr(u8)]
@@ -8,8 +11,11 @@ pub enum OpInstruction {
     RETURN = 0,
     ADD,
     ADDI,
+    // NEW <location of fn> <args starting register> <number of args>
     CALL,
+    // NEW <location of type> <args starting register> <number of args>
     NEW,
+    LOAD_CONST,
 }
 
 // #[repr(packed(1))]
@@ -23,14 +29,11 @@ pub struct Instruction {
 }
 
 #[derive(Debug, Clone)]
-pub struct Value {}
-
-#[derive(Debug, Clone)]
 pub struct Chunk {
     pub instructions: std::vec::Vec<Instruction>,
     // todo only enable this in debug mode
     pub debug_line_info: std::vec::Vec<usize>,
-    pub constant_pool: std::vec::Vec<Value>,
+    pub constant_pool: std::vec::Vec<Object>,
 }
 
 impl Chunk {
@@ -56,41 +59,74 @@ pub struct Bytecode {
     pub instructions: std::vec::Vec<Instruction>,
 }
 
-pub struct BytecodeGenerator {}
+pub struct BytecodeGenerator {
+    current_chunk: Chunk,
+}
 
 impl BytecodeGenerator {
-    pub fn generate(&self, ast: &Statement) -> Chunk {
-        return Chunk {
-            debug_line_info: vec![0, 0, 0, 0],
-            constant_pool: vec![],
-            instructions: vec![
-                // right now assume the stack is zero'd out
-                Instruction {
-                    // put 10 in register 10
-                    op_instruction: OpInstruction::ADDI,
-                    arg_0: 0,
-                    arg_1: 10,
-                    arg_2: 0,
-                },
-                Instruction {
-                    op_instruction: OpInstruction::ADDI,
-                    arg_0: 0,
-                    arg_1: 20,
-                    arg_2: 0,
-                },
-                Instruction {
-                    op_instruction: OpInstruction::ADD,
-                    arg_0: 0,
-                    arg_1: 0,
-                    arg_2: 1,
-                },
-                Instruction {
-                    op_instruction: OpInstruction::RETURN,
-                    arg_0: 0,
-                    arg_1: 0,
-                    arg_2: 0,
-                },
-            ],
+    pub fn new() -> BytecodeGenerator {
+        return BytecodeGenerator {
+            current_chunk: Chunk {
+                debug_line_info: vec![],
+                constant_pool: vec![],
+                instructions: vec![],
+            },
         };
+    }
+    pub fn generate(&mut self, ast: &Statement) -> Chunk {
+        let mut print_chunk = Chunk {
+            instructions: vec![Instruction {
+                op_instruction: OpInstruction::RETURN,
+                arg_0: 0,
+                arg_1: 0,
+                arg_2: 0,
+            }],
+            debug_line_info: vec![],
+            constant_pool: vec![],
+        };
+        self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
+            data: HeapObjectData::FN(FnObject { chunk: print_chunk }),
+            is_marked: false,
+        })));
+
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::LOAD_CONST,
+                arg_0: 0,
+                arg_1: 0,
+                arg_2: 0,
+            },
+            0,
+        );
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::CALL,
+                arg_0: 0,
+                arg_1: 0,
+                arg_2: 0,
+            },
+            0,
+        );
+
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::RETURN,
+                arg_0: 0,
+                arg_1: 0,
+                arg_2: 0,
+            },
+            3,
+        );
+
+        return self.current_chunk.clone();
+    }
+
+    fn push_instruction(&mut self, instruction: Instruction, line: usize) {
+        self.current_chunk.instructions.push(instruction);
+        self.current_chunk.debug_line_info.push(line);
+    }
+
+    fn push_constant(&mut self, constant: Object) {
+        self.current_chunk.constant_pool.push(constant);
     }
 }
