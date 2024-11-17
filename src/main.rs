@@ -58,7 +58,7 @@ fn main() {
         let ast = parser.parse();
         let bytecode_generator = BytecodeGenerator {};
         let bytecode = bytecode_generator.generate(&ast);
-        println!("bytecode: {:?}", bytecode);
+        bytecode.print();
         let mut exec_engine = ExecutionEngine {
             instruction_pointer: 0,
             running: true,

@@ -26,7 +26,27 @@ pub struct Value {}
 #[derive(Debug)]
 pub struct Chunk {
     pub instructions: std::vec::Vec<Instruction>,
+    // todo only enable this in debug mode
+    pub debug_line_info: std::vec::Vec<usize>,
     pub constant_pool: std::vec::Vec<Value>,
+}
+
+impl Chunk {
+    pub fn print(&self) {
+        println!("Chunk:");
+        let mut counter: usize = 0;
+        for instruction in &self.instructions {
+            println!(
+                "{:?} = {:?} {:?} {:?} {:?} ",
+                self.debug_line_info[counter],
+                instruction.op_instruction,
+                instruction.arg_0,
+                instruction.arg_1,
+                instruction.arg_2
+            );
+            counter += 1;
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -37,8 +57,10 @@ pub struct Bytecode {
 pub struct BytecodeGenerator {}
 
 impl BytecodeGenerator {
-    pub fn generate(&self, ast: &Statement) -> Bytecode {
-        return Bytecode {
+    pub fn generate(&self, ast: &Statement) -> Chunk {
+        return Chunk {
+            debug_line_info: vec![0, 0, 0, 0],
+            constant_pool: vec![],
             instructions: vec![
                 // right now assume the stack is zero'd out
                 Instruction {

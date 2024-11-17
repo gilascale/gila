@@ -1,5 +1,3 @@
-use std::thread::current;
-
 use crate::{
     ast::{Expression, Op, Statement},
     lex::Token,
