@@ -3,6 +3,7 @@ use std::vec;
 use crate::{
     ast::{ASTNode, Op, Statement},
     execution::{FnObject, HeapObject, HeapObjectData, Object},
+    lex::{Token, Type},
 };
 
 #[derive(Debug, Clone)]
@@ -10,6 +11,7 @@ use crate::{
 pub enum OpInstruction {
     RETURN = 0,
     ADD,
+    // ADDI i1 i2 <desination>
     ADDI,
     // NEW <location of fn> <args starting register> <number of args>
     CALL,
@@ -156,6 +158,33 @@ impl BytecodeGenerator {
 
     fn gen_bin_op(&mut self, e1: &Box<ASTNode>, e2: &Box<ASTNode>, op: &Op) {
         // todo only do literals & we need to deal with slot allocation
+
+        // lets see if e1 and e2 can fit in registers
+        match &e1.statement {
+            Statement::LITERAL_NUM(i1) => match &e2.statement {
+                Statement::LITERAL_NUM(i2) => match &i1.typ {
+                    Type::NUMBER(n1) => match &i2.typ {
+                        Type::NUMBER(n2) => {
+                            // lets try doing addi
+                            self.push_instruction(
+                                Instruction {
+                                    op_instruction: OpInstruction::ADDI,
+                                    arg_0: n1.to_string().parse::<u8>().unwrap(),
+                                    arg_1: n2.to_string().parse::<u8>().unwrap(),
+                                    arg_2: 0,
+                                },
+                                0,
+                            );
+                            return;
+                        }
+                        _ => {}
+                    },
+                    _ => {}
+                },
+                _ => {}
+            },
+            _ => {}
+        }
 
         self.push_instruction(
             Instruction {
