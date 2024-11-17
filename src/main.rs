@@ -60,7 +60,6 @@ fn main() {
         let bytecode = bytecode_generator.generate(&ast);
         bytecode.print();
         let mut exec_engine = ExecutionEngine {
-            instruction_pointer: 0,
             stack_frame_pointer: 0,
             running: true,
             stack_frames: vec![],

@@ -31,6 +31,7 @@ pub enum Object {
 
 #[derive(Debug)]
 pub struct StackFrame {
+    pub instruction_pointer: usize,
     pub stack: std::vec::Vec<Object>,
     // todo this sucks
     pub fn_object: Box<FnObject>,
@@ -49,7 +50,6 @@ impl Heap {
 }
 
 pub struct ExecutionEngine {
-    pub instruction_pointer: usize,
     pub running: bool,
     pub stack_frames: std::vec::Vec<StackFrame>,
     pub stack_frame_pointer: usize,
@@ -65,7 +65,8 @@ impl ExecutionEngine {
             // let current_instruction = self.current_instruction().clone();
             let instr = {
                 let current_frame = &self.stack_frames[self.stack_frame_pointer];
-                &current_frame.fn_object.chunk.instructions[self.instruction_pointer].clone()
+                &current_frame.fn_object.chunk.instructions[current_frame.instruction_pointer]
+                    .clone()
             };
 
             self.exec_instr(instr);
@@ -77,7 +78,7 @@ impl ExecutionEngine {
 
     fn exec_instr(&mut self, instr: &Instruction) {
         match instr.op_instruction {
-            OpInstruction::RETURN => self.running = false,
+            OpInstruction::RETURN => self.exec_return(instr),
             OpInstruction::ADDI => self.exec_addi(instr),
             OpInstruction::ADD => self.exec_add(instr),
             OpInstruction::CALL => self.exec_call(instr),
@@ -91,8 +92,8 @@ impl ExecutionEngine {
         self.stack_frames.push(StackFrame {
             stack: vec![],
             fn_object: fn_object,
+            instruction_pointer: 0,
         });
-        self.instruction_pointer = 0;
         self.stack_frame_pointer = 0;
     }
 
@@ -100,8 +101,8 @@ impl ExecutionEngine {
         self.stack_frames.push(StackFrame {
             stack: vec![],
             fn_object: fn_object,
+            instruction_pointer: 0,
         });
-        self.instruction_pointer = 0;
         self.stack_frame_pointer += 1;
     }
 
@@ -114,11 +115,21 @@ impl ExecutionEngine {
         }
     }
 
+    fn exec_return(&mut self, ret: &Instruction) {
+        self.stack_frames.pop();
+        if self.stack_frames.len() == 0 {
+            self.running = false;
+        } else {
+            self.stack_frame_pointer -= 1;
+            self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+        }
+    }
+
     fn exec_addi(&mut self, addi: &Instruction) {
         // self.stack[addi.arg_2 as usize]
         //     .i_value
         //     .replace(self.stack[addi.arg_0 as usize].i_value.unwrap() + addi.arg_1 as i64);
-        self.instruction_pointer += 1;
+        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
     }
 
     fn exec_add(&mut self, add: &Instruction) {
@@ -126,11 +137,10 @@ impl ExecutionEngine {
         //     self.stack[add.arg_0 as usize].i_value.unwrap()
         //         + self.stack[add.arg_1 as usize].i_value.unwrap(),
         // );
-        self.instruction_pointer += 1;
+        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
     }
 
     fn exec_call(&mut self, call: &Instruction) {
-        println!("doing call!");
         let fn_object = &self.stack_frames[self.stack_frame_pointer].stack[call.arg_0 as usize];
 
         let heap_object: &HeapObject = match &fn_object {
@@ -146,12 +156,6 @@ impl ExecutionEngine {
         // fixme this sucks, we shouldn't clone functions it's so expensive
         self.push_stack_frame(Box::new(fn_object.clone()));
         self.zero_stack();
-
-        println!(
-            "done call! {:?} {:?}",
-            self.stack_frames.len(),
-            self.stack_frame_pointer
-        );
     }
 
     fn exec_new(&mut self, new: &Instruction) {
@@ -163,7 +167,7 @@ impl ExecutionEngine {
         let type_object = &self.stack_frames[self.stack_frame_pointer].stack[new.arg_0 as usize];
 
         // self.heap.mark_and_sweep();
-        self.instruction_pointer += 1;
+        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
     }
 
     fn exec_load_const(&mut self, load_const: &Instruction) {
@@ -175,7 +179,7 @@ impl ExecutionEngine {
         self.stack_frames[self.stack_frame_pointer].stack[load_const.arg_1 as usize] =
             const_obj.clone();
         println!("loaded object");
-        self.instruction_pointer += 1;
+        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
     }
 
     fn mark_and_sweep(&mut self) {
