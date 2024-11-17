@@ -25,36 +25,31 @@ pub enum HeapObjectData {
 pub struct HeapObject {
     pub data: HeapObjectData,
     pub is_marked: bool,
-    pub next: Rc<RefCell<HeapObject>>,
 }
 
 #[derive(Debug)]
 pub enum Object {
     F64(f64),
     I64(i64),
-    HEAP_OBJECT(Rc<RefCell<HeapObject>>),
+    HEAP_OBJECT(Box<HeapObject>),
 }
 
 #[derive(Debug)]
 pub struct StackFrame {
     pub stack: std::vec::Vec<Object>,
+    // todo this sucks
     pub fn_object: Box<FnObject>,
 }
 
 pub struct Heap {
     // linked list of objects
-    pub objects: Option<Rc<RefCell<HeapObject>>>,
+    pub objects: std::vec::Vec<Box<HeapObject>>,
 }
 
 impl Heap {
     pub fn new(&mut self, object: HeapObject) {
-        let next = Rc::new(RefCell::new(object));
-        match &self.objects {
-            None => self.objects = Some(next),
-            Some(o) => {
-                o.borrow_mut().next = next;
-            }
-        }
+        let next = Box::new(object);
+        self.objects.push(next);
     }
 }
 
@@ -96,7 +91,7 @@ impl ExecutionEngine {
         }
     }
 
-    fn push_stack_frame(&mut self, fn_object: FnObject) {
+    fn push_stack_frame(&mut self, fn_object: Box<FnObject>) {
         self.stack_frames.push(StackFrame {
             stack: vec![],
             fn_object: fn_object,
@@ -135,7 +130,8 @@ impl ExecutionEngine {
             _ => panic!("unknown value"),
         };
 
-        self.push_stack_frame(fn_object.clone());
+        // fixme this sucks, we shouldn't clone functions it's so expensive
+        self.push_stack_frame(Box::new(fn_object.clone()));
         self.instruction_pointer = 0;
     }
 
@@ -148,29 +144,29 @@ impl ExecutionEngine {
     }
 
     fn mark_and_sweep(&mut self) {
-        // todo
-        // 1. mark every object
-        // 2. sweep
+        // // todo
+        // // 1. mark every object
+        // // 2. sweep
 
-        // lets go through the stack first
-        let current_frame = &self.stack_frames[self.stack_frame_pointer];
-        for obj in current_frame.stack.iter() {
-            match obj {
-                _ => continue,
-                Object::HEAP_OBJECT(heap_object) => {
-                    // lets check if its reachable on the heap
-                    // todo probably have object ids?
+        // // lets go through the stack first
+        // let current_frame = &self.stack_frames[self.stack_frame_pointer];
+        // for obj in current_frame.stack.iter() {
+        //     match obj {
+        //         _ => continue,
+        //         Object::HEAP_OBJECT(heap_object) => {
+        //             // lets check if its reachable on the heap
+        //             // todo probably have object ids?
 
-                    if self.heap.objects.is_none() {
-                        return;
-                    }
-                    let mut next = self.heap.objects.as_ref().unwrap();
-                    while true {
-                        break;
-                        // if next == heap_object.data
-                    }
-                }
-            }
-        }
+        //             if self.heap.objects.is_none() {
+        //                 return;
+        //             }
+        //             let mut next = self.heap.objects.as_ref().unwrap();
+        //             while true {
+        //                 break;
+        //                 // if next == heap_object.data
+        //             }
+        //         }
+        //     }
+        // }
     }
 }

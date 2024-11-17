@@ -64,7 +64,7 @@ fn main() {
             stack_frame_pointer: 0,
             running: true,
             stack_frames: vec![],
-            heap: execution::Heap { objects: None },
+            heap: execution::Heap { objects: vec![] },
         };
         exec_engine.exec(bytecode);
     }
