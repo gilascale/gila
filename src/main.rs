@@ -61,8 +61,10 @@ fn main() {
         bytecode.print();
         let mut exec_engine = ExecutionEngine {
             instruction_pointer: 0,
+            stack_frame_pointer: 0,
             running: true,
-            stack: vec![],
+            stack_frames: vec![],
+            heap: execution::Heap { objects: None },
         };
         exec_engine.exec(bytecode);
     }

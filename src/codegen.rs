@@ -8,11 +8,13 @@ pub enum OpInstruction {
     RETURN = 0,
     ADD,
     ADDI,
+    CALL,
+    NEW,
 }
 
 // #[repr(packed(1))]
 // all instructions are 32 bit
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Instruction {
     pub op_instruction: OpInstruction,
     pub arg_0: u8,
@@ -20,10 +22,10 @@ pub struct Instruction {
     pub arg_2: u8,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Value {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Chunk {
     pub instructions: std::vec::Vec<Instruction>,
     // todo only enable this in debug mode
