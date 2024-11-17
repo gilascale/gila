@@ -29,6 +29,16 @@ pub enum Object {
     HEAP_OBJECT(Box<HeapObject>),
 }
 
+impl Object {
+    pub fn print(&self) -> std::string::String {
+        match self {
+            Self::F64(f) => f.to_string(),
+            Self::I64(i) => i.to_string(),
+            Self::HEAP_OBJECT(h) => format!("<HeapObject at {:p}>", *h),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct StackFrame {
     pub instruction_pointer: usize,
@@ -176,9 +186,9 @@ impl ExecutionEngine {
             .chunk
             .constant_pool[load_const.arg_0 as usize];
 
+        println!("loaded object {:?}", const_obj.print());
         self.stack_frames[self.stack_frame_pointer].stack[load_const.arg_1 as usize] =
             const_obj.clone();
-        println!("loaded object");
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
     }
 
