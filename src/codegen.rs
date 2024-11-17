@@ -156,44 +156,36 @@ impl BytecodeGenerator {
         }
     }
 
+    fn parse_embedding_instruction_number(&self, typ: &Type) -> Option<u8> {
+        if let Type::NUMBER(n) = typ {
+            n.to_string().parse::<u8>().ok()
+        } else {
+            None
+        }
+    }
+
     fn gen_bin_op(&mut self, e1: &Box<ASTNode>, e2: &Box<ASTNode>, op: &Op) {
         // todo only do literals & we need to deal with slot allocation
 
         // lets see if e1 and e2 can fit in registers
-        match &e1.statement {
-            Statement::LITERAL_NUM(i1) => match &e2.statement {
-                Statement::LITERAL_NUM(i2) => match &i1.typ {
-                    Type::NUMBER(n1) => match &i2.typ {
-                        Type::NUMBER(n2) => {
-                            // lets try doing addi
-                            self.push_instruction(
-                                Instruction {
-                                    op_instruction: OpInstruction::ADDI,
-                                    arg_0: n1.to_string().parse::<u8>().unwrap(),
-                                    arg_1: n2.to_string().parse::<u8>().unwrap(),
-                                    arg_2: 0,
-                                },
-                                0,
-                            );
-                            return;
-                        }
-                        _ => {}
-                    },
-                    _ => {}
-                },
-                _ => {}
-            },
-            _ => {}
-        }
 
-        self.push_instruction(
-            Instruction {
-                op_instruction: OpInstruction::ADDI,
-                arg_0: 0,
-                arg_1: 0,
-                arg_2: 0,
-            },
-            0,
-        );
+        if let (Statement::LITERAL_NUM(i1), Statement::LITERAL_NUM(i2)) =
+            (&e1.statement, &e2.statement)
+        {
+            if let (Some(n1), Some(n2)) = (
+                self.parse_embedding_instruction_number(&i1.typ),
+                self.parse_embedding_instruction_number(&i2.typ),
+            ) {
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::ADDI,
+                        arg_0: n1,
+                        arg_1: n2,
+                        arg_2: 0,
+                    },
+                    0,
+                );
+            }
+        }
     }
 }
