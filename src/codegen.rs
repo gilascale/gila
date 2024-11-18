@@ -11,9 +11,9 @@ use crate::{
 pub enum OpInstruction {
     RETURN = 0,
     ADD,
-    // ADDI i1 i2 <desination>
+    // ADDI <r1> <r2> <desination>
     ADDI,
-    // ADDI i1 i2 <desination>
+    // ADDI <i1> <i2> <desination>
     SUBI,
     // NEW <location of fn> <args starting register> <number of args>
     CALL,
@@ -64,12 +64,14 @@ pub struct Bytecode {
 }
 
 pub struct BytecodeGenerator {
+    current_register: u8,
     current_chunk: Chunk,
 }
 
 impl BytecodeGenerator {
     pub fn new() -> BytecodeGenerator {
         return BytecodeGenerator {
+            current_register: 0,
             current_chunk: Chunk {
                 debug_line_info: vec![],
                 constant_pool: vec![],
@@ -128,6 +130,12 @@ impl BytecodeGenerator {
         return self.current_chunk.clone();
     }
 
+    fn get_available_register(&mut self) -> u8 {
+        let next = self.current_register;
+        self.current_register += 1;
+        next
+    }
+
     fn push_instruction(&mut self, instruction: Instruction, line: usize) {
         self.current_chunk.instructions.push(instruction);
         self.current_chunk.debug_line_info.push(line);
@@ -137,7 +145,7 @@ impl BytecodeGenerator {
         self.current_chunk.constant_pool.push(constant);
     }
 
-    fn visit(&mut self, ast: &ASTNode) {
+    fn visit(&mut self, ast: &ASTNode) -> u8 {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(&p),
             Statement::BLOCK(b) => self.gen_block(&b),
@@ -146,16 +154,18 @@ impl BytecodeGenerator {
         }
     }
 
-    fn gen_program(&mut self, p: &Vec<ASTNode>) {
+    fn gen_program(&mut self, p: &Vec<ASTNode>) -> u8 {
         for instruction in p {
             self.visit(instruction);
         }
+        0
     }
 
-    fn gen_block(&mut self, b: &Vec<ASTNode>) {
+    fn gen_block(&mut self, b: &Vec<ASTNode>) -> u8 {
         for instruction in b {
             self.visit(instruction);
         }
+        0
     }
 
     fn parse_embedding_instruction_number(&self, typ: &Type) -> Option<u8> {
@@ -166,7 +176,7 @@ impl BytecodeGenerator {
         }
     }
 
-    fn gen_bin_op(&mut self, e1: &Box<ASTNode>, e2: &Box<ASTNode>, op: &Op) {
+    fn gen_bin_op(&mut self, e1: &Box<ASTNode>, e2: &Box<ASTNode>, op: &Op) -> u8 {
         // todo only do literals & we need to deal with slot allocation
 
         // lets see if e1 and e2 can fit in registers
@@ -178,6 +188,8 @@ impl BytecodeGenerator {
                 self.parse_embedding_instruction_number(&i1.typ),
                 self.parse_embedding_instruction_number(&i2.typ),
             ) {
+                let register = self.get_available_register();
+
                 self.push_instruction(
                     Instruction {
                         op_instruction: match op {
@@ -188,11 +200,42 @@ impl BytecodeGenerator {
                         },
                         arg_0: n1,
                         arg_1: n2,
-                        arg_2: 0,
+                        arg_2: register,
                     },
                     0,
                 );
+                return register;
             }
+        } else if let Statement::LITERAL_NUM(i1) = &e1.statement {
+            // store the number in register 0
+
+            let register = self.get_available_register();
+
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::ADDI,
+                    arg_0: register,
+                    arg_1: self.parse_embedding_instruction_number(&i1.typ).unwrap(),
+                    arg_2: register,
+                },
+                0,
+            );
+
+            let rhs_register = self.visit(&e2);
+
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::ADD,
+                    arg_0: register,
+                    arg_1: rhs_register,
+                    arg_2: register,
+                },
+                0,
+            );
+
+            return register;
         }
+
+        panic!();
     }
 }
