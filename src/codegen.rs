@@ -98,24 +98,24 @@ impl BytecodeGenerator {
 
         self.visit(ast);
 
-        self.push_instruction(
-            Instruction {
-                op_instruction: OpInstruction::LOAD_CONST,
-                arg_0: 0,
-                arg_1: 0,
-                arg_2: 0,
-            },
-            0,
-        );
-        self.push_instruction(
-            Instruction {
-                op_instruction: OpInstruction::CALL,
-                arg_0: 0,
-                arg_1: 0,
-                arg_2: 0,
-            },
-            0,
-        );
+        // self.push_instruction(
+        //     Instruction {
+        //         op_instruction: OpInstruction::LOAD_CONST,
+        //         arg_0: 0,
+        //         arg_1: 0,
+        //         arg_2: 0,
+        //     },
+        //     0,
+        // );
+        // self.push_instruction(
+        //     Instruction {
+        //         op_instruction: OpInstruction::CALL,
+        //         arg_0: 0,
+        //         arg_1: 0,
+        //         arg_2: 0,
+        //     },
+        //     0,
+        // );
 
         self.push_instruction(
             Instruction {
@@ -222,6 +222,34 @@ impl BytecodeGenerator {
             );
 
             let rhs_register = self.visit(&e2);
+
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::ADD,
+                    arg_0: register,
+                    arg_1: rhs_register,
+                    arg_2: register,
+                },
+                0,
+            );
+
+            return register;
+        } else if let Statement::LITERAL_NUM(i2) = &e2.statement {
+            // store the number in register 0
+
+            let register = self.get_available_register();
+
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::ADDI,
+                    arg_0: register,
+                    arg_1: self.parse_embedding_instruction_number(&i2.typ).unwrap(),
+                    arg_2: register,
+                },
+                0,
+            );
+
+            let rhs_register = self.visit(&e1);
 
             self.push_instruction(
                 Instruction {

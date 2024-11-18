@@ -82,7 +82,7 @@ impl ExecutionEngine {
             self.exec_instr(instr);
         }
 
-        println!("stack: {:#?}", self.stack_frames);
+        // println!("stack: {:#?}", self.stack_frames);
         return Object::I64(0);
     }
 
@@ -127,6 +127,10 @@ impl ExecutionEngine {
     }
 
     fn exec_return(&mut self, ret: &Instruction) {
+        if self.stack_frames.len() == 1 {
+            println!("stack: {:#?}", self.stack_frames);
+        }
+
         self.stack_frames.pop();
         if self.stack_frames.len() == 0 {
             self.running = false;
@@ -137,6 +141,9 @@ impl ExecutionEngine {
     }
 
     fn exec_addi(&mut self, addi: &Instruction) {
+        self.stack_frames[self.stack_frame_pointer].stack[addi.arg_2 as usize] =
+            Object::I64((addi.arg_0 + addi.arg_1).into());
+
         // self.stack[addi.arg_2 as usize]
         //     .i_value
         //     .replace(self.stack[addi.arg_0 as usize].i_value.unwrap() + addi.arg_1 as i64);
@@ -150,10 +157,14 @@ impl ExecutionEngine {
     }
 
     fn exec_add(&mut self, add: &Instruction) {
-        // self.stack[add.arg_2 as usize].i_value.replace(
-        //     self.stack[add.arg_0 as usize].i_value.unwrap()
-        //         + self.stack[add.arg_1 as usize].i_value.unwrap(),
-        // );
+        let lhs = &self.stack_frames[self.stack_frame_pointer].stack[add.arg_0 as usize];
+        let rhs = &self.stack_frames[self.stack_frame_pointer].stack[add.arg_1 as usize];
+
+        // todo check type but for now treat as in
+        if let (Object::I64(i1), Object::I64(i2)) = (lhs, rhs) {
+            self.stack_frames[self.stack_frame_pointer].stack[add.arg_2 as usize] =
+                Object::I64(i1 + i2);
+        }
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
     }
 
