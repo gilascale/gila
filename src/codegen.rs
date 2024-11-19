@@ -109,35 +109,6 @@ impl BytecodeGenerator {
 
         self.visit(ast);
 
-        // self.push_instruction(
-        //     Instruction {
-        //         op_instruction: OpInstruction::LOAD_CONST,
-        //         arg_0: 0,
-        //         arg_1: 0,
-        //         arg_2: 0,
-        //     },
-        //     0,
-        // );
-        // self.push_instruction(
-        //     Instruction {
-        //         op_instruction: OpInstruction::CALL,
-        //         arg_0: 0,
-        //         arg_1: 0,
-        //         arg_2: 0,
-        //     },
-        //     0,
-        // );
-
-        // self.push_instruction(
-        //     Instruction {
-        //         op_instruction: OpInstruction::RETURN,
-        //         arg_0: 0,
-        //         arg_1: 0,
-        //         arg_2: 0,
-        //     },
-        //     0,
-        // );
-
         return self.chunks[self.current_chunk_pointer].clone();
     }
 

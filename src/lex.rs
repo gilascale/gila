@@ -356,8 +356,6 @@ impl Lexer {
             counter += 1;
         }
 
-        println!("lexing {:?}... done!", source);
-
         return v;
     }
 }
