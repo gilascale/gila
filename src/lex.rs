@@ -39,6 +39,7 @@ pub enum Type {
     MUL,
     DIV,
     NUMBER(Rc<String>),
+    ATOM(Rc<String>),
     IDENTIFIER(Rc<String>),
     STRING(Rc<String>),
 }
@@ -328,6 +329,34 @@ impl Lexer {
                             line_end: line,
                         },
                     });
+                }
+                ':' => {
+                    index += 1;
+                    counter += 1;
+                    if current.is_alphabetic() {
+                        let tmp_index = index;
+                        let mut identifier = "".to_string();
+                        while counter < chars.len() {
+                            if !chars[counter].is_alphabetic() {
+                                break;
+                            }
+                            let next = chars[counter];
+                            identifier.push(next);
+                            index += 1;
+                            counter += 1;
+                        }
+                        // identifier
+                        v.push(Token {
+                            typ: Type::ATOM(identifier.into()),
+                            pos: Position {
+                                index: tmp_index,
+                                line,
+                                index_end: index + 1,
+                                line_end: line,
+                            },
+                        });
+                        continue;
+                    }
                 }
                 _ => {
                     if current.is_alphabetic() {

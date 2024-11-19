@@ -40,7 +40,7 @@ fn main() {
             println!("bytecode={:#?}", bytecode);
             let result = exec_engine.exec(bytecode);
             match result {
-                Ok(o) => println!("={}", o.print()),
+                Ok(o) => println!("={} (type={})", o.print(), o.get_type().print()),
                 Err(e) => println!("encountered runtime exception {:?}", e),
             }
         }

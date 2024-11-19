@@ -71,6 +71,7 @@ impl<'a> Parser<'a> {
         let next: &Token = &self.tokens[self.counter];
         match (next.typ) {
             Type::STRING(_) => self.string(),
+            Type::ATOM(_) => self.atom(),
             Type::IDENTIFIER(_) => self.identifier(),
             Type::NUMBER(_) => {
                 self.counter += 1;
@@ -219,6 +220,16 @@ impl<'a> Parser<'a> {
             statement: Statement::STRING(s.clone()),
             position: s.pos.clone(),
         }
+    }
+
+    fn atom(&mut self) -> ASTNode {
+        let tok = &self.tokens[self.counter];
+        let pos = tok.pos.clone();
+        self.counter += 1;
+        return ASTNode {
+            statement: Statement::ATOM(tok.clone()),
+            position: pos,
+        };
     }
 
     fn identifier(&mut self) -> ASTNode {

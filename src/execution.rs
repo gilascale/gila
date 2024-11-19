@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::codegen::{Chunk, Instruction, OpInstruction};
 
@@ -8,9 +8,19 @@ pub enum RuntimeError {
 }
 
 #[derive(Debug, Clone)]
-pub struct CustomObjectTypeDefinition {
-    // todo implement types
-    pub field_types: Vec<Object>,
+pub struct DynamicObject {
+    // todo perhaps this should be builtin-strings
+    pub fields: HashMap<String, Object>,
+}
+
+impl DynamicObject {
+    pub fn new(map: HashMap<String, Object>) -> Self {
+        DynamicObject { fields: map }
+    }
+
+    pub fn print(&self) -> String {
+        return format!("{:?}", self.fields);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -33,8 +43,7 @@ pub struct StringObject {
 pub enum HeapObjectData {
     FN(FnObject),
     STRING(StringObject),
-    CUSTOM_OBJECT(CustomObject),
-    CUSTOM_OBJECT_TYPE_DEFINITION(CustomObjectTypeDefinition),
+    DYNAMIC_OBJECT(DynamicObject),
 }
 
 #[derive(Debug, Clone)]
@@ -48,10 +57,9 @@ impl HeapObject {
         match &self.data {
             HeapObjectData::STRING(s) => s.s.to_string(),
             HeapObjectData::FN(f) => format!("<HeapObject:FnObject at {:p}>", self),
-            HeapObjectData::CUSTOM_OBJECT(c) => format!("<HeapObject:CustomObject at {:p}>", self),
-            HeapObjectData::CUSTOM_OBJECT_TYPE_DEFINITION(c) => {
-                format!("<HeapObject:CustomObjectTypeDefinition at {:p}>", self)
-            }
+            HeapObjectData::DYNAMIC_OBJECT(d) => d.print(), // HeapObjectData::DYNAMIC_OBJECT(d) => {
+                                                            //     format!("<HeapObject:DynamicObject at {:p}>", self)
+                                                            // }
         }
     }
 
@@ -64,14 +72,34 @@ impl HeapObject {
 pub enum Object {
     F64(f64),
     I64(i64),
+    ATOM(Rc<String>),
     HEAP_OBJECT(Box<HeapObject>),
 }
 
 impl Object {
+    pub fn create_heap_obj(heap_obj_data: HeapObjectData) -> Self {
+        Object::HEAP_OBJECT(Box::new(HeapObject {
+            data: heap_obj_data,
+            is_marked: false,
+        }))
+    }
+
+    pub fn get_type(&self) -> Object {
+        match self {
+            Self::I64(_) => {
+                Object::create_heap_obj(HeapObjectData::DYNAMIC_OBJECT(DynamicObject::new(
+                    HashMap::from([("name".to_string(), Object::ATOM(Rc::new("I64".to_string())))]),
+                )))
+            }
+            _ => panic!(),
+        }
+    }
+
     pub fn print(&self) -> std::string::String {
         match self {
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
+            Self::ATOM(a) => format!(":{:?}", a.to_string()),
             Self::HEAP_OBJECT(h) => h.print(),
         }
     }
