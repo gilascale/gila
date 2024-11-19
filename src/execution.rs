@@ -8,6 +8,11 @@ pub enum RuntimeError {
 }
 
 #[derive(Debug, Clone)]
+pub struct CustomObject {
+    pub fields: Vec<Object>,
+}
+
+#[derive(Debug, Clone)]
 pub struct FnObject {
     pub chunk: Chunk,
 }
@@ -22,6 +27,7 @@ pub struct StringObject {
 pub enum HeapObjectData {
     FN(FnObject),
     STRING(StringObject),
+    CUSTOM_OBJECT(CustomObject),
 }
 
 #[derive(Debug, Clone)]
@@ -35,6 +41,7 @@ impl HeapObject {
         match &self.data {
             HeapObjectData::STRING(s) => s.s.to_string(),
             HeapObjectData::FN(f) => format!("<HeapObject:FnObject at {:p}>", self),
+            HeapObjectData::CUSTOM_OBJECT(c) => format!("<HeapObject:CustomObject at {:p}>", self),
         }
     }
 
