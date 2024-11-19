@@ -40,6 +40,7 @@ pub enum Type {
     DIV,
     NUMBER(Rc<String>),
     IDENTIFIER(Rc<String>),
+    STRING(Rc<String>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -299,6 +300,34 @@ impl Lexer {
                             },
                         })
                     }
+                }
+                '"' => {
+                    // fixme deal with multiline
+                    let tmp_index = index;
+                    let mut s = "".to_string();
+                    index += 1;
+                    counter += 1;
+
+                    while counter < chars.len() {
+                        let next = chars[counter];
+                        if next == '"' {
+                            counter += 1;
+                            index += 1;
+                            break;
+                        };
+                        s.push(next);
+                        index += 1;
+                        counter += 1;
+                    }
+                    v.push(Token {
+                        typ: Type::STRING(s.into()),
+                        pos: Position {
+                            index: tmp_index,
+                            line: line,
+                            index_end: index,
+                            line_end: line,
+                        },
+                    });
                 }
                 _ => {
                     if current.is_alphabetic() {

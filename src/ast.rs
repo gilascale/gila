@@ -21,6 +21,7 @@ pub enum Statement {
     VARIABLE(Token),
     BIN_OP(Box<ASTNode>, Box<ASTNode>, Op),
     LITERAL_NUM(Token),
+    STRING(Token),
     RETURN(Option<Box<ASTNode>>),
     PROGRAM(Vec<ASTNode>),
     BLOCK(Vec<ASTNode>),

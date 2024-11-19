@@ -2,7 +2,7 @@ use std::{collections::HashMap, vec};
 
 use crate::{
     ast::{ASTNode, Op, Statement},
-    execution::{FnObject, HeapObject, HeapObjectData, Object},
+    execution::{FnObject, Heap, HeapObject, HeapObjectData, Object, StringObject},
     lex::{Position, Token, Type},
 };
 
@@ -161,6 +161,7 @@ impl BytecodeGenerator {
             Statement::VARIABLE(v) => self.gen_variable(ast.position.clone(), v),
             Statement::DEFINE(var, value) => self.gen_define(ast.position.clone(), var, value),
             Statement::LITERAL_NUM(n) => self.gen_literal_num(ast.position.clone(), n),
+            Statement::STRING(s) => self.gen_string(ast.position.clone(), s),
             Statement::CALL(b) => self.gen_call(ast.position.clone(), b),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
             Statement::NAMED_FUNCTION(t, statement) => self.gen_named_function(&t, &statement),
@@ -219,6 +220,30 @@ impl BytecodeGenerator {
             );
             return reg;
         }
+        panic!();
+    }
+
+    fn gen_string(&mut self, pos: Position, s: &Token) -> u8 {
+        if let Type::STRING(str) = &s.typ {
+            let index = self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
+                data: HeapObjectData::STRING(StringObject { s: str.clone() }),
+                is_marked: false,
+            })));
+
+            let reg = self.get_available_register();
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::LOAD_CONST,
+                    arg_0: index,
+                    arg_1: 0,
+                    arg_2: reg,
+                },
+                pos.line.try_into().unwrap(),
+            );
+
+            return 0;
+        }
+
         panic!();
     }
 

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::codegen::{Chunk, Instruction, OpInstruction};
 
 #[derive(Debug, Clone)]
@@ -5,9 +7,10 @@ pub struct FnObject {
     pub chunk: Chunk,
 }
 
+// todo should this be Rc'd?
 #[derive(Debug, Clone)]
 pub struct StringObject {
-    pub s: std::string::String,
+    pub s: Rc<String>,
 }
 
 #[derive(Debug, Clone)]

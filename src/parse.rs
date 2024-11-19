@@ -70,6 +70,7 @@ impl<'a> Parser<'a> {
     fn single(&mut self) -> ASTNode {
         let next: &Token = &self.tokens[self.counter];
         match (next.typ) {
+            Type::STRING(_) => self.string(),
             Type::IDENTIFIER(_) => self.identifier(),
             Type::NUMBER(_) => {
                 self.counter += 1;
@@ -209,6 +210,15 @@ impl<'a> Parser<'a> {
             statement: Statement::RETURN(None),
             position: pos.clone(),
         };
+    }
+
+    fn string(&mut self) -> ASTNode {
+        let s = &self.tokens[self.counter];
+        self.counter += 1;
+        ASTNode {
+            statement: Statement::STRING(s.clone()),
+            position: s.pos.clone(),
+        }
     }
 
     fn identifier(&mut self) -> ASTNode {
