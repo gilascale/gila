@@ -36,7 +36,7 @@ impl<'a> Parser<'a> {
 
         match current.typ {
             Type::RETURN => self.ret(),
-            Type::IDENTIFIER(_) => self.identifier(),
+            // Type::IDENTIFIER(_) => self.identifier(),
             _ => self.expression(),
         }
     }
@@ -47,9 +47,28 @@ impl<'a> Parser<'a> {
         return self.add_sub();
     }
 
+    fn call(&mut self) -> ASTNode {
+        let higher_precedence = self.single();
+
+        if !self.end() && self.tokens[self.counter].typ == Type::LPAREN {
+            self.counter += 1;
+            let lhs_pos = higher_precedence.position.clone();
+            let rhs_pos = self.tokens[self.counter].pos.clone();
+            self.counter += 1;
+
+            return ASTNode {
+                statement: Statement::CALL(Box::new(higher_precedence)),
+                position: lhs_pos.join(rhs_pos),
+            };
+        }
+
+        higher_precedence
+    }
+
     fn single(&mut self) -> ASTNode {
         let next: &Token = &self.tokens[self.counter];
         match (next.typ) {
+            Type::IDENTIFIER(_) => self.identifier(),
             Type::NUMBER(_) => {
                 self.counter += 1;
                 return ASTNode {
@@ -91,7 +110,7 @@ impl<'a> Parser<'a> {
     }
 
     fn mul_div(&mut self) -> ASTNode {
-        let higher_precedence = self.single();
+        let higher_precedence = self.call();
         if !self.end() && self.tokens[self.counter].typ == Type::MUL {
             self.counter += 1;
             let rhs = self.expression();
@@ -149,13 +168,6 @@ impl<'a> Parser<'a> {
         let identifier = &self.tokens[self.counter];
         self.counter += 1;
 
-        if self.end() {
-            return ASTNode {
-                statement: Statement::VARIABLE(identifier.clone()),
-                position: identifier.pos.clone(),
-            };
-        }
-
         // function
         // todo deal with blocks?
         if self.tokens[self.counter].typ == Type::FN {
@@ -169,6 +181,7 @@ impl<'a> Parser<'a> {
             };
         }
 
+        // fixme this should be lower precedence
         if self.tokens[self.counter].typ == Type::ASSIGN {
             let lhs_pos = self.tokens[self.counter].pos.clone();
             self.counter += 1;
@@ -180,7 +193,10 @@ impl<'a> Parser<'a> {
             };
         }
 
-        panic!()
+        ASTNode {
+            statement: Statement::VARIABLE(identifier.clone()),
+            position: identifier.pos.clone(),
+        }
     }
 
     fn end(&self) -> bool {

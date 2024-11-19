@@ -1,4 +1,4 @@
-use std::vec;
+use std::{collections::HashMap, vec};
 
 use crate::{
     ast::{ASTNode, Op, Statement},
@@ -41,6 +41,7 @@ pub struct Chunk {
     pub debug_line_info: std::vec::Vec<usize>,
     // maybe constant pools should be global...?
     pub constant_pool: std::vec::Vec<Object>,
+    pub variable_map: HashMap<Type, u8>,
 }
 
 impl Chunk {
@@ -82,6 +83,7 @@ impl BytecodeGenerator {
                 debug_line_info: vec![],
                 constant_pool: vec![],
                 instructions: vec![],
+                variable_map: HashMap::new(),
             }],
         };
     }
@@ -165,6 +167,7 @@ impl BytecodeGenerator {
             debug_line_info: vec![],
             constant_pool: vec![],
             instructions: vec![],
+            variable_map: HashMap::new(),
         });
         self.current_chunk_pointer += 1;
     }
@@ -180,6 +183,8 @@ impl BytecodeGenerator {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(&p),
             Statement::BLOCK(b) => self.gen_block(&b),
+            Statement::VARIABLE(v) => self.gen_variable(ast.position.clone(), v),
+            Statement::CALL(b) => self.gen_call(ast.position.clone(), b),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
             Statement::NAMED_FUNCTION(t, statement) => self.gen_named_function(&t, &statement),
             _ => panic!(),
@@ -200,12 +205,41 @@ impl BytecodeGenerator {
         0
     }
 
+    // todo we need a map or something to map these to registers
+    fn gen_variable(&mut self, pos: Position, t: &Token) -> u8 {
+        // todo we assume it exists so return the map
+        let result = self.chunks[self.current_chunk_pointer]
+            .variable_map
+            .get(&t.typ);
+
+        if let Some(v) = result {
+            return *v;
+        }
+        panic!("{:?}", t)
+    }
+
     fn parse_embedding_instruction_number(&self, typ: &Type) -> Option<u8> {
         if let Type::NUMBER(n) = typ {
             n.to_string().parse::<u8>().ok()
         } else {
             None
         }
+    }
+
+    fn gen_call(&mut self, pos: Position, callee: &Box<ASTNode>) -> u8 {
+        let callee_register = self.visit(&callee);
+
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::CALL,
+                arg_0: callee_register,
+                arg_1: 0,
+                arg_2: 0,
+            },
+            pos.line.try_into().unwrap(),
+        );
+
+        0
     }
 
     fn gen_bin_op(&mut self, pos: Position, e1: &Box<ASTNode>, e2: &Box<ASTNode>, op: &Op) -> u8 {
@@ -317,6 +351,12 @@ impl BytecodeGenerator {
         // todo set as a local as it is named?
 
         let location = self.get_available_register();
+
+        self.chunks[self.current_chunk_pointer]
+            .variable_map
+            .insert(token.typ.clone(), location);
+
+        println!("put {:?} into {:?}", token, location);
 
         self.push_instruction(
             Instruction {

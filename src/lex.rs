@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Position {
     pub index: u32, // 0-based
     pub line: u32,  // 0-based
@@ -15,7 +15,7 @@ impl Position {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub enum Type {
     RETURN,
     LPAREN,
@@ -35,7 +35,7 @@ pub enum Type {
     IDENTIFIER(Rc<String>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Token {
     pub pos: Position,
     pub typ: Type,
@@ -268,7 +268,7 @@ impl Lexer {
                         let tmp_index = index;
                         let mut identifier = "".to_string();
                         while counter < chars.len() {
-                            if chars[counter].is_whitespace() {
+                            if !chars[counter].is_alphabetic() {
                                 break;
                             }
                             let next = chars[counter];
