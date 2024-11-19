@@ -11,7 +11,12 @@ pub struct Position {
 impl Position {
     pub fn join(&self, other: Position) -> Position {
         // todo
-        return self.clone();
+        return Position {
+            index: self.index,
+            line: self.line,
+            index_end: other.index_end,
+            line_end: other.line_end,
+        };
     }
 }
 
@@ -24,6 +29,7 @@ pub enum Type {
     EQUALS,
     PASS,
     FN,
+    IF,
     DO,
     THEN,
     END,
@@ -138,6 +144,21 @@ impl Lexer {
                     if chars[counter + 1] == 'n' {
                         v.push(Token {
                             typ: Type::FN,
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 2,
+                                line_end: line,
+                            },
+                        });
+                        counter += 1;
+                        index += 1;
+                    }
+                }
+                'i' => {
+                    if chars[counter + 1] == 'f' {
+                        v.push(Token {
+                            typ: Type::IF,
                             pos: Position {
                                 index,
                                 line,

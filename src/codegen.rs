@@ -19,9 +19,9 @@ pub enum OpInstruction {
     CALL,
     // NEW <location of type> <args starting register> <number of args>
     NEW,
-
     // LOAD_CONST <constant index> <> <destination>
     LOAD_CONST,
+    IF, // IF <value> <jump to> <>
 }
 
 // #[repr(packed(1))]
@@ -183,6 +183,7 @@ impl BytecodeGenerator {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(&p),
             Statement::BLOCK(b) => self.gen_block(&b),
+            Statement::IF(cond, body) => self.gen_if(ast.position.clone(), &cond, &body),
             Statement::VARIABLE(v) => self.gen_variable(ast.position.clone(), v),
             Statement::CALL(b) => self.gen_call(ast.position.clone(), b),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
@@ -202,6 +203,19 @@ impl BytecodeGenerator {
         for instruction in b {
             self.visit(instruction);
         }
+        0
+    }
+
+    fn gen_if(&mut self, position: Position, cond: &ASTNode, body: &ASTNode) -> u8 {
+        // todo
+        // let value_register = self.visit(cond);
+
+        // self.push_instruction(
+        //     Instruction {
+        //         op_instruction: OpInstruction::IF,
+        //     },
+        //     line,
+        // );
         0
     }
 
@@ -355,8 +369,6 @@ impl BytecodeGenerator {
         self.chunks[self.current_chunk_pointer]
             .variable_map
             .insert(token.typ.clone(), location);
-
-        println!("put {:?} into {:?}", token, location);
 
         self.push_instruction(
             Instruction {

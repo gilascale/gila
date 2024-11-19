@@ -27,6 +27,7 @@ pub enum Statement {
     // todo should these tokens be references?
     DEFINE(Token, Box<ASTNode>),
     NAMED_FUNCTION(Token, Box<ASTNode>),
+    IF(Box<ASTNode>, Box<ASTNode>),
 }
 
 #[derive(Debug)]

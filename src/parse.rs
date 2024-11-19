@@ -35,6 +35,7 @@ impl<'a> Parser<'a> {
         let current: &Token = &self.tokens[self.counter];
 
         match current.typ {
+            Type::IF => self.iff(),
             Type::RETURN => self.ret(),
             // Type::IDENTIFIER(_) => self.identifier(),
             _ => self.expression(),
@@ -77,7 +78,7 @@ impl<'a> Parser<'a> {
                 };
             }
             // _ => higher_precedence,
-            _ => panic!(),
+            _ => panic!("{:?}", next),
         }
     }
 
@@ -159,6 +160,25 @@ impl<'a> Parser<'a> {
             // todo this will error if block is empty
             position: start_pos.join(end_pos),
         };
+    }
+
+    fn iff(&mut self) -> ASTNode {
+        let if_pos = self.tokens[self.counter].pos.clone();
+        self.counter += 1;
+
+        let condition = self.expression();
+        println!("parsed if condition {:?}", condition);
+        let body = self.statement();
+        println!("parsed if body {:?}", body);
+        let body_pos = body.position.clone();
+
+        // consume end
+        self.counter += 1;
+
+        ASTNode {
+            statement: Statement::IF(Box::new(condition), Box::new(body)),
+            position: if_pos.join(body_pos),
+        }
     }
 
     fn ret(&mut self) -> ASTNode {

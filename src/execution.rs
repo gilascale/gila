@@ -68,22 +68,29 @@ pub struct ExecutionEngine {
 }
 
 impl ExecutionEngine {
+    pub fn new() -> ExecutionEngine {
+        ExecutionEngine {
+            stack_frame_pointer: 0,
+            running: true,
+            stack_frames: vec![],
+            heap: Heap { objects: vec![] },
+        }
+    }
+
     pub fn exec(&mut self, bytecode: Chunk) -> Object {
-        println!("executing: {:#?}", bytecode);
-        // self.init_startup_stack(Box::new(FnObject { chunk: bytecode }));
-        // self.zero_stack();
-        // while self.running {
-        //     // let current_instruction = self.current_instruction().clone();
-        //     let instr = {
-        //         let current_frame = &self.stack_frames[self.stack_frame_pointer];
-        //         &current_frame.fn_object.chunk.instructions[current_frame.instruction_pointer]
-        //             .clone()
-        //     };
+        self.init_startup_stack(Box::new(FnObject { chunk: bytecode }));
+        self.zero_stack();
+        while self.running {
+            // let current_instruction = self.current_instruction().clone();
+            let instr = {
+                let current_frame = &self.stack_frames[self.stack_frame_pointer];
+                &current_frame.fn_object.chunk.instructions[current_frame.instruction_pointer]
+                    .clone()
+            };
 
-        //     self.exec_instr(instr);
-        // }
+            self.exec_instr(instr);
+        }
 
-        // println!("stack: {:#?}", self.stack_frames);
         return Object::I64(0);
     }
 
