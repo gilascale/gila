@@ -38,7 +38,7 @@ fn main() {
                 heap: execution::Heap { objects: vec![] },
             };
             let result = exec_engine.exec(bytecode);
-            println!("={:?}", result)
+            println!("={}", result.print())
         }
     } else {
         let source = fs::read_to_string("C:/Users/jking/dev/gila/example/minimal.gila")
