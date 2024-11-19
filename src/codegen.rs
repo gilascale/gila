@@ -65,18 +65,21 @@ pub struct Bytecode {
 
 pub struct BytecodeGenerator {
     current_register: u8,
-    current_chunk: Chunk,
+    current_chunk_pointer: usize,
+    // current_chunk: Chunk,
+    chunks: Vec<Chunk>,
 }
 
 impl BytecodeGenerator {
     pub fn new() -> BytecodeGenerator {
         return BytecodeGenerator {
             current_register: 0,
-            current_chunk: Chunk {
+            current_chunk_pointer: 0,
+            chunks: vec![Chunk {
                 debug_line_info: vec![],
                 constant_pool: vec![],
                 instructions: vec![],
-            },
+            }],
         };
     }
 
@@ -127,7 +130,7 @@ impl BytecodeGenerator {
             3,
         );
 
-        return self.current_chunk.clone();
+        return self.chunks[self.current_chunk_pointer].clone();
     }
 
     fn get_available_register(&mut self) -> u8 {
@@ -137,12 +140,34 @@ impl BytecodeGenerator {
     }
 
     fn push_instruction(&mut self, instruction: Instruction, line: usize) {
-        self.current_chunk.instructions.push(instruction);
-        self.current_chunk.debug_line_info.push(line);
+        self.chunks[self.current_chunk_pointer]
+            .instructions
+            .push(instruction);
+        self.chunks[self.current_chunk_pointer]
+            .debug_line_info
+            .push(line);
     }
 
     fn push_constant(&mut self, constant: Object) {
-        self.current_chunk.constant_pool.push(constant);
+        self.chunks[self.current_chunk_pointer]
+            .constant_pool
+            .push(constant);
+    }
+
+    fn push_chunk(&mut self) {
+        self.chunks.push(Chunk {
+            debug_line_info: vec![],
+            constant_pool: vec![],
+            instructions: vec![],
+        });
+        self.current_chunk_pointer += 1;
+    }
+
+    fn pop_chunk(&mut self) -> Chunk {
+        let c = self.chunks[self.current_chunk_pointer].clone();
+        self.chunks.pop();
+        self.current_chunk_pointer -= 1;
+        return c;
     }
 
     fn visit(&mut self, ast: &ASTNode) -> u8 {
@@ -150,6 +175,7 @@ impl BytecodeGenerator {
             Statement::PROGRAM(p) => self.gen_program(&p),
             Statement::BLOCK(b) => self.gen_block(&b),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(&e1, &e2, &op),
+            Statement::NAMED_FUNCTION(t, statement) => self.gen_named_function(&t, &statement),
             _ => panic!(),
         }
     }
@@ -234,36 +260,54 @@ impl BytecodeGenerator {
             );
 
             return register;
-        } else if let Statement::LITERAL_NUM(i2) = &e2.statement {
-            // store the number in register 0
-
-            let register = self.get_available_register();
-
-            self.push_instruction(
-                Instruction {
-                    op_instruction: OpInstruction::ADDI,
-                    arg_0: register,
-                    arg_1: self.parse_embedding_instruction_number(&i2.typ).unwrap(),
-                    arg_2: register,
-                },
-                0,
-            );
-
-            let rhs_register = self.visit(&e1);
-
-            self.push_instruction(
-                Instruction {
-                    op_instruction: OpInstruction::ADD,
-                    arg_0: register,
-                    arg_1: rhs_register,
-                    arg_2: register,
-                },
-                0,
-            );
-
-            return register;
         }
+        // } else if let Statement::LITERAL_NUM(i2) = &e2.statement {
+        //     // store the number in register 0
+
+        //     let register = self.get_available_register();
+
+        //     self.push_instruction(
+        //         Instruction {
+        //             op_instruction: OpInstruction::ADDI,
+        //             arg_0: register,
+        //             arg_1: self.parse_embedding_instruction_number(&i2.typ).unwrap(),
+        //             arg_2: register,
+        //         },
+        //         0,
+        //     );
+
+        //     let rhs_register = self.visit(&e1);
+
+        //     self.push_instruction(
+        //         Instruction {
+        //             op_instruction: OpInstruction::ADD,
+        //             arg_0: register,
+        //             arg_1: rhs_register,
+        //             arg_2: register,
+        //         },
+        //         0,
+        //     );
+
+        //     return register;
+        // }
 
         panic!();
+    }
+
+    fn gen_named_function(&mut self, token: &Token, statement: &ASTNode) -> u8 {
+        // this obviously has to be a constant
+
+        self.push_chunk();
+        // todo enter new block?
+        self.generate(statement);
+
+        let c = self.pop_chunk();
+
+        self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
+            data: HeapObjectData::FN(FnObject { chunk: c }),
+            is_marked: false,
+        })));
+
+        0
     }
 }
