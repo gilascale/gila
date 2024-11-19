@@ -22,7 +22,12 @@ impl<'a> Parser<'a> {
         // ))])
         ASTNode {
             statement: Statement::PROGRAM(program),
-            position: Position { index: 0, line: 0 },
+            position: Position {
+                index: 0,
+                line: 0,
+                index_end: 0,
+                line_end: 0,
+            },
         }
     }
 
@@ -43,13 +48,13 @@ impl<'a> Parser<'a> {
     }
 
     fn single(&mut self) -> ASTNode {
-        let next = &self.tokens[self.counter];
+        let next: &Token = &self.tokens[self.counter];
         match (next.typ) {
             Type::NUMBER(_) => {
                 self.counter += 1;
                 return ASTNode {
                     statement: Statement::LITERAL_NUM(next.clone()),
-                    position: Position { index: 0, line: 0 },
+                    position: next.pos.clone(),
                 };
             }
             // _ => higher_precedence,
@@ -62,16 +67,24 @@ impl<'a> Parser<'a> {
         if !self.end() && self.tokens[self.counter].typ == Type::ADD {
             self.counter += 1;
             let rhs: ASTNode = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
             return ASTNode {
                 statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::ADD),
-                position: Position { index: 0, line: 0 },
+                position: pos,
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::SUB {
             self.counter += 1;
             let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
             return ASTNode {
                 statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::SUB),
-                position: Position { index: 0, line: 0 },
+                position: pos,
             };
         }
         return higher_precedence;
@@ -82,38 +95,51 @@ impl<'a> Parser<'a> {
         if !self.end() && self.tokens[self.counter].typ == Type::MUL {
             self.counter += 1;
             let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
             return ASTNode {
                 statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::MUL),
-                position: Position { index: 0, line: 0 },
+                position: pos,
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::DIV {
             self.counter += 1;
             let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
             return ASTNode {
                 statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::DIV),
-                position: Position { index: 0, line: 0 },
+                position: pos,
             };
         }
         return higher_precedence;
     }
 
     fn block(&mut self) -> ASTNode {
+        // todo get the block start token somehow?
         let mut stms = vec![];
         while !self.end() && self.tokens[self.counter].typ != Type::END {
             stms.push(self.statement());
         }
+        let start_pos = stms[0].position.clone();
+        let end_pos = stms[stms.len() - 1].position.clone();
         self.counter += 1;
         return ASTNode {
             statement: Statement::BLOCK(stms),
-            position: Position { index: 0, line: 0 },
+            // todo this will error if block is empty
+            position: start_pos.join(end_pos),
         };
     }
 
     fn ret(&mut self) -> ASTNode {
+        let pos = &self.tokens[self.counter].pos;
         self.counter += 1;
         return ASTNode {
             statement: Statement::RETURN(None),
-            position: Position { index: 0, line: 0 },
+            position: pos.clone(),
         };
     }
 
@@ -126,25 +152,31 @@ impl<'a> Parser<'a> {
         if self.end() {
             return ASTNode {
                 statement: Statement::VARIABLE(identifier.clone()),
-                position: Position { index: 0, line: 0 },
+                position: identifier.pos.clone(),
             };
         }
 
         // function
         // todo deal with blocks?
         if self.tokens[self.counter].typ == Type::FN {
+            let lhs_pos = self.tokens[self.counter].pos.clone();
             self.counter += 1;
+            let rhs = self.block();
+            let rhs_pos = rhs.position.clone();
             return ASTNode {
                 statement: Statement::NAMED_FUNCTION(identifier.clone(), Box::new(self.block())),
-                position: Position { index: 0, line: 0 },
+                position: lhs_pos.join(rhs_pos),
             };
         }
 
         if self.tokens[self.counter].typ == Type::ASSIGN {
+            let lhs_pos = self.tokens[self.counter].pos.clone();
             self.counter += 1;
+            let rhs = self.expression();
+            let rhs_pos = rhs.position.clone();
             return ASTNode {
                 statement: Statement::DEFINE(identifier.clone(), Box::new(self.expression())),
-                position: Position { index: 0, line: 0 },
+                position: lhs_pos.join(rhs_pos),
             };
         }
 

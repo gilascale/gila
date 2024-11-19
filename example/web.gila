@@ -1,29 +1,69 @@
-// Simple web server
 
 
-// imports everything in 'web' module into the current namespace
 
 
-import "std/templating"
-web = import "std/web"
+type Templator
+...
+end
+
+impl Templater
+    template fn (self: Templator, template: string, values: dict<str,any>)
+    ...
+    end
+end
+
+type Server
+    templator: Templater
+    callbacks: dict<str,fn>
+end
+
+impl Server
+    new fn (self: Server)
+
+    end
+
+    // todo how do we figure out the args?
+    mount fn (self: Server, callback: fn)
+    ...
+    end
+
+    serve fn (self: Server)
+    ...
+    end
+end
+
+user_template = """
+    <p>{name}</p> 
+    """
+
+user type
+    name: string
+end
 
 
-index = "<p>hi {name}<p>"
+create_user fn(name: string) 
+...
+end
 
-index fn(context web.RequestContext) -> string do
-    print(f"got request {}", context)
 
-    name = context.path.get "name";
+get_user_html fn(name: string) -> string
 
-    //=name means we want to add a named param the same as the variable name here
-    return Templater().template(index,=name)
+
+    // the server implicity loads itself into the context
+    using context
+
+    // todo how do we deal with errors
+    return templator.template(name, user_template) 
 end
 
 
 main fn
-    server  = web.Server(8080)
-    
-    server.route "/<name>", 
-    
+    server = Server(port=8080)
+
+    // use of atoms i.e. 'global enums'
+    server.mount("/user/<name>", :POST, create_user)
+    server.mount("/user/name, :GET, get_user_html)
+
     server.serve()
+
 end

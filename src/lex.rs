@@ -4,7 +4,14 @@ use std::rc::Rc;
 pub struct Position {
     pub index: u32, // 0-based
     pub line: u32,  // 0-based
-                    // todo add end
+    pub index_end: u32,
+    pub line_end: u32, // todo add end
+}
+
+impl Position {
+    pub fn join(&self, other: Position) -> Position {
+        return self.clone();
+    }
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -42,7 +49,7 @@ impl Lexer {
         let mut counter = 0;
         let mut index = 0;
         let mut line = 0;
-        let mut position = Position { index: 0, line: 0 };
+        // let mut position: Position = Position { index: 0, line: 0 };
 
         let chars: Vec<char> = source.chars().collect();
 
@@ -64,25 +71,45 @@ impl Lexer {
                 '+' => {
                     v.push(Token {
                         typ: Type::ADD,
-                        pos: Position { index, line },
+                        pos: Position {
+                            index,
+                            line,
+                            index_end: index + 1,
+                            line_end: line,
+                        },
                     });
                 }
                 '-' => {
                     v.push(Token {
                         typ: Type::SUB,
-                        pos: Position { index, line },
+                        pos: Position {
+                            index,
+                            line,
+                            index_end: index + 1,
+                            line_end: line,
+                        },
                     });
                 }
                 '*' => {
                     v.push(Token {
                         typ: Type::MUL,
-                        pos: Position { index, line },
+                        pos: Position {
+                            index,
+                            line,
+                            index_end: index + 1,
+                            line_end: line,
+                        },
                     });
                 }
                 '/' => {
                     v.push(Token {
                         typ: Type::DIV,
-                        pos: Position { index, line },
+                        pos: Position {
+                            index,
+                            line,
+                            index_end: index + 1,
+                            line_end: line,
+                        },
                     });
                 }
                 '.' => {
@@ -95,7 +122,12 @@ impl Lexer {
                     if chars[counter + 1] == 'o' {
                         v.push(Token {
                             typ: Type::DO,
-                            pos: Position { index, line },
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 2,
+                                line_end: line,
+                            },
                         });
                         counter += 1;
                         index += 1;
@@ -105,7 +137,12 @@ impl Lexer {
                     if chars[counter + 1] == 'n' {
                         v.push(Token {
                             typ: Type::FN,
-                            pos: Position { index, line },
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 2,
+                                line_end: line,
+                            },
                         });
                         counter += 1;
                         index += 1;
@@ -115,7 +152,12 @@ impl Lexer {
                     if chars[counter + 1] == 'n' && chars[counter + 2] == 'd' {
                         v.push(Token {
                             typ: Type::END,
-                            pos: Position { index, line },
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 3,
+                                line_end: line,
+                            },
                         });
                         counter += 2;
                         index += 2;
@@ -128,7 +170,12 @@ impl Lexer {
                     {
                         v.push(Token {
                             typ: Type::THEN,
-                            pos: Position { index, line },
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 4,
+                                line_end: line,
+                            },
                         });
                         counter += 3;
                         index += 3;
@@ -141,7 +188,12 @@ impl Lexer {
                     {
                         v.push(Token {
                             typ: Type::PASS,
-                            pos: Position { index, line },
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 4,
+                                line_end: line,
+                            },
                         });
                         counter += 3;
                         index += 3;
@@ -156,7 +208,12 @@ impl Lexer {
                     {
                         v.push(Token {
                             typ: Type::RETURN,
-                            pos: Position { index, line },
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 6,
+                                line_end: line,
+                            },
                         });
                         counter += 5;
                         index += 5;
@@ -164,29 +221,50 @@ impl Lexer {
                 }
                 '(' => v.push(Token {
                     typ: Type::LPAREN,
-                    pos: Position { index, line },
+                    pos: Position {
+                        index,
+                        line,
+                        index_end: index + 1,
+                        line_end: line,
+                    },
                 }),
                 ')' => v.push(Token {
                     typ: Type::RPAREN,
-                    pos: Position { index, line },
+                    pos: Position {
+                        index,
+                        line,
+                        index_end: index + 1,
+                        line_end: line,
+                    },
                 }),
                 '=' => {
                     if chars[counter + 1] == '=' {
                         v.push(Token {
                             typ: Type::EQUALS,
-                            pos: Position { index, line },
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 2,
+                                line_end: line,
+                            },
                         });
                         index += 1;
                         counter += 1;
                     } else {
                         v.push(Token {
                             typ: Type::ASSIGN,
-                            pos: Position { index, line },
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 1,
+                                line_end: line,
+                            },
                         })
                     }
                 }
                 _ => {
                     if current.is_alphabetic() {
+                        let tmp_index = index;
                         let mut identifier = "".to_string();
                         while counter < chars.len() {
                             if chars[counter].is_whitespace() {
@@ -200,12 +278,18 @@ impl Lexer {
                         // identifier
                         v.push(Token {
                             typ: Type::IDENTIFIER(identifier.into()),
-                            pos: Position { index, line },
+                            pos: Position {
+                                index: tmp_index,
+                                line,
+                                index_end: index + 1,
+                                line_end: line,
+                            },
                         });
                         continue;
                     }
                     if current.is_numeric() {
                         let mut identifier = "".to_string();
+                        let tmp_index = index;
                         while counter < chars.len() {
                             if chars[counter].is_whitespace() || !chars[counter].is_numeric() {
                                 break;
@@ -218,7 +302,12 @@ impl Lexer {
                         // identifier
                         v.push(Token {
                             typ: Type::NUMBER(identifier.into()),
-                            pos: Position { index, line },
+                            pos: Position {
+                                index: tmp_index,
+                                line,
+                                index_end: index + 1,
+                                line_end: line,
+                            },
                         });
                         continue;
                     }

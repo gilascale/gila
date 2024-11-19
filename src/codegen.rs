@@ -3,7 +3,7 @@ use std::vec;
 use crate::{
     ast::{ASTNode, Op, Statement},
     execution::{FnObject, HeapObject, HeapObjectData, Object},
-    lex::{Token, Type},
+    lex::{Position, Token, Type},
 };
 
 #[derive(Debug, Clone)]
@@ -84,20 +84,20 @@ impl BytecodeGenerator {
     }
 
     pub fn generate(&mut self, ast: &ASTNode) -> Chunk {
-        let mut print_chunk = Chunk {
-            instructions: vec![Instruction {
-                op_instruction: OpInstruction::RETURN,
-                arg_0: 0,
-                arg_1: 0,
-                arg_2: 0,
-            }],
-            debug_line_info: vec![],
-            constant_pool: vec![],
-        };
-        self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
-            data: HeapObjectData::FN(FnObject { chunk: print_chunk }),
-            is_marked: false,
-        })));
+        // let mut print_chunk = Chunk {
+        //     instructions: vec![Instruction {
+        //         op_instruction: OpInstruction::RETURN,
+        //         arg_0: 0,
+        //         arg_1: 0,
+        //         arg_2: 0,
+        //     }],
+        //     debug_line_info: vec![],
+        //     constant_pool: vec![],
+        // };
+        // self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
+        //     data: HeapObjectData::FN(FnObject { chunk: print_chunk }),
+        //     is_marked: false,
+        // })));
 
         self.visit(ast);
 
@@ -127,7 +127,7 @@ impl BytecodeGenerator {
                 arg_1: 0,
                 arg_2: 0,
             },
-            3,
+            0,
         );
 
         return self.chunks[self.current_chunk_pointer].clone();
@@ -174,7 +174,7 @@ impl BytecodeGenerator {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(&p),
             Statement::BLOCK(b) => self.gen_block(&b),
-            Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(&e1, &e2, &op),
+            Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
             Statement::NAMED_FUNCTION(t, statement) => self.gen_named_function(&t, &statement),
             _ => panic!(),
         }
@@ -202,7 +202,7 @@ impl BytecodeGenerator {
         }
     }
 
-    fn gen_bin_op(&mut self, e1: &Box<ASTNode>, e2: &Box<ASTNode>, op: &Op) -> u8 {
+    fn gen_bin_op(&mut self, pos: Position, e1: &Box<ASTNode>, e2: &Box<ASTNode>, op: &Op) -> u8 {
         // todo only do literals & we need to deal with slot allocation
 
         // lets see if e1 and e2 can fit in registers
@@ -228,7 +228,7 @@ impl BytecodeGenerator {
                         arg_1: n2,
                         arg_2: register,
                     },
-                    0,
+                    pos.line.try_into().unwrap(),
                 );
                 return register;
             }
