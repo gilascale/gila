@@ -19,6 +19,8 @@ pub enum OpInstruction {
     CALL,
     // NEW <location of type> <args starting register> <number of args>
     NEW,
+
+    // LOAD_CONST <constant index> <> <destination>
     LOAD_CONST,
 }
 
@@ -37,6 +39,7 @@ pub struct Chunk {
     pub instructions: std::vec::Vec<Instruction>,
     // todo only enable this in debug mode
     pub debug_line_info: std::vec::Vec<usize>,
+    // maybe constant pools should be global...?
     pub constant_pool: std::vec::Vec<Object>,
 }
 
@@ -148,10 +151,13 @@ impl BytecodeGenerator {
             .push(line);
     }
 
-    fn push_constant(&mut self, constant: Object) {
+    fn push_constant(&mut self, constant: Object) -> u8 {
         self.chunks[self.current_chunk_pointer]
             .constant_pool
             .push(constant);
+        return (self.chunks[self.current_chunk_pointer].constant_pool.len() - 1)
+            .try_into()
+            .unwrap();
     }
 
     fn push_chunk(&mut self) {
@@ -303,11 +309,24 @@ impl BytecodeGenerator {
 
         let c = self.pop_chunk();
 
-        self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
+        let constant = self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
             data: HeapObjectData::FN(FnObject { chunk: c }),
             is_marked: false,
         })));
 
+        // todo set as a local as it is named?
+
+        let location = self.get_available_register();
+
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::LOAD_CONST,
+                arg_0: constant,
+                arg_1: 0,
+                arg_2: location,
+            },
+            token.pos.line.try_into().unwrap(),
+        );
         0
     }
 }
