@@ -17,6 +17,8 @@ pub enum OpInstruction {
     SUBI,
     // NEW <location of fn> <args starting register> <number of args>
     CALL,
+    //
+    CALL_EXTERN,
     // NEW <location of type> <args starting register> <number of args>
     NEW,
     // LOAD_CONST <constant index> <> <destination>
@@ -186,6 +188,7 @@ impl BytecodeGenerator {
             Statement::BLOCK(b) => self.gen_block(&b),
             Statement::IF(cond, body) => self.gen_if(ast.position.clone(), &cond, &body),
             Statement::VARIABLE(v) => self.gen_variable(ast.position.clone(), v),
+            Statement::DEFINE(var, value) => self.gen_define(ast.position.clone(), var, value),
             Statement::LITERAL_NUM(n) => self.gen_literal_num(ast.position.clone(), n),
             Statement::CALL(b) => self.gen_call(ast.position.clone(), b),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
@@ -259,6 +262,14 @@ impl BytecodeGenerator {
             return *v;
         }
         panic!("{:?}", t)
+    }
+
+    fn gen_define(&mut self, pos: Position, var: &Token, value: &Box<ASTNode>) -> u8 {
+        let location = self.visit(&value);
+        self.chunks[self.current_chunk_pointer]
+            .variable_map
+            .insert(var.typ.clone(), location);
+        location
     }
 
     fn parse_embedding_instruction_number(&self, typ: &Type) -> Option<u8> {

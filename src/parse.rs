@@ -36,6 +36,7 @@ impl<'a> Parser<'a> {
 
         match current.typ {
             Type::IF => self.iff(),
+            Type::LET => self.lett(),
             Type::RETURN => self.ret(),
             // Type::IDENTIFIER(_) => self.identifier(),
             _ => self.expression(),
@@ -178,6 +179,26 @@ impl<'a> Parser<'a> {
         ASTNode {
             statement: Statement::IF(Box::new(condition), Box::new(body)),
             position: if_pos.join(body_pos),
+        }
+    }
+
+    fn lett(&mut self) -> ASTNode {
+        let let_pos = self.tokens[self.counter].pos.clone();
+        self.counter += 1;
+
+        let identifier = &self.tokens[self.counter];
+
+        // consume identifier and =
+        self.counter += 1;
+        self.counter += 1;
+
+        let value = self.expression();
+        let value_pos = value.position.clone();
+
+        // fixme add type
+        ASTNode {
+            statement: Statement::DEFINE(identifier.clone(), Box::new(value)),
+            position: let_pos.join(value_pos),
         }
     }
 

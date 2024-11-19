@@ -32,6 +32,7 @@ pub enum Type {
     IF,
     DO,
     THEN,
+    LET,
     END,
     ADD,
     SUB,
@@ -174,6 +175,21 @@ impl Lexer {
                     if chars[counter + 1] == 'n' && chars[counter + 2] == 'd' {
                         v.push(Token {
                             typ: Type::END,
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 3,
+                                line_end: line,
+                            },
+                        });
+                        counter += 2;
+                        index += 2;
+                    }
+                }
+                'l' => {
+                    if chars[counter + 1] == 'e' && chars[counter + 2] == 't' {
+                        v.push(Token {
+                            typ: Type::LET,
                             pos: Position {
                                 index,
                                 line,
