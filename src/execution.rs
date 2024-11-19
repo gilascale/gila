@@ -30,6 +30,19 @@ pub struct HeapObject {
     pub is_marked: bool,
 }
 
+impl HeapObject {
+    pub fn print(&self) -> String {
+        match &self.data {
+            HeapObjectData::STRING(s) => s.s.to_string(),
+            HeapObjectData::FN(f) => format!("<HeapObject:FnObject at {:p}>", self),
+        }
+    }
+
+    pub fn add(&self, other: Object) -> Result<Object, RuntimeError> {
+        Ok(Object::I64(1))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Object {
     F64(f64),
@@ -42,7 +55,7 @@ impl Object {
         match self {
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
-            Self::HEAP_OBJECT(h) => format!("<HeapObject at {:p}>", *h),
+            Self::HEAP_OBJECT(h) => h.print(),
         }
     }
 
@@ -55,6 +68,7 @@ impl Object {
                     _ => return Err(RuntimeError::INVALID_OPERATION),
                 }
             }
+            // Self::HEAP_OBJECT(h1) => h1.data.add(other),
             _ => return Err(RuntimeError::INVALID_OPERATION),
         }
     }
