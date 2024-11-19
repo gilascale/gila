@@ -8,6 +8,12 @@ pub enum RuntimeError {
 }
 
 #[derive(Debug, Clone)]
+pub struct CustomObjectTypeDefinition {
+    // todo implement types
+    pub field_types: Vec<Object>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CustomObject {
     pub fields: Vec<Object>,
 }
@@ -28,6 +34,7 @@ pub enum HeapObjectData {
     FN(FnObject),
     STRING(StringObject),
     CUSTOM_OBJECT(CustomObject),
+    CUSTOM_OBJECT_TYPE_DEFINITION(CustomObjectTypeDefinition),
 }
 
 #[derive(Debug, Clone)]
@@ -42,6 +49,9 @@ impl HeapObject {
             HeapObjectData::STRING(s) => s.s.to_string(),
             HeapObjectData::FN(f) => format!("<HeapObject:FnObject at {:p}>", self),
             HeapObjectData::CUSTOM_OBJECT(c) => format!("<HeapObject:CustomObject at {:p}>", self),
+            HeapObjectData::CUSTOM_OBJECT_TYPE_DEFINITION(c) => {
+                format!("<HeapObject:CustomObjectTypeDefinition at {:p}>", self)
+            }
         }
     }
 
