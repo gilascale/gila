@@ -217,6 +217,13 @@ impl<'a> Parser<'a> {
         let identifier = &self.tokens[self.counter];
         self.counter += 1;
 
+        if self.end() {
+            return ASTNode {
+                statement: Statement::VARIABLE(identifier.clone()),
+                position: identifier.pos.clone(),
+            };
+        }
+
         // function
         // todo deal with blocks?
         if self.tokens[self.counter].typ == Type::FN {
