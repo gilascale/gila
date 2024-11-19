@@ -241,7 +241,7 @@ impl BytecodeGenerator {
                 pos.line.try_into().unwrap(),
             );
 
-            return 0;
+            return reg;
         }
 
         panic!();

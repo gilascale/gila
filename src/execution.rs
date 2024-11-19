@@ -2,6 +2,11 @@ use std::rc::Rc;
 
 use crate::codegen::{Chunk, Instruction, OpInstruction};
 
+#[derive(Debug)]
+pub enum RuntimeError {
+    INVALID_OPERATION,
+}
+
 #[derive(Debug, Clone)]
 pub struct FnObject {
     pub chunk: Chunk,
@@ -38,6 +43,19 @@ impl Object {
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
             Self::HEAP_OBJECT(h) => format!("<HeapObject at {:p}>", *h),
+        }
+    }
+
+    pub fn add(&self, other: Object) -> Result<Object, RuntimeError> {
+        match self {
+            Self::I64(i1) => {
+                // integer addition
+                match other {
+                    Object::I64(i2) => return Ok(Object::I64(i1 + i2)),
+                    _ => return Err(RuntimeError::INVALID_OPERATION),
+                }
+            }
+            _ => return Err(RuntimeError::INVALID_OPERATION),
         }
     }
 
@@ -88,7 +106,7 @@ impl ExecutionEngine {
         }
     }
 
-    pub fn exec(&mut self, bytecode: Chunk) -> Object {
+    pub fn exec(&mut self, bytecode: Chunk) -> Result<Object, RuntimeError> {
         self.init_startup_stack(Box::new(FnObject { chunk: bytecode }));
         self.zero_stack();
         let mut reg = 0;
@@ -100,7 +118,11 @@ impl ExecutionEngine {
                     .clone()
             };
 
-            reg = self.exec_instr(instr);
+            let reg_result = self.exec_instr(instr);
+
+            if let Err(e) = reg_result {
+                return Err(e);
+            }
 
             if self.stack_frames[self.stack_frame_pointer].instruction_pointer
                 == self.stack_frames[self.stack_frame_pointer]
@@ -114,10 +136,10 @@ impl ExecutionEngine {
         }
 
         // todo return reference
-        return self.stack_frames[self.stack_frame_pointer].stack[reg as usize].clone();
+        return Ok(self.stack_frames[self.stack_frame_pointer].stack[reg as usize].clone());
     }
 
-    fn exec_instr(&mut self, instr: &Instruction) -> u8 {
+    fn exec_instr(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
         match instr.op_instruction {
             OpInstruction::RETURN => self.exec_return(instr),
             OpInstruction::ADDI => self.exec_addi(instr),
@@ -158,7 +180,7 @@ impl ExecutionEngine {
         }
     }
 
-    fn exec_return(&mut self, ret: &Instruction) -> u8 {
+    fn exec_return(&mut self, ret: &Instruction) -> Result<u8, RuntimeError> {
         if self.stack_frames.len() == 1 {
             println!("stack: {:#?}", self.stack_frames);
         }
@@ -172,41 +194,42 @@ impl ExecutionEngine {
         }
 
         // fixme
-        0
+        Ok(0)
     }
 
-    fn exec_addi(&mut self, addi: &Instruction) -> u8 {
+    fn exec_addi(&mut self, addi: &Instruction) -> Result<u8, RuntimeError> {
         self.stack_frames[self.stack_frame_pointer].stack[addi.arg_2 as usize] =
             Object::I64((addi.arg_0 + addi.arg_1).into());
 
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
 
-        addi.arg_2
+        Ok(addi.arg_2)
     }
-    fn exec_subi(&mut self, subi: &Instruction) -> u8 {
+    fn exec_subi(&mut self, subi: &Instruction) -> Result<u8, RuntimeError> {
         self.stack_frames[self.stack_frame_pointer].stack[subi.arg_2 as usize] =
             Object::I64((subi.arg_0 - subi.arg_1).into());
 
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
 
-        subi.arg_2
+        Ok(subi.arg_2)
     }
 
-    fn exec_add(&mut self, add: &Instruction) -> u8 {
+    fn exec_add(&mut self, add: &Instruction) -> Result<u8, RuntimeError> {
         let lhs = &self.stack_frames[self.stack_frame_pointer].stack[add.arg_0 as usize];
         let rhs = &self.stack_frames[self.stack_frame_pointer].stack[add.arg_1 as usize];
 
-        // todo check type but for now treat as in
-        if let (Object::I64(i1), Object::I64(i2)) = (lhs, rhs) {
-            self.stack_frames[self.stack_frame_pointer].stack[add.arg_2 as usize] =
-                Object::I64(i1 + i2);
-        }
-        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+        let addition: Result<Object, RuntimeError> = lhs.add(rhs.clone());
+        if let Ok(res) = addition {
+            self.stack_frames[self.stack_frame_pointer].stack[add.arg_2 as usize] = res;
+            self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
 
-        add.arg_2
+            return Ok(add.arg_2);
+        } else {
+            return Err(addition.err().unwrap());
+        }
     }
 
-    fn exec_call(&mut self, call: &Instruction) -> u8 {
+    fn exec_call(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
         let fn_object = &self.stack_frames[self.stack_frame_pointer].stack[call.arg_0 as usize];
 
         let heap_object: &HeapObject = match &fn_object {
@@ -224,10 +247,10 @@ impl ExecutionEngine {
         self.zero_stack();
 
         // fixme
-        0
+        Ok(0)
     }
 
-    fn exec_new(&mut self, new: &Instruction) -> u8 {
+    fn exec_new(&mut self, new: &Instruction) -> Result<u8, RuntimeError> {
         // todo allocate on stack
         // for now just GC now
         self.mark_and_sweep();
@@ -239,10 +262,10 @@ impl ExecutionEngine {
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
 
         // fixme
-        0
+        Ok(0)
     }
 
-    fn exec_load_const(&mut self, load_const: &Instruction) -> u8 {
+    fn exec_load_const(&mut self, load_const: &Instruction) -> Result<u8, RuntimeError> {
         let const_obj = &self.stack_frames[self.stack_frame_pointer]
             .fn_object
             .chunk
@@ -252,10 +275,10 @@ impl ExecutionEngine {
             const_obj.clone();
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
 
-        load_const.arg_1
+        Ok(load_const.arg_1)
     }
 
-    fn exec_if_jmp_false(&mut self, if_jmp_else: &Instruction) -> u8 {
+    fn exec_if_jmp_false(&mut self, if_jmp_else: &Instruction) -> Result<u8, RuntimeError> {
         let val = &self.stack_frames[self.stack_frame_pointer].stack[if_jmp_else.arg_0 as usize];
 
         if !val.truthy() {
@@ -266,7 +289,7 @@ impl ExecutionEngine {
         }
 
         // fixme
-        0
+        Ok(0)
     }
 
     fn mark_and_sweep(&mut self) {

@@ -37,8 +37,12 @@ fn main() {
                 stack_frames: vec![],
                 heap: execution::Heap { objects: vec![] },
             };
+            println!("bytecode={:#?}", bytecode);
             let result = exec_engine.exec(bytecode);
-            println!("={}", result.print())
+            match result {
+                Ok(o) => println!("={}", o.print()),
+                Err(e) => println!("encountered runtime exception {:?}", e),
+            }
         }
     } else {
         let source = fs::read_to_string("C:/Users/jking/dev/gila/example/minimal.gila")
@@ -62,8 +66,11 @@ fn main() {
 
         let mut execution_engine = ExecutionEngine::new();
 
-        let obj = execution_engine.exec(bytecode);
+        let result = execution_engine.exec(bytecode);
 
-        println!("result = {:?}", obj)
+        match result {
+            Ok(o) => println!("={}", o.print()),
+            Err(e) => println!("encountered runtime exception {:?}", e),
+        }
     }
 }
