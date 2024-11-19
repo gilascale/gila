@@ -88,6 +88,7 @@ impl ExecutionEngine {
     pub fn exec(&mut self, bytecode: Chunk) -> Object {
         self.init_startup_stack(Box::new(FnObject { chunk: bytecode }));
         self.zero_stack();
+        let mut reg = 0;
         while self.running {
             // let current_instruction = self.current_instruction().clone();
             let instr = {
@@ -96,13 +97,24 @@ impl ExecutionEngine {
                     .clone()
             };
 
-            self.exec_instr(instr);
+            reg = self.exec_instr(instr);
+
+            if self.stack_frames[self.stack_frame_pointer].instruction_pointer
+                == self.stack_frames[self.stack_frame_pointer]
+                    .fn_object
+                    .chunk
+                    .instructions
+                    .len()
+            {
+                self.running = false;
+            }
         }
 
-        return Object::I64(0);
+        // todo return reference
+        return self.stack_frames[self.stack_frame_pointer].stack[reg as usize].clone();
     }
 
-    fn exec_instr(&mut self, instr: &Instruction) {
+    fn exec_instr(&mut self, instr: &Instruction) -> u8 {
         match instr.op_instruction {
             OpInstruction::RETURN => self.exec_return(instr),
             OpInstruction::ADDI => self.exec_addi(instr),
@@ -143,7 +155,7 @@ impl ExecutionEngine {
         }
     }
 
-    fn exec_return(&mut self, ret: &Instruction) {
+    fn exec_return(&mut self, ret: &Instruction) -> u8 {
         if self.stack_frames.len() == 1 {
             println!("stack: {:#?}", self.stack_frames);
         }
@@ -155,25 +167,29 @@ impl ExecutionEngine {
             self.stack_frame_pointer -= 1;
             self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
         }
+
+        // fixme
+        0
     }
 
-    fn exec_addi(&mut self, addi: &Instruction) {
+    fn exec_addi(&mut self, addi: &Instruction) -> u8 {
         self.stack_frames[self.stack_frame_pointer].stack[addi.arg_2 as usize] =
             Object::I64((addi.arg_0 + addi.arg_1).into());
 
-        // self.stack[addi.arg_2 as usize]
-        //     .i_value
-        //     .replace(self.stack[addi.arg_0 as usize].i_value.unwrap() + addi.arg_1 as i64);
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+
+        addi.arg_2
     }
-    fn exec_subi(&mut self, subi: &Instruction) {
-        // self.stack[addi.arg_2 as usize]
-        //     .i_value
-        //     .replace(self.stack[addi.arg_0 as usize].i_value.unwrap() + addi.arg_1 as i64);
+    fn exec_subi(&mut self, subi: &Instruction) -> u8 {
+        self.stack_frames[self.stack_frame_pointer].stack[subi.arg_2 as usize] =
+            Object::I64((subi.arg_0 - subi.arg_1).into());
+
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+
+        subi.arg_2
     }
 
-    fn exec_add(&mut self, add: &Instruction) {
+    fn exec_add(&mut self, add: &Instruction) -> u8 {
         let lhs = &self.stack_frames[self.stack_frame_pointer].stack[add.arg_0 as usize];
         let rhs = &self.stack_frames[self.stack_frame_pointer].stack[add.arg_1 as usize];
 
@@ -183,9 +199,11 @@ impl ExecutionEngine {
                 Object::I64(i1 + i2);
         }
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+
+        add.arg_2
     }
 
-    fn exec_call(&mut self, call: &Instruction) {
+    fn exec_call(&mut self, call: &Instruction) -> u8 {
         let fn_object = &self.stack_frames[self.stack_frame_pointer].stack[call.arg_0 as usize];
 
         let heap_object: &HeapObject = match &fn_object {
@@ -201,9 +219,12 @@ impl ExecutionEngine {
         // fixme this sucks, we shouldn't clone functions it's so expensive
         self.push_stack_frame(Box::new(fn_object.clone()));
         self.zero_stack();
+
+        // fixme
+        0
     }
 
-    fn exec_new(&mut self, new: &Instruction) {
+    fn exec_new(&mut self, new: &Instruction) -> u8 {
         // todo allocate on stack
         // for now just GC now
         self.mark_and_sweep();
@@ -213,21 +234,25 @@ impl ExecutionEngine {
 
         // self.heap.mark_and_sweep();
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+
+        // fixme
+        0
     }
 
-    fn exec_load_const(&mut self, load_const: &Instruction) {
+    fn exec_load_const(&mut self, load_const: &Instruction) -> u8 {
         let const_obj = &self.stack_frames[self.stack_frame_pointer]
             .fn_object
             .chunk
             .constant_pool[load_const.arg_0 as usize];
 
-        println!("loaded object {:?}", const_obj.print());
         self.stack_frames[self.stack_frame_pointer].stack[load_const.arg_1 as usize] =
             const_obj.clone();
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+
+        load_const.arg_1
     }
 
-    fn exec_if_jmp_false(&mut self, if_jmp_else: &Instruction) {
+    fn exec_if_jmp_false(&mut self, if_jmp_else: &Instruction) -> u8 {
         let val = &self.stack_frames[self.stack_frame_pointer].stack[if_jmp_else.arg_0 as usize];
 
         if !val.truthy() {
@@ -236,6 +261,9 @@ impl ExecutionEngine {
         } else {
             self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
         }
+
+        // fixme
+        0
     }
 
     fn mark_and_sweep(&mut self) {
