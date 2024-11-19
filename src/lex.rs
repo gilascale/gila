@@ -10,6 +10,7 @@ pub struct Position {
 
 impl Position {
     pub fn join(&self, other: Position) -> Position {
+        // todo
         return self.clone();
     }
 }

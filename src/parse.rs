@@ -164,7 +164,7 @@ impl<'a> Parser<'a> {
             let rhs = self.block();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
-                statement: Statement::NAMED_FUNCTION(identifier.clone(), Box::new(self.block())),
+                statement: Statement::NAMED_FUNCTION(identifier.clone(), Box::new(rhs)),
                 position: lhs_pos.join(rhs_pos),
             };
         }
