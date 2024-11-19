@@ -21,7 +21,7 @@ pub enum OpInstruction {
     NEW,
     // LOAD_CONST <constant index> <> <destination>
     LOAD_CONST,
-    IF, // IF <value> <jump to> <>
+    IF_JMP_FALSE, // IF <value> <jump to instruction> <>
 }
 
 // #[repr(packed(1))]
@@ -70,6 +70,7 @@ pub struct Bytecode {
 pub struct BytecodeGenerator {
     current_register: u8,
     current_chunk_pointer: usize,
+
     // current_chunk: Chunk,
     chunks: Vec<Chunk>,
 }
@@ -210,13 +211,22 @@ impl BytecodeGenerator {
     fn gen_if(&mut self, position: Position, cond: &ASTNode, body: &ASTNode) -> u8 {
         // todo
         let value_register = self.visit(cond);
+        let saved_if_ip = self.chunks[self.current_chunk_pointer].instructions.len();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::IF_JMP_FALSE,
+                arg_0: 0,
+                arg_1: 0,
+                arg_2: 0,
+            },
+            position.line.try_into().unwrap(),
+        );
+        self.visit(body);
 
-        // self.push_instruction(
-        //     Instruction {
-        //         op_instruction: OpInstruction::IF,
-        //     },
-        //     line,
-        // );
+        let ip = self.chunks[self.current_chunk_pointer].instructions.len();
+        self.chunks[self.current_chunk_pointer].instructions[saved_if_ip].arg_1 =
+            ip.try_into().unwrap();
+
         0
     }
 

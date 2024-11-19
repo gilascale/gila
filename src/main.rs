@@ -42,7 +42,7 @@ fn main() {
     // analyser.analyse(&ast);
     let bytecode = bytecode_generator.generate(&ast);
 
-    // println!("bytecode: \n{:#?}", bytecode);
+    println!("bytecode: \n{:#?}", bytecode);
 
     let mut execution_engine = ExecutionEngine::new();
 

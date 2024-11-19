@@ -37,6 +37,10 @@ impl Object {
             Self::HEAP_OBJECT(h) => format!("<HeapObject at {:p}>", *h),
         }
     }
+
+    pub fn truthy(&self) -> bool {
+        return false;
+    }
 }
 
 #[derive(Debug)]
@@ -103,6 +107,7 @@ impl ExecutionEngine {
             OpInstruction::CALL => self.exec_call(instr),
             OpInstruction::NEW => self.exec_new(instr),
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
+            OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
             _ => panic!("unknown instruction {:?}", instr.op_instruction),
         }
     }
@@ -216,6 +221,17 @@ impl ExecutionEngine {
         self.stack_frames[self.stack_frame_pointer].stack[load_const.arg_1 as usize] =
             const_obj.clone();
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+    }
+
+    fn exec_if_jmp_false(&mut self, if_jmp_else: &Instruction) {
+        let val = &self.stack_frames[self.stack_frame_pointer].stack[if_jmp_else.arg_0 as usize];
+
+        if !val.truthy() {
+            self.stack_frames[self.stack_frame_pointer].instruction_pointer =
+                if_jmp_else.arg_1 as usize
+        } else {
+            self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+        }
     }
 
     fn mark_and_sweep(&mut self) {
