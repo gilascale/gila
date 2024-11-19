@@ -143,8 +143,16 @@ impl<'a> Parser<'a> {
         while !self.end() && self.tokens[self.counter].typ != Type::END {
             stms.push(self.statement());
         }
-        let start_pos = stms[0].position.clone();
-        let end_pos = stms[stms.len() - 1].position.clone();
+        let start_pos: Position;
+        let end_pos: Position;
+        if stms.len() > 0 {
+            start_pos = stms[0].position.clone();
+            end_pos = stms[stms.len() - 1].position.clone();
+        } else {
+            // todo this is a hack so if the block is empty we don't crash
+            start_pos = self.tokens[self.counter - 1].pos.clone();
+            end_pos = self.tokens[self.counter - 1].pos.clone();
+        }
         self.counter += 1;
         return ASTNode {
             statement: Statement::BLOCK(stms),
