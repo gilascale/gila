@@ -2,7 +2,7 @@ use std::{collections::HashMap, vec};
 
 use crate::{
     ast::{ASTNode, Op, Statement},
-    execution::{FnObject, Heap, HeapObject, HeapObjectData, Object, StringObject},
+    execution::{DynamicObject, FnObject, Heap, HeapObject, HeapObjectData, Object, StringObject},
     lex::{Position, Token, Type},
 };
 
@@ -106,6 +106,14 @@ impl BytecodeGenerator {
         //     data: HeapObjectData::FN(FnObject { chunk: print_chunk }),
         //     is_marked: false,
         // })));
+
+        // todo do i want first class maps???
+        self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
+            data: HeapObjectData::DYNAMIC_OBJECT(DynamicObject {
+                fields: HashMap::from([("field_definitions".to_string(), Object::I64(1))]),
+            }),
+            is_marked: false,
+        })));
 
         self.visit(ast);
 

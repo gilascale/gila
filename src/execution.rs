@@ -9,7 +9,7 @@ pub enum RuntimeError {
 
 #[derive(Debug, Clone)]
 pub struct DynamicObject {
-    // todo perhaps this should be builtin-strings
+    // todo perhaps this should be builtin-strings or RC'd?
     pub fields: HashMap<String, Object>,
 }
 

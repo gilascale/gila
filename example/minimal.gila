@@ -1,4 +1,18 @@
 
 
 
-"hi"
+
+// this creates an instance of the 'type' template
+type Vec
+    x: f64
+    y: f64
+end
+
+
+// same as
+Vec = __Type(fields={"x":f64, "y":f64})
+
+
+
+
+pos = Vec()
