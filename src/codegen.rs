@@ -185,6 +185,7 @@ impl BytecodeGenerator {
             Statement::BLOCK(b) => self.gen_block(&b),
             Statement::IF(cond, body) => self.gen_if(ast.position.clone(), &cond, &body),
             Statement::VARIABLE(v) => self.gen_variable(ast.position.clone(), v),
+            Statement::LITERAL_NUM(n) => self.gen_literal_num(ast.position.clone(), n),
             Statement::CALL(b) => self.gen_call(ast.position.clone(), b),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
             Statement::NAMED_FUNCTION(t, statement) => self.gen_named_function(&t, &statement),
@@ -208,7 +209,7 @@ impl BytecodeGenerator {
 
     fn gen_if(&mut self, position: Position, cond: &ASTNode, body: &ASTNode) -> u8 {
         // todo
-        // let value_register = self.visit(cond);
+        let value_register = self.visit(cond);
 
         // self.push_instruction(
         //     Instruction {
@@ -217,6 +218,24 @@ impl BytecodeGenerator {
         //     line,
         // );
         0
+    }
+
+    fn gen_literal_num(&mut self, pos: Position, t: &Token) -> u8 {
+        // so currently we just add to a new register
+        if let Some(n) = self.parse_embedding_instruction_number(&t.typ) {
+            let reg = self.get_available_register();
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::ADDI,
+                    arg_0: 0,
+                    arg_1: n,
+                    arg_2: reg,
+                },
+                t.pos.line.try_into().unwrap(),
+            );
+            return reg;
+        }
+        panic!();
     }
 
     // todo we need a map or something to map these to registers
