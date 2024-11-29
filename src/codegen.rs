@@ -278,13 +278,18 @@ impl BytecodeGenerator {
         panic!();
     }
 
-    fn gen_define(&mut self, pos: Position, var: &Token, value: &Box<ASTNode>) -> u8 {
-        let location = self.visit(&value);
-        // todo what happened here
-        self.chunks[self.current_chunk_pointer]
-            .variable_map
-            .insert(var.typ.clone(), location);
-        location
+    fn gen_define(&mut self, pos: Position, var: &Token, value: &Option<Box<ASTNode>>) -> u8 {
+        match value {
+            Some(v) => {
+                let location = self.visit(&v);
+                // todo what happened here
+                self.chunks[self.current_chunk_pointer]
+                    .variable_map
+                    .insert(var.typ.clone(), location);
+                return location;
+            }
+            None => panic!(),
+        }
     }
 
     fn parse_embedding_instruction_number(&self, typ: &Type) -> Option<u8> {

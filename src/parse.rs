@@ -264,7 +264,7 @@ impl<'a> Parser<'a> {
             let rhs = self.expression();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
-                statement: Statement::DEFINE(identifier.clone(), Some(typ), Box::new(rhs)),
+                statement: Statement::DEFINE(identifier.clone(), Some(typ), Some(Box::new(rhs))),
                 position: lhs_pos.join(rhs_pos),
             };
         }
@@ -311,7 +311,7 @@ impl<'a> Parser<'a> {
             let rhs = self.expression();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
-                statement: Statement::DEFINE(identifier.clone(), None, Box::new(rhs)),
+                statement: Statement::DEFINE(identifier.clone(), None, Some(Box::new(rhs))),
                 position: lhs_pos.join(rhs_pos),
             };
         }
@@ -326,6 +326,21 @@ impl<'a> Parser<'a> {
             Type::U32 => DataType::new(DataTypeVariant::U32),
             _ => panic!(),
         }
+    }
+
+    fn parse_decl(&mut self) -> ASTNode {
+        let identifier = &self.tokens[self.counter];
+        let lhs_pos = identifier.pos.clone();
+        // consume identifier
+        self.counter += 1;
+        // consume :
+        self.counter += 1;
+        let rhs_pos = self.tokens[self.counter].pos.clone();
+        let typ = self.parse_type();
+        return ASTNode {
+            statement: Statement::DEFINE(identifier.clone(), Some(typ), None),
+            position: lhs_pos.join(rhs_pos),
+        };
     }
 
     fn end(&self) -> bool {
