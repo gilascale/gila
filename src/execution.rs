@@ -292,7 +292,6 @@ impl ExecutionEngine {
 
     fn exec_call(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
         let fn_object = &self.stack_frames[self.stack_frame_pointer].stack[call.arg_0 as usize];
-
         let heap_object: &HeapObject = match &fn_object {
             Object::HEAP_OBJECT(h) => h,
             _ => panic!("can only call func"),
@@ -332,11 +331,11 @@ impl ExecutionEngine {
             .chunk
             .constant_pool[load_const.arg_0 as usize];
 
-        self.stack_frames[self.stack_frame_pointer].stack[load_const.arg_1 as usize] =
+        self.stack_frames[self.stack_frame_pointer].stack[load_const.arg_2 as usize] =
             const_obj.clone();
         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
 
-        Ok(load_const.arg_1)
+        Ok(load_const.arg_2)
     }
 
     fn exec_if_jmp_false(&mut self, if_jmp_else: &Instruction) -> Result<u8, RuntimeError> {
