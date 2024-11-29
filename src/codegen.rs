@@ -343,19 +343,18 @@ impl BytecodeGenerator {
         } else if let Statement::LITERAL_NUM(i1) = &e1.statement {
             // store the number in register 0
 
+            let rhs_register = self.visit(&e2);
             let register = self.get_available_register();
 
             self.push_instruction(
                 Instruction {
                     op_instruction: OpInstruction::ADDI,
-                    arg_0: register,
+                    arg_0: 0,
                     arg_1: self.parse_embedding_instruction_number(&i1.typ).unwrap(),
                     arg_2: register,
                 },
                 0,
             );
-
-            let rhs_register = self.visit(&e2);
 
             self.push_instruction(
                 Instruction {
@@ -373,7 +372,6 @@ impl BytecodeGenerator {
 
             let register = self.get_available_register();
             let variable_register = self.get_variable(pos, v1);
-            println!("gen var {:?} {:?}", v1, variable_register);
 
             let rhs_register = self.visit(e2);
 
@@ -389,36 +387,6 @@ impl BytecodeGenerator {
 
             return register;
         }
-
-        // } else if let Statement::LITERAL_NUM(i2) = &e2.statement {
-        //     // store the number in register 0
-
-        //     let register = self.get_available_register();
-
-        //     self.push_instruction(
-        //         Instruction {
-        //             op_instruction: OpInstruction::ADDI,
-        //             arg_0: register,
-        //             arg_1: self.parse_embedding_instruction_number(&i2.typ).unwrap(),
-        //             arg_2: register,
-        //         },
-        //         0,
-        //     );
-
-        //     let rhs_register = self.visit(&e1);
-
-        //     self.push_instruction(
-        //         Instruction {
-        //             op_instruction: OpInstruction::ADD,
-        //             arg_0: register,
-        //             arg_1: rhs_register,
-        //             arg_2: register,
-        //         },
-        //         0,
-        //     );
-
-        //     return register;
-        // }
 
         panic!();
     }
