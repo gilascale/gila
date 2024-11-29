@@ -13,6 +13,7 @@ use std::{
 };
 
 use codegen::BytecodeGenerator;
+use deepsize::DeepSizeOf;
 use execution::ExecutionEngine;
 
 fn main() {
@@ -78,6 +79,11 @@ fn main() {
             }
             Err(e) => println!("encountered runtime exception {:?}", e),
         }
-        println!("finished in {:.9?}s", elapsed.as_secs_f64());
+        let denominator = 1000_000;
+        println!(
+            "finished in {:.9?}s & used {:.9?}MB",
+            elapsed.as_secs_f64(),
+            execution_engine.heap.deep_size_of() / denominator
+        );
     }
 }

@@ -1,3 +1,4 @@
+use deepsize::DeepSizeOf;
 use std::{collections::HashMap, rc::Rc};
 
 use crate::codegen::{Chunk, Instruction, OpInstruction};
@@ -6,8 +7,7 @@ use crate::codegen::{Chunk, Instruction, OpInstruction};
 pub enum RuntimeError {
     INVALID_OPERATION,
 }
-
-#[derive(Debug, Clone)]
+#[derive(DeepSizeOf, Debug, Clone)]
 pub struct DynamicObject {
     // todo perhaps this should be builtin-strings or RC'd?
     pub fields: HashMap<String, Object>,
@@ -22,26 +22,25 @@ impl DynamicObject {
         return format!("DynamicObject={:?}", self.fields);
     }
 }
-
-#[derive(Debug, Clone)]
+#[derive(DeepSizeOf, Debug, Clone)]
 pub struct FnObject {
     pub chunk: Chunk,
 }
 
 // todo should this be Rc'd?
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DeepSizeOf)]
 pub struct StringObject {
     pub s: Rc<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(DeepSizeOf, Debug, Clone)]
 pub enum GCRefData {
     FN(FnObject),
     STRING(StringObject),
     DYNAMIC_OBJECT(DynamicObject),
 }
 
-#[derive(Debug, Clone)]
+#[derive(DeepSizeOf, Debug, Clone)]
 pub enum Object {
     F64(f64),
     I64(i64),
@@ -109,13 +108,14 @@ pub struct StackFrame {
     pub fn_object: Box<FnObject>,
 }
 
+#[derive(Debug, DeepSizeOf)]
 pub struct Heap {
     // linked list of objects
     pub live_slots: Vec<GCRefData>,
     pub dead_objects: Vec<usize>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DeepSizeOf)]
 pub struct GCRef {
     pub index: usize,
     pub marked: bool,
@@ -322,8 +322,6 @@ impl ExecutionEngine {
                 self.init_constants();
             }
             GCRefData::DYNAMIC_OBJECT(d) => {
-                println!("calling new on {:?}", d);
-
                 let fields: HashMap<String, Object> = HashMap::new();
                 let gc_ref = self
                     .heap

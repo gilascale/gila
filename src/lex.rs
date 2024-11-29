@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+use deepsize::DeepSizeOf;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Position {
     pub index: u32, // 0-based
@@ -20,7 +22,7 @@ impl Position {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+#[derive(Eq, PartialEq, Debug, Clone, Hash, DeepSizeOf)]
 pub enum Type {
     RETURN,
     LPAREN,

@@ -1,3 +1,4 @@
+use deepsize::DeepSizeOf;
 use std::{collections::HashMap, vec};
 
 use crate::{
@@ -6,7 +7,7 @@ use crate::{
     lex::{Position, Token, Type},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DeepSizeOf)]
 #[repr(u8)]
 pub enum OpInstruction {
     RETURN = 0,
@@ -28,15 +29,14 @@ pub enum OpInstruction {
 
 // #[repr(packed(1))]
 // all instructions are 32 bit
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DeepSizeOf)]
 pub struct Instruction {
     pub op_instruction: OpInstruction,
     pub arg_0: u8,
     pub arg_1: u8,
     pub arg_2: u8,
 }
-
-#[derive(Debug, Clone)]
+#[derive(DeepSizeOf, Debug, Clone)]
 pub struct Chunk {
     pub instructions: std::vec::Vec<Instruction>,
     // todo only enable this in debug mode
