@@ -41,22 +41,6 @@ pub enum GCRefData {
     DYNAMIC_OBJECT(DynamicObject),
 }
 
-// impl HeapObject {
-//     pub fn print(&self) -> String {
-//         match &self.data {
-//             HeapObjectData::STRING(s) => s.s.to_string(),
-//             HeapObjectData::FN(f) => format!("<HeapObject:FnObject at {:p}>", self),
-//             HeapObjectData::DYNAMIC_OBJECT(d) => d.print(), // HeapObjectData::DYNAMIC_OBJECT(d) => {
-//                                                             //     format!("<HeapObject:DynamicObject at {:p}>", self)
-//                                                             // }
-//         }
-//     }
-
-//     pub fn add(&self, other: Object) -> Result<Object, RuntimeError> {
-//         Ok(Object::I64(1))
-//     }
-// }
-
 #[derive(Debug, Clone)]
 pub enum Object {
     F64(f64),
@@ -327,11 +311,6 @@ impl ExecutionEngine {
             _ => panic!("can only call func or constructor"),
         };
 
-        println!(
-            "whoa gc ref {:?} {:?}",
-            gc_ref_object, self.heap.live_slots[0]
-        );
-
         let dereferenced_data = self.heap.deref(gc_ref_object);
 
         match &dereferenced_data {
@@ -344,6 +323,14 @@ impl ExecutionEngine {
             }
             GCRefData::DYNAMIC_OBJECT(d) => {
                 println!("calling new on {:?}", d);
+
+                let fields: HashMap<String, Object> = HashMap::new();
+                let gc_ref = self
+                    .heap
+                    .new(GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }));
+
+                self.stack_frames[self.stack_frame_pointer].stack[call.arg_2 as usize] =
+                    Object::GC_REF(gc_ref);
                 self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
             }
             _ => {

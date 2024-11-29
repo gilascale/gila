@@ -15,7 +15,7 @@ pub enum OpInstruction {
     ADDI,
     // ADDI <i1> <i2> <desination>
     SUBI,
-    // NEW <location of fn> <args starting register> <number of args>
+    // NEW <location of fn> <args starting register> <destination>
     CALL,
     //
     CALL_EXTERN,
@@ -429,34 +429,36 @@ impl BytecodeGenerator {
         // FIXME
         // this obviously has+ to be a constant
 
-        // self.push_chunk();
-        // // todo enter new block?
-        // self.generate(statement);
+        self.push_chunk();
+        // todo enter new block?
+        self.generate(statement);
 
-        // let c = self.pop_chunk();
+        let c = self.pop_chunk();
 
-        // let constant = self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
-        //     data: HeapObjectData::FN(FnObject { chunk: c }),
-        //     is_marked: false,
-        // })));
+        let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::FN(FnObject { chunk: c }));
 
-        // // todo set as a local as it is named?
+        let constant = self.push_constant(Object::GC_REF(GCRef {
+            index: gc_ref_data_idx as usize,
+            marked: false,
+        }));
 
-        // let location = self.get_available_register();
+        // todo set as a local as it is named?
 
-        // self.chunks[self.current_chunk_pointer]
-        //     .variable_map
-        //     .insert(token.typ.clone(), location);
+        let location = self.get_available_register();
 
-        // self.push_instruction(
-        //     Instruction {
-        //         op_instruction: OpInstruction::LOAD_CONST,
-        //         arg_0: constant,
-        //         arg_1: 0,
-        //         arg_2: location,
-        //     },
-        //     token.pos.line.try_into().unwrap(),
-        // );
+        self.chunks[self.current_chunk_pointer]
+            .variable_map
+            .insert(token.typ.clone(), location);
+
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::LOAD_CONST,
+                arg_0: constant,
+                arg_1: 0,
+                arg_2: location,
+            },
+            token.pos.line.try_into().unwrap(),
+        );
         0
     }
 

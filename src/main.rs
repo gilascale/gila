@@ -71,8 +71,11 @@ fn main() {
 
         let result = execution_engine.exec(bytecode);
         let elapsed = start.elapsed();
+
         match result {
-            Ok(o) => println!("={}", o.print()),
+            Ok(o) => {
+                println!("={}", o.print());
+            }
             Err(e) => println!("encountered runtime exception {:?}", e),
         }
         println!("finished in {:.9?}s", elapsed.as_secs_f64());
