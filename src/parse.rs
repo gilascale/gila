@@ -292,12 +292,16 @@ impl<'a> Parser<'a> {
             // move over the fn
             self.counter += 1;
 
-            // consume
+            // consume types
+            let first_type = self.parse_decl();
+            let decls: Vec<ASTNode> = vec![first_type];
 
-            let rhs = self.block();
-            let rhs_pos = rhs.position.clone();
+            let end = &self.tokens[self.counter];
+            let rhs_pos = end.pos.clone();
+            self.counter += 1;
+
             return ASTNode {
-                statement: Statement::NAMED_FUNCTION(identifier.clone(), Box::new(rhs)),
+                statement: Statement::NAMED_TYPE_DECL(identifier.clone(), decls),
                 position: lhs_pos.join(rhs_pos),
             };
         }
