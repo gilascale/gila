@@ -146,6 +146,10 @@ impl Heap {
             marked: false,
         }
     }
+
+    pub fn deref(&mut self, gc_ref: &GCRef) -> GCRefData {
+        return self.live_slots[gc_ref.index].clone();
+    }
 }
 
 pub struct ExecutionEngine {
@@ -327,13 +331,32 @@ impl ExecutionEngine {
             "whoa gc ref {:?} {:?}",
             gc_ref_object, self.heap.live_slots[0]
         );
-        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+
+        let dereferenced_data = self.heap.deref(gc_ref_object);
+
+        match &dereferenced_data {
+            GCRefData::FN(f) => {
+                // fixme this sucks, we shouldn't clone functions it's so expensive
+                // fixme why is this a Box?
+                self.push_stack_frame(Box::new(f.clone()));
+                self.zero_stack();
+                self.init_constants();
+            }
+            GCRefData::DYNAMIC_OBJECT(d) => {
+                println!("calling new on {:?}", d);
+                self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+            }
+            _ => {
+                self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+            }
+        }
 
         // match &heap_object.data {
         //     HeapObjectData::FN(fnn) => {
         //         // fixme this sucks, we shouldn't clone functions it's so expensive
         //         self.push_stack_frame(Box::new(fnn.clone()));
         //         self.zero_stack();
+        //          self.init_constants();
         //     }
         //     HeapObjectData::DYNAMIC_OBJECT(obj) => {
         //         println!("calling new on Vec! {:?}", obj);
