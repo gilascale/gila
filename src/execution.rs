@@ -19,7 +19,7 @@ impl DynamicObject {
     }
 
     pub fn print(&self) -> String {
-        return format!("{:?}", self.fields);
+        return format!("DynamicObject={:?}", self.fields);
     }
 }
 
@@ -352,6 +352,8 @@ impl ExecutionEngine {
     }
 
     fn mark_and_sweep(&mut self) {
+        // https://ceronman.com/2021/07/22/my-experience-crafting-an-interpreter-with-rust/
+
         // // todo
         // // 1. mark every object
         // // 2. sweep
