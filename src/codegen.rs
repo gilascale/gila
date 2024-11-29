@@ -447,6 +447,14 @@ impl BytecodeGenerator {
     }
 
     fn gen_named_type(&mut self, token: &Token, decls: &Vec<ASTNode>) -> u8 {
+        let field_definitions: HashMap<String, Object> = HashMap::from([]);
+
+        let type_object = Object::HEAP_OBJECT(Box::new(HeapObject {
+            data: HeapObjectData::DYNAMIC_OBJECT(DynamicObject {
+                fields: field_definitions,
+            }),
+            is_marked: false,
+        }));
         0
     }
 }

@@ -6,6 +6,7 @@ mod lex;
 mod parse;
 mod r#type;
 
+use std::time::Instant;
 use std::{
     fs,
     io::{self, Write},
@@ -46,6 +47,7 @@ fn main() {
             }
         }
     } else {
+        let start = Instant::now();
         let source = fs::read_to_string("C:/Users/jking/dev/gila/example/test.gila")
             .expect("Unable to read file");
         let lexer = lex::Lexer {};
@@ -68,10 +70,11 @@ fn main() {
         let mut execution_engine = ExecutionEngine::new();
 
         let result = execution_engine.exec(bytecode);
-
+        let elapsed = start.elapsed();
         match result {
             Ok(o) => println!("={}", o.print()),
             Err(e) => println!("encountered runtime exception {:?}", e),
         }
+        println!("finished in {:.9?}s", elapsed.as_secs_f64());
     }
 }
