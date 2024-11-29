@@ -268,6 +268,16 @@ impl BytecodeGenerator {
         panic!("{:?}", t)
     }
 
+    fn get_variable(&mut self, pos: Position, t: &Token) -> u8 {
+        let result = self.chunks[self.current_chunk_pointer]
+            .variable_map
+            .get(&t.typ);
+        if let Some(v) = result {
+            return *v;
+        }
+        panic!();
+    }
+
     fn gen_define(&mut self, pos: Position, var: &Token, value: &Box<ASTNode>) -> u8 {
         let location = self.visit(&value);
         self.chunks[self.current_chunk_pointer]
@@ -358,7 +368,28 @@ impl BytecodeGenerator {
             );
 
             return register;
+        } else if let Statement::VARIABLE(v1) = &e1.statement {
+            // dealing with an identifier here so load it and perform add
+
+            let register = self.get_available_register();
+            let variable_register = self.get_variable(pos, v1);
+            println!("gen var {:?} {:?}", v1, variable_register);
+
+            let rhs_register = self.visit(e2);
+
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::ADD,
+                    arg_0: variable_register,
+                    arg_1: rhs_register,
+                    arg_2: register,
+                },
+                0,
+            );
+
+            return register;
         }
+
         // } else if let Statement::LITERAL_NUM(i2) = &e2.statement {
         //     // store the number in register 0
 
@@ -393,7 +424,7 @@ impl BytecodeGenerator {
     }
 
     fn gen_named_function(&mut self, token: &Token, statement: &ASTNode) -> u8 {
-        // this obviously has to be a constant
+        // this obviously has+ to be a constant
 
         self.push_chunk();
         // todo enter new block?

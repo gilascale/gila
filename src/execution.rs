@@ -183,6 +183,8 @@ impl ExecutionEngine {
                 return Err(e);
             }
 
+            reg = reg_result.unwrap();
+
             if self.stack_frames[self.stack_frame_pointer].instruction_pointer
                 == self.stack_frames[self.stack_frame_pointer]
                     .fn_object
