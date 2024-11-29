@@ -4,6 +4,7 @@ mod codegen;
 mod execution;
 mod lex;
 mod parse;
+mod r#type;
 
 use std::{
     fs,

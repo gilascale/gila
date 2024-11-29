@@ -32,12 +32,15 @@ pub enum Type {
     IF,
     DO,
     THEN,
+    TYPE,
     LET,
     END,
     ADD,
     SUB,
     MUL,
     DIV,
+    COLON,
+    U32,
     NUMBER(Rc<String>),
     ATOM(Rc<String>),
     IDENTIFIER(Rc<String>),
@@ -81,6 +84,17 @@ impl Lexer {
                 '+' => {
                     v.push(Token {
                         typ: Type::ADD,
+                        pos: Position {
+                            index,
+                            line,
+                            index_end: index + 1,
+                            line_end: line,
+                        },
+                    });
+                }
+                ':' => {
+                    v.push(Token {
+                        typ: Type::COLON,
                         pos: Position {
                             index,
                             line,
@@ -219,6 +233,21 @@ impl Lexer {
                         });
                         counter += 3;
                         index += 3;
+                    } else if chars[counter + 1] == 'y'
+                        && chars[counter + 2] == 'p'
+                        && chars[counter + 3] == 'e'
+                    {
+                        v.push(Token {
+                            typ: Type::TYPE,
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 4,
+                                line_end: line,
+                            },
+                        });
+                        counter += 3;
+                        index += 3;
                     }
                 }
                 'p' => {
@@ -257,6 +286,21 @@ impl Lexer {
                         });
                         counter += 5;
                         index += 5;
+                    }
+                }
+                'u' => {
+                    if chars[counter + 1] == '3' && chars[counter + 2] == '2' {
+                        v.push(Token {
+                            typ: Type::U32,
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 3,
+                                line_end: line,
+                            },
+                        });
+                        counter += 2;
+                        index += 2;
                     }
                 }
                 '(' => v.push(Token {

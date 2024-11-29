@@ -1,6 +1,7 @@
 use crate::{
     ast::{ASTNode, Op, Statement},
     lex::{Position, Token, Type},
+    r#type::{DataType, DataTypeVariant},
 };
 
 pub struct Parser<'a> {
@@ -36,7 +37,7 @@ impl<'a> Parser<'a> {
 
         match current.typ {
             Type::IF => self.iff(),
-            Type::LET => self.lett(),
+            // Type::LET => self.lett(),
             Type::RETURN => self.ret(),
             Type::IDENTIFIER(_) => self.identifier(),
             _ => self.expression(),
@@ -190,25 +191,25 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn lett(&mut self) -> ASTNode {
-        let let_pos = self.tokens[self.counter].pos.clone();
-        self.counter += 1;
+    // fn lett(&mut self) -> ASTNode {
+    //     let let_pos = self.tokens[self.counter].pos.clone();
+    //     self.counter += 1;
 
-        let identifier = &self.tokens[self.counter];
+    //     let identifier = &self.tokens[self.counter];
 
-        // consume identifier and =
-        self.counter += 1;
-        self.counter += 1;
+    //     // consume identifier and =
+    //     self.counter += 1;
+    //     self.counter += 1;
 
-        let value = self.expression();
-        let value_pos = value.position.clone();
+    //     let value = self.expression();
+    //     let value_pos = value.position.clone();
 
-        // fixme add type
-        ASTNode {
-            statement: Statement::DEFINE(identifier.clone(), Box::new(value)),
-            position: let_pos.join(value_pos),
-        }
-    }
+    //     // fixme add type
+    //     ASTNode {
+    //         statement: Statement::DEFINE(identifier.clone(), Box::new(value)),
+    //         position: let_pos.join(value_pos),
+    //     }
+    // }
 
     fn ret(&mut self) -> ASTNode {
         let pos = &self.tokens[self.counter].pos;
@@ -252,6 +253,22 @@ impl<'a> Parser<'a> {
             };
         }
 
+        if self.tokens[self.counter + 1].typ == Type::COLON {
+            self.counter += 1;
+            let lhs_pos = identifier.pos.clone();
+            // move over the :
+            self.counter += 1;
+            let typ = self.parse_type();
+            // move over the =
+            self.counter += 1;
+            let rhs = self.expression();
+            let rhs_pos = rhs.position.clone();
+            return ASTNode {
+                statement: Statement::DEFINE(identifier.clone(), Some(typ), Box::new(rhs)),
+                position: lhs_pos.join(rhs_pos),
+            };
+        }
+
         // function
         // todo deal with blocks?
         if self.tokens[self.counter + 1].typ == Type::FN {
@@ -259,6 +276,24 @@ impl<'a> Parser<'a> {
             let lhs_pos = identifier.pos.clone();
             // move over the fn
             self.counter += 1;
+            let rhs = self.block();
+            let rhs_pos = rhs.position.clone();
+            return ASTNode {
+                statement: Statement::NAMED_FUNCTION(identifier.clone(), Box::new(rhs)),
+                position: lhs_pos.join(rhs_pos),
+            };
+        }
+
+        // type
+        // todo deal with blocks?
+        if self.tokens[self.counter + 1].typ == Type::TYPE {
+            self.counter += 1;
+            let lhs_pos = identifier.pos.clone();
+            // move over the fn
+            self.counter += 1;
+
+            // consume
+
             let rhs = self.block();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
@@ -276,12 +311,21 @@ impl<'a> Parser<'a> {
             let rhs = self.expression();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
-                statement: Statement::DEFINE(identifier.clone(), Box::new(rhs)),
+                statement: Statement::DEFINE(identifier.clone(), None, Box::new(rhs)),
                 position: lhs_pos.join(rhs_pos),
             };
         }
 
         self.expression()
+    }
+
+    fn parse_type(&mut self) -> DataType {
+        let current = &self.tokens[self.counter];
+        self.counter += 1;
+        match current.typ {
+            Type::U32 => DataType::new(DataTypeVariant::U32),
+            _ => panic!(),
+        }
     }
 
     fn end(&self) -> bool {

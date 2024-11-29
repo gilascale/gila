@@ -1,4 +1,7 @@
-use crate::lex::{Position, Token};
+use crate::{
+    lex::{Position, Token},
+    r#type::DataType,
+};
 
 #[derive(Debug)]
 pub enum Op {
@@ -27,7 +30,7 @@ pub enum Statement {
     PROGRAM(Vec<ASTNode>),
     BLOCK(Vec<ASTNode>),
     // todo should these tokens be references?
-    DEFINE(Token, Box<ASTNode>),
+    DEFINE(Token, Option<DataType>, Box<ASTNode>),
     NAMED_FUNCTION(Token, Box<ASTNode>),
     IF(Box<ASTNode>, Box<ASTNode>),
 }
