@@ -306,7 +306,7 @@ impl ExecutionEngine {
         self.push_stack_frame(Box::new(fn_object.clone()));
         self.zero_stack();
 
-        // fixme
+        // fixme we need a way of tracking the last register used, maybe return does this?
         Ok(0)
     }
 

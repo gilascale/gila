@@ -4,7 +4,13 @@
 
 main fn 
 
-x = 2+3
+
+    another fn
+        y=99
+    end
+
+    x = 2+3
+    another()
 
 end
 
