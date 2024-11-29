@@ -280,7 +280,10 @@ impl BytecodeGenerator {
 
     fn gen_define(&mut self, pos: Position, var: &Token, value: &Box<ASTNode>) -> u8 {
         let location = self.visit(&value);
-
+        // todo what happened here
+        self.chunks[self.current_chunk_pointer]
+            .variable_map
+            .insert(var.typ.clone(), location);
         location
     }
 
