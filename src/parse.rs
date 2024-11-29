@@ -73,7 +73,6 @@ impl<'a> Parser<'a> {
             Type::STRING(_) => self.string(),
             Type::ATOM(_) => self.atom(),
             Type::IDENTIFIER(_) => {
-                println!("identifier found!");
                 self.counter += 1;
                 return ASTNode {
                     statement: Statement::VARIABLE(next.clone()),

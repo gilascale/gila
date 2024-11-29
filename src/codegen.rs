@@ -386,6 +386,20 @@ impl BytecodeGenerator {
             );
 
             return register;
+        } else {
+            let lhs_register = self.visit(&e1);
+            let rhs_register = self.visit(&e2);
+
+            let register = self.get_available_register();
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::ADD,
+                    arg_0: lhs_register,
+                    arg_1: rhs_register,
+                    arg_2: register,
+                },
+                0,
+            );
         }
 
         panic!();
