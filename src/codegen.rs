@@ -2,7 +2,7 @@ use std::{collections::HashMap, vec};
 
 use crate::{
     ast::{ASTNode, Op, Statement},
-    execution::{DynamicObject, FnObject, Heap, HeapObject, HeapObjectData, Object, StringObject},
+    execution::{DynamicObject, FnObject, GCRef, GCRefData, Heap, Object, StringObject},
     lex::{Position, Token, Type},
 };
 
@@ -43,6 +43,7 @@ pub struct Chunk {
     pub debug_line_info: std::vec::Vec<usize>,
     // maybe constant pools should be global...?
     pub constant_pool: std::vec::Vec<Object>,
+    pub gc_ref_data: std::vec::Vec<GCRefData>,
     pub variable_map: HashMap<Type, u8>,
 }
 
@@ -85,6 +86,7 @@ impl BytecodeGenerator {
             chunks: vec![Chunk {
                 debug_line_info: vec![],
                 constant_pool: vec![],
+                gc_ref_data: vec![],
                 instructions: vec![],
                 variable_map: HashMap::new(),
             }],
@@ -108,12 +110,13 @@ impl BytecodeGenerator {
         // })));
 
         // todo do i want first class maps???
-        self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
-            data: HeapObjectData::DYNAMIC_OBJECT(DynamicObject {
-                fields: HashMap::from([("field_definitions".to_string(), Object::I64(1))]),
-            }),
-            is_marked: false,
-        })));
+        // FIXME
+        // self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
+        //     data: HeapObjectData::DYNAMIC_OBJECT(DynamicObject {
+        //         fields: HashMap::from([("field_definitions".to_string(), Object::I64(1))]),
+        //     }),
+        //     is_marked: false,
+        // })));
 
         self.visit(ast);
 
@@ -135,6 +138,14 @@ impl BytecodeGenerator {
             .push(line);
     }
 
+    fn push_gc_ref_data(&mut self, gc_ref_data: GCRefData) -> u8 {
+        self.chunks[self.current_chunk_pointer]
+            .gc_ref_data
+            .push(gc_ref_data);
+        return (self.chunks[self.current_chunk_pointer].gc_ref_data.len() - 1)
+            .try_into()
+            .unwrap();
+    }
     fn push_constant(&mut self, constant: Object) -> u8 {
         self.chunks[self.current_chunk_pointer]
             .constant_pool
@@ -148,6 +159,7 @@ impl BytecodeGenerator {
         self.chunks.push(Chunk {
             debug_line_info: vec![],
             constant_pool: vec![],
+            gc_ref_data: vec![],
             instructions: vec![],
             variable_map: HashMap::new(),
         });
@@ -233,27 +245,28 @@ impl BytecodeGenerator {
     }
 
     fn gen_string(&mut self, pos: Position, s: &Token) -> u8 {
-        if let Type::STRING(str) = &s.typ {
-            let index = self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
-                data: HeapObjectData::STRING(StringObject { s: str.clone() }),
-                is_marked: false,
-            })));
+        //FIXME
+        0
+        // if let Type::STRING(str) = &s.typ {
+        //     let index = self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
+        //         data: HeapObjectData::STRING(StringObject { s: str.clone() }),
+        //         is_marked: false,
+        //     })));
 
-            let reg = self.get_available_register();
-            self.push_instruction(
-                Instruction {
-                    op_instruction: OpInstruction::LOAD_CONST,
-                    arg_0: index,
-                    arg_1: 0,
-                    arg_2: reg,
-                },
-                pos.line.try_into().unwrap(),
-            );
+        //     let reg = self.get_available_register();
+        //     self.push_instruction(
+        //         Instruction {
+        //             op_instruction: OpInstruction::LOAD_CONST,
+        //             arg_0: index,
+        //             arg_1: 0,
+        //             arg_2: reg,
+        //         },
+        //         pos.line.try_into().unwrap(),
+        //     );
 
-            return reg;
-        }
-
-        panic!();
+        //     return reg;
+        // }
+        // panic!();
     }
 
     // todo we need a map or something to map these to registers
@@ -413,48 +426,67 @@ impl BytecodeGenerator {
     }
 
     fn gen_named_function(&mut self, token: &Token, statement: &ASTNode) -> u8 {
+        // FIXME
         // this obviously has+ to be a constant
 
-        self.push_chunk();
-        // todo enter new block?
-        self.generate(statement);
+        // self.push_chunk();
+        // // todo enter new block?
+        // self.generate(statement);
 
-        let c = self.pop_chunk();
+        // let c = self.pop_chunk();
 
-        let constant = self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
-            data: HeapObjectData::FN(FnObject { chunk: c }),
-            is_marked: false,
-        })));
+        // let constant = self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
+        //     data: HeapObjectData::FN(FnObject { chunk: c }),
+        //     is_marked: false,
+        // })));
 
-        // todo set as a local as it is named?
+        // // todo set as a local as it is named?
 
-        let location = self.get_available_register();
+        // let location = self.get_available_register();
 
-        self.chunks[self.current_chunk_pointer]
-            .variable_map
-            .insert(token.typ.clone(), location);
+        // self.chunks[self.current_chunk_pointer]
+        //     .variable_map
+        //     .insert(token.typ.clone(), location);
 
-        self.push_instruction(
-            Instruction {
-                op_instruction: OpInstruction::LOAD_CONST,
-                arg_0: constant,
-                arg_1: 0,
-                arg_2: location,
-            },
-            token.pos.line.try_into().unwrap(),
-        );
+        // self.push_instruction(
+        //     Instruction {
+        //         op_instruction: OpInstruction::LOAD_CONST,
+        //         arg_0: constant,
+        //         arg_1: 0,
+        //         arg_2: location,
+        //     },
+        //     token.pos.line.try_into().unwrap(),
+        // );
         0
     }
 
     fn gen_named_type(&mut self, token: &Token, decls: &Vec<ASTNode>) -> u8 {
-        let field_definitions: HashMap<String, Object> = HashMap::from([]);
+        // FIXME
+        let field_definitions: HashMap<String, Object> =
+            HashMap::from([("x".to_string(), Object::ATOM("u32".to_string().into()))]);
 
-        let type_object = Object::HEAP_OBJECT(Box::new(HeapObject {
-            data: HeapObjectData::DYNAMIC_OBJECT(DynamicObject {
-                fields: field_definitions,
-            }),
-            is_marked: false,
+        let gc_ref_data_index = self.push_gc_ref_data(GCRefData::DYNAMIC_OBJECT(DynamicObject {
+            fields: field_definitions,
         }));
-        0
+        let index = self.push_constant(Object::GC_REF(GCRef {
+            index: gc_ref_data_index as usize,
+            marked: false,
+        }));
+
+        let reg = self.get_available_register();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::LOAD_CONST,
+                arg_0: index,
+                arg_1: 0,
+                arg_2: reg,
+            },
+            token.pos.line.try_into().unwrap(),
+        );
+        self.chunks[self.current_chunk_pointer]
+            .variable_map
+            .insert(token.typ.clone(), reg);
+        // this is TERRIBLE, we need to somehow reference constants as variables
+        reg
     }
 }

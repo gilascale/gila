@@ -24,11 +24,6 @@ impl DynamicObject {
 }
 
 #[derive(Debug, Clone)]
-pub struct CustomObject {
-    pub fields: Vec<Object>,
-}
-
-#[derive(Debug, Clone)]
 pub struct FnObject {
     pub chunk: Chunk,
 }
@@ -40,57 +35,51 @@ pub struct StringObject {
 }
 
 #[derive(Debug, Clone)]
-pub enum HeapObjectData {
+pub enum GCRefData {
     FN(FnObject),
     STRING(StringObject),
     DYNAMIC_OBJECT(DynamicObject),
 }
 
-#[derive(Debug, Clone)]
-pub struct HeapObject {
-    pub data: HeapObjectData,
-    pub is_marked: bool,
-}
+// impl HeapObject {
+//     pub fn print(&self) -> String {
+//         match &self.data {
+//             HeapObjectData::STRING(s) => s.s.to_string(),
+//             HeapObjectData::FN(f) => format!("<HeapObject:FnObject at {:p}>", self),
+//             HeapObjectData::DYNAMIC_OBJECT(d) => d.print(), // HeapObjectData::DYNAMIC_OBJECT(d) => {
+//                                                             //     format!("<HeapObject:DynamicObject at {:p}>", self)
+//                                                             // }
+//         }
+//     }
 
-impl HeapObject {
-    pub fn print(&self) -> String {
-        match &self.data {
-            HeapObjectData::STRING(s) => s.s.to_string(),
-            HeapObjectData::FN(f) => format!("<HeapObject:FnObject at {:p}>", self),
-            HeapObjectData::DYNAMIC_OBJECT(d) => d.print(), // HeapObjectData::DYNAMIC_OBJECT(d) => {
-                                                            //     format!("<HeapObject:DynamicObject at {:p}>", self)
-                                                            // }
-        }
-    }
-
-    pub fn add(&self, other: Object) -> Result<Object, RuntimeError> {
-        Ok(Object::I64(1))
-    }
-}
+//     pub fn add(&self, other: Object) -> Result<Object, RuntimeError> {
+//         Ok(Object::I64(1))
+//     }
+// }
 
 #[derive(Debug, Clone)]
 pub enum Object {
     F64(f64),
     I64(i64),
     ATOM(Rc<String>),
-    HEAP_OBJECT(Box<HeapObject>),
+    GC_REF(GCRef),
 }
 
 impl Object {
-    pub fn create_heap_obj(heap_obj_data: HeapObjectData) -> Self {
-        Object::HEAP_OBJECT(Box::new(HeapObject {
-            data: heap_obj_data,
-            is_marked: false,
-        }))
-    }
+    // pub fn create_heap_obj(heap_obj_data: HeapObjectData) -> Self {
+    //     Object::HEAP_OBJECT(Box::new(HeapObject {
+    //         data: heap_obj_data,
+    //         is_marked: false,
+    //     }))
+    // }
 
     pub fn get_type(&self) -> Object {
         match self {
-            Self::I64(_) => {
-                Object::create_heap_obj(HeapObjectData::DYNAMIC_OBJECT(DynamicObject::new(
-                    HashMap::from([("name".to_string(), Object::ATOM(Rc::new("I64".to_string())))]),
-                )))
-            }
+            // Self::I64(_) => {
+            //     Object::create_heap_obj(HeapObjectData::DYNAMIC_OBJECT(DynamicObject::new(
+            //         HashMap::from([("name".to_string(), Object::ATOM(Rc::new("I64".to_string())))]),
+            //     )))
+            // }
             _ => panic!(),
         }
     }
@@ -100,7 +89,8 @@ impl Object {
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
             Self::ATOM(a) => format!(":{:?}", a.to_string()),
-            Self::HEAP_OBJECT(h) => h.print(),
+            Self::GC_REF(r) => format!("GCRef {:?}", r.index),
+            // Self::HEAP_OBJECT(h) => h.print(),
         }
     }
 
@@ -137,13 +127,24 @@ pub struct StackFrame {
 
 pub struct Heap {
     // linked list of objects
-    pub objects: std::vec::Vec<Box<HeapObject>>,
+    pub live_slots: Vec<GCRefData>,
+    pub dead_objects: Vec<usize>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GCRef {
+    pub index: usize,
+    pub marked: bool,
 }
 
 impl Heap {
-    pub fn new(&mut self, object: HeapObject) {
-        let next = Box::new(object);
-        self.objects.push(next);
+    pub fn new(&mut self, gc_ref_dat: GCRefData) -> GCRef {
+        // todo for now just push to end
+        self.live_slots.push(gc_ref_dat);
+        GCRef {
+            index: self.live_slots.len() - 1,
+            marked: false,
+        }
     }
 }
 
@@ -161,13 +162,17 @@ impl ExecutionEngine {
             stack_frame_pointer: 0,
             running: true,
             stack_frames: vec![],
-            heap: Heap { objects: vec![] },
+            heap: Heap {
+                live_slots: vec![],
+                dead_objects: vec![],
+            },
         }
     }
 
     pub fn exec(&mut self, bytecode: Chunk) -> Result<Object, RuntimeError> {
         self.init_startup_stack(Box::new(FnObject { chunk: bytecode }));
         self.zero_stack();
+        self.init_constants();
         let mut reg = 0;
         while self.running {
             // let current_instruction = self.current_instruction().clone();
@@ -198,6 +203,27 @@ impl ExecutionEngine {
 
         // todo return reference
         return Ok(self.stack_frames[self.stack_frame_pointer].stack[reg as usize].clone());
+    }
+
+    fn init_constants(&mut self) {
+        // todo
+        // for each gc ref data constant on the current chunk, put it in the heap and update the reference
+
+        let stack_frame = &mut self.stack_frames[self.stack_frame_pointer];
+
+        let constant_pool = &mut stack_frame.fn_object.chunk.constant_pool;
+        // todo this is HORRIBLE
+        let gc_ref_data = &stack_frame.fn_object.chunk.gc_ref_data.clone();
+
+        for i in constant_pool.iter_mut() {
+            if let Object::GC_REF(gc_ref) = i {
+                let gc_ref_data = &gc_ref_data[gc_ref.index];
+
+                // now lets heap allocate!
+                let alloc = self.heap.new(gc_ref_data.clone());
+                gc_ref.index = alloc.index;
+            }
+        }
     }
 
     fn exec_instr(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
@@ -292,19 +318,39 @@ impl ExecutionEngine {
 
     fn exec_call(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
         let fn_object = &self.stack_frames[self.stack_frame_pointer].stack[call.arg_0 as usize];
-        let heap_object: &HeapObject = match &fn_object {
-            Object::HEAP_OBJECT(h) => h,
-            _ => panic!("can only call func"),
+        let gc_ref_object: &GCRef = match &fn_object {
+            Object::GC_REF(r) => r,
+            _ => panic!("can only call func or constructor"),
         };
 
-        let fn_object = match &heap_object.data {
-            HeapObjectData::FN(fnn) => fnn,
-            _ => panic!("unknown value"),
-        };
+        println!(
+            "whoa gc ref {:?} {:?}",
+            gc_ref_object, self.heap.live_slots[0]
+        );
+        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
 
-        // fixme this sucks, we shouldn't clone functions it's so expensive
-        self.push_stack_frame(Box::new(fn_object.clone()));
-        self.zero_stack();
+        // match &heap_object.data {
+        //     HeapObjectData::FN(fnn) => {
+        //         // fixme this sucks, we shouldn't clone functions it's so expensive
+        //         self.push_stack_frame(Box::new(fnn.clone()));
+        //         self.zero_stack();
+        //     }
+        //     HeapObjectData::DYNAMIC_OBJECT(obj) => {
+        //         println!("calling new on Vec! {:?}", obj);
+
+        //         let fields: HashMap<String, Object> = HashMap::new();
+        //         // create a new instance of this
+        //         let new_object = Object::HEAP_OBJECT(Box::new(HeapObject {
+        //             data: HeapObjectData::DYNAMIC_OBJECT(DynamicObject { fields }),
+        //             is_marked: false,
+        //         }));
+
+        //         // todo put object on the heap
+
+        //         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+        //     }
+        //     _ => panic!(),
+        // }
 
         // fixme we need a way of tracking the last register used, maybe return does this?
         Ok(0)

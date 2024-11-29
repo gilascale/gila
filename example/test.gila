@@ -4,10 +4,4 @@ Vec type
     x:u32
 end
 
-
-main fn
-    1
-end
-
-
-main()
+Vec()
