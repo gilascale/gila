@@ -14,7 +14,7 @@ use codegen::BytecodeGenerator;
 use execution::ExecutionEngine;
 
 fn main() {
-    let repl = true;
+    let repl = false;
 
     if repl {
         loop {
@@ -45,7 +45,7 @@ fn main() {
             }
         }
     } else {
-        let source = fs::read_to_string("C:/Users/jking/dev/gila/example/minimal.gila")
+        let source = fs::read_to_string("C:/Users/jking/dev/gila/example/test.gila")
             .expect("Unable to read file");
         let lexer = lex::Lexer {};
         let tokens = lexer.lex(source);

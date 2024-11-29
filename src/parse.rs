@@ -38,7 +38,7 @@ impl<'a> Parser<'a> {
             Type::IF => self.iff(),
             Type::LET => self.lett(),
             Type::RETURN => self.ret(),
-            // Type::IDENTIFIER(_) => self.identifier(),
+            Type::IDENTIFIER(_) => self.identifier(),
             _ => self.expression(),
         }
     }
@@ -72,7 +72,14 @@ impl<'a> Parser<'a> {
         match (next.typ) {
             Type::STRING(_) => self.string(),
             Type::ATOM(_) => self.atom(),
-            Type::IDENTIFIER(_) => self.identifier(),
+            Type::IDENTIFIER(_) => {
+                println!("identifier found!");
+                self.counter += 1;
+                return ASTNode {
+                    statement: Statement::VARIABLE(next.clone()),
+                    position: next.pos.clone(),
+                };
+            }
             Type::NUMBER(_) => {
                 self.counter += 1;
                 return ASTNode {
@@ -236,9 +243,10 @@ impl<'a> Parser<'a> {
         // todo assume define?
 
         let identifier = &self.tokens[self.counter];
-        self.counter += 1;
+        // self.counter += 1;
 
-        if self.end() {
+        if self.end_away(1) {
+            self.counter += 1;
             return ASTNode {
                 statement: Statement::VARIABLE(identifier.clone()),
                 position: identifier.pos.clone(),
@@ -247,8 +255,10 @@ impl<'a> Parser<'a> {
 
         // function
         // todo deal with blocks?
-        if self.tokens[self.counter].typ == Type::FN {
-            let lhs_pos = self.tokens[self.counter].pos.clone();
+        if self.tokens[self.counter + 1].typ == Type::FN {
+            self.counter += 1;
+            let lhs_pos = identifier.pos.clone();
+            // move over the fn
             self.counter += 1;
             let rhs = self.block();
             let rhs_pos = rhs.position.clone();
@@ -259,24 +269,27 @@ impl<'a> Parser<'a> {
         }
 
         // fixme this should be lower precedence
-        if self.tokens[self.counter].typ == Type::ASSIGN {
-            let lhs_pos = self.tokens[self.counter].pos.clone();
+        if self.tokens[self.counter + 1].typ == Type::ASSIGN {
+            self.counter += 1;
+            let lhs_pos = identifier.pos.clone();
+            // move over the =
             self.counter += 1;
             let rhs = self.expression();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
-                statement: Statement::DEFINE(identifier.clone(), Box::new(self.expression())),
+                statement: Statement::DEFINE(identifier.clone(), Box::new(rhs)),
                 position: lhs_pos.join(rhs_pos),
             };
         }
 
-        ASTNode {
-            statement: Statement::VARIABLE(identifier.clone()),
-            position: identifier.pos.clone(),
-        }
+        self.expression()
     }
 
     fn end(&self) -> bool {
         self.counter == self.tokens.len()
+    }
+
+    fn end_away(&self, offset: usize) -> bool {
+        self.counter + offset == self.tokens.len()
     }
 }
