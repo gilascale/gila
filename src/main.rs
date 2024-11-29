@@ -1,6 +1,7 @@
 mod analyse;
 mod ast;
 mod codegen;
+mod config;
 mod execution;
 mod lex;
 mod parse;
@@ -13,6 +14,7 @@ use std::{
 };
 
 use codegen::BytecodeGenerator;
+use config::Config;
 use deepsize::DeepSizeOf;
 use execution::ExecutionEngine;
 
@@ -48,6 +50,8 @@ fn main() {
         //     }
         // }
     } else {
+        let config = Config { max_memory: 1000 };
+
         let start = Instant::now();
         let source = fs::read_to_string("C:/Users/jking/dev/gila/example/test.gila")
             .expect("Unable to read file");
@@ -68,7 +72,7 @@ fn main() {
 
         // println!("bytecode: \n{:#?}", bytecode);
 
-        let mut execution_engine = ExecutionEngine::new();
+        let mut execution_engine = ExecutionEngine::new(&config);
 
         let result = execution_engine.exec(bytecode);
         let elapsed = start.elapsed();
@@ -83,7 +87,7 @@ fn main() {
         println!(
             "finished in {:.9?}s & used {:.9?}MB",
             elapsed.as_secs_f64(),
-            execution_engine.heap.deep_size_of() / denominator
+            execution_engine.heap.live_slots.deep_size_of() / denominator
         );
     }
 }

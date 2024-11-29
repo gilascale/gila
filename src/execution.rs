@@ -1,11 +1,15 @@
 use deepsize::DeepSizeOf;
 use std::{collections::HashMap, rc::Rc};
 
-use crate::codegen::{Chunk, Instruction, OpInstruction};
+use crate::{
+    codegen::{Chunk, Instruction, OpInstruction},
+    config::Config,
+};
 
 #[derive(Debug)]
 pub enum RuntimeError {
     INVALID_OPERATION,
+    OUT_OF_MEMORY,
 }
 #[derive(DeepSizeOf, Debug, Clone)]
 pub struct DynamicObject {
@@ -109,7 +113,8 @@ pub struct StackFrame {
 }
 
 #[derive(Debug, DeepSizeOf)]
-pub struct Heap {
+pub struct Heap<'a> {
+    pub config: &'a Config,
     // linked list of objects
     pub live_slots: Vec<GCRefData>,
     pub dead_objects: Vec<usize>,
@@ -121,36 +126,47 @@ pub struct GCRef {
     pub marked: bool,
 }
 
-impl Heap {
-    pub fn new(&mut self, gc_ref_dat: GCRefData) -> GCRef {
+impl Heap<'_> {
+    pub fn new(&mut self, gc_ref_dat: GCRefData) -> Result<GCRef, RuntimeError> {
+        if self.free_space_available_bytes() >= self.config.max_memory {
+            return Err(RuntimeError::OUT_OF_MEMORY);
+        }
+
         // todo for now just push to end
         self.live_slots.push(gc_ref_dat);
-        GCRef {
+        Ok(GCRef {
             index: self.live_slots.len() - 1,
             marked: false,
-        }
+        })
     }
 
     pub fn deref(&mut self, gc_ref: &GCRef) -> GCRefData {
         return self.live_slots[gc_ref.index].clone();
     }
+
+    pub fn free_space_available_bytes(&self) -> usize {
+        self.live_slots.deep_size_of()
+    }
 }
 
-pub struct ExecutionEngine {
+pub struct ExecutionEngine<'a> {
+    pub config: &'a Config,
     pub running: bool,
     pub stack_frames: std::vec::Vec<StackFrame>,
     pub stack_frame_pointer: usize,
     // todo we need a sort of heap
-    pub heap: Heap,
+    pub heap: Heap<'a>,
 }
 
-impl ExecutionEngine {
-    pub fn new() -> ExecutionEngine {
+impl ExecutionEngine<'_> {
+    pub fn new(config: &Config) -> ExecutionEngine {
         ExecutionEngine {
+            config,
             stack_frame_pointer: 0,
             running: true,
             stack_frames: vec![],
             heap: Heap {
+                config: config,
                 live_slots: vec![],
                 dead_objects: vec![],
             },
@@ -193,7 +209,7 @@ impl ExecutionEngine {
         return Ok(self.stack_frames[self.stack_frame_pointer].stack[reg as usize].clone());
     }
 
-    fn init_constants(&mut self) {
+    fn init_constants(&mut self) -> Result<(), RuntimeError> {
         // todo
         // for each gc ref data constant on the current chunk, put it in the heap and update the reference
 
@@ -209,9 +225,14 @@ impl ExecutionEngine {
 
                 // now lets heap allocate!
                 let alloc = self.heap.new(gc_ref_data.clone());
-                gc_ref.index = alloc.index;
+                match alloc {
+                    Ok(_) => gc_ref.index = alloc.unwrap().index,
+                    Err(e) => return Err(e),
+                }
             }
         }
+
+        return Ok(());
     }
 
     fn exec_instr(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
@@ -327,8 +348,12 @@ impl ExecutionEngine {
                     .heap
                     .new(GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }));
 
+                if gc_ref.is_err() {
+                    return Err(gc_ref.err().unwrap());
+                }
+
                 self.stack_frames[self.stack_frame_pointer].stack[call.arg_2 as usize] =
-                    Object::GC_REF(gc_ref);
+                    Object::GC_REF(gc_ref.unwrap());
                 self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
             }
             _ => {
