@@ -183,7 +183,7 @@ impl BytecodeGenerator<'_> {
             Statement::CALL(b, args) => self.gen_call(ast.position.clone(), b),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
             Statement::NAMED_FUNCTION(t, params, statement) => {
-                self.gen_named_function(&t, &statement)
+                self.gen_named_function(&t, &params, &statement)
             }
             Statement::NAMED_TYPE_DECL(t, decls) => self.gen_named_type(&t, &decls),
             _ => panic!(),
@@ -437,11 +437,32 @@ impl BytecodeGenerator<'_> {
         panic!();
     }
 
-    fn gen_named_function(&mut self, token: &Token, statement: &ASTNode) -> u8 {
+    fn gen_named_function(
+        &mut self,
+        token: &Token,
+        params: &Vec<ASTNode>,
+        statement: &ASTNode,
+    ) -> u8 {
         // FIXME
         // this obviously has+ to be a constant
 
         self.push_chunk();
+
+        // setup locals
+        let mut param_slots: Vec<u8> = vec![];
+        for param in params {
+            if let Statement::VARIABLE(v) = &param.statement {
+                let loc = self.get_available_register();
+                // todo what happened here
+                self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+                    .variable_map
+                    .insert(v.typ.clone(), loc);
+                param_slots.push(loc);
+            } else {
+                panic!();
+            }
+        }
+
         // todo enter new block?
         self.generate(statement);
 
@@ -455,6 +476,7 @@ impl BytecodeGenerator<'_> {
         let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::FN(FnObject {
             chunk: c,
             name: name.to_string(),
+            param_slots,
         }));
 
         let constant = self.push_constant(Object::GC_REF(GCRef {

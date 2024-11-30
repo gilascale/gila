@@ -30,6 +30,7 @@ impl DynamicObject {
 pub struct FnObject {
     pub chunk: Chunk,
     pub name: String,
+    pub param_slots: Vec<u8>,
 }
 
 // todo should this be Rc'd?
@@ -50,8 +51,6 @@ pub enum Object {
     F64(f64),
     I64(i64),
     ATOM(Rc<String>),
-    // don't like that we can't deterministically heap allocate this but oh well
-    TUPLE(Vec<Object>),
     GC_REF(GCRef),
 }
 
@@ -79,7 +78,6 @@ impl Object {
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
             Self::ATOM(a) => format!(":{:?}", a.to_string()),
-            Self::TUPLE(t) => format!("({:?})", t),
             Self::GC_REF(r) => format!("GCRef {:?}", r.index),
             // Self::HEAP_OBJECT(h) => h.print(),
         }
@@ -185,6 +183,7 @@ impl ExecutionEngine<'_> {
                 self.init_startup_stack(Box::new(FnObject {
                     chunk: bytecode,
                     name: "main".to_string(),
+                    param_slots: vec![],
                 }));
                 self.zero_stack();
                 self.init_constants();
@@ -197,6 +196,7 @@ impl ExecutionEngine<'_> {
             self.init_startup_stack(Box::new(FnObject {
                 chunk: bytecode,
                 name: "main".to_string(),
+                param_slots: vec![],
             }));
             self.zero_stack();
             self.init_constants();
