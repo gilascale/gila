@@ -31,7 +31,7 @@ pub enum Statement {
     BLOCK(Vec<ASTNode>),
     // todo should these tokens be references?
     DEFINE(Token, Option<DataType>, Option<Box<ASTNode>>),
-    NAMED_FUNCTION(Token, Box<ASTNode>),
+    NAMED_FUNCTION(Token, Vec<ASTNode>, Box<ASTNode>),
     NAMED_TYPE_DECL(Token, Vec<ASTNode>),
     IF(Box<ASTNode>, Box<ASTNode>, Option<Box<ASTNode>>),
 }

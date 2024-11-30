@@ -182,7 +182,9 @@ impl BytecodeGenerator<'_> {
             Statement::STRING(s) => self.gen_string(ast.position.clone(), s),
             Statement::CALL(b, args) => self.gen_call(ast.position.clone(), b),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
-            Statement::NAMED_FUNCTION(t, statement) => self.gen_named_function(&t, &statement),
+            Statement::NAMED_FUNCTION(t, params, statement) => {
+                self.gen_named_function(&t, &statement)
+            }
             Statement::NAMED_TYPE_DECL(t, decls) => self.gen_named_type(&t, &decls),
             _ => panic!(),
         }
@@ -324,6 +326,8 @@ impl BytecodeGenerator<'_> {
 
     fn gen_call(&mut self, pos: Position, callee: &Box<ASTNode>) -> u8 {
         let callee_register = self.visit(&callee);
+
+        // todo uhh how do we construct a tuple literally...
 
         self.push_instruction(
             Instruction {

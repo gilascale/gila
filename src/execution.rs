@@ -1,5 +1,5 @@
 use deepsize::DeepSizeOf;
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, fmt::format, rc::Rc};
 
 use crate::{
     codegen::{Chunk, Instruction, OpInstruction},
@@ -50,6 +50,8 @@ pub enum Object {
     F64(f64),
     I64(i64),
     ATOM(Rc<String>),
+    // don't like that we can't deterministically heap allocate this but oh well
+    TUPLE(Vec<Object>),
     GC_REF(GCRef),
 }
 
@@ -77,6 +79,7 @@ impl Object {
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
             Self::ATOM(a) => format!(":{:?}", a.to_string()),
+            Self::TUPLE(t) => format!("({:?})", t),
             Self::GC_REF(r) => format!("GCRef {:?}", r.index),
             // Self::HEAP_OBJECT(h) => h.print(),
         }

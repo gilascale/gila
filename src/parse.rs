@@ -299,10 +299,36 @@ impl<'a> Parser<'a> {
             let lhs_pos = identifier.pos.clone();
             // move over the fn
             self.counter += 1;
+
+            let mut params: Vec<ASTNode> = vec![];
+
+            if self.tokens[self.counter].typ == Type::LPAREN {
+                self.counter += 1;
+                if self.tokens[self.counter].typ != Type::RPAREN {
+                    loop {
+                        // fixme do proper decl
+                        params.push(ASTNode {
+                            statement: Statement::VARIABLE(self.tokens[self.counter].clone()),
+                            position: self.tokens[self.counter].pos.clone(),
+                        });
+                        self.counter += 1;
+
+                        if self.tokens[self.counter].typ == Type::RPAREN {
+                            self.counter += 1;
+                            break;
+                        }
+                        // skip ,
+                        self.counter += 1;
+                    }
+                } else {
+                    self.counter += 1;
+                }
+            }
+
             let rhs = self.block();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
-                statement: Statement::NAMED_FUNCTION(identifier.clone(), Box::new(rhs)),
+                statement: Statement::NAMED_FUNCTION(identifier.clone(), params, Box::new(rhs)),
                 position: lhs_pos.join(rhs_pos),
             };
         }
