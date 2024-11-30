@@ -32,6 +32,7 @@ fn repl() {
         },
     };
 
+    let mut bytecode_generator = BytecodeGenerator::new();
     let mut exec_engine = ExecutionEngine::new(&config, &mut environment);
 
     loop {
@@ -46,7 +47,6 @@ fn repl() {
             counter: 0,
         };
         let ast = parser.parse();
-        let mut bytecode_generator = BytecodeGenerator::new();
         let bytecode = bytecode_generator.generate(&ast);
         let result = exec_engine.exec(bytecode);
         match result {
