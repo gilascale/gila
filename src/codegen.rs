@@ -70,27 +70,19 @@ pub struct Bytecode {
     pub instructions: std::vec::Vec<Instruction>,
 }
 
-pub struct BytecodeGenerator {
-    current_register: u8,
-    current_chunk_pointer: usize,
-
-    // current_chunk: Chunk,
-    chunks: Vec<Chunk>,
+pub struct CodegenContext {
+    pub current_register: u8,
+    pub current_chunk_pointer: usize,
+    pub chunks: Vec<Chunk>,
 }
 
-impl BytecodeGenerator {
-    pub fn new() -> BytecodeGenerator {
-        return BytecodeGenerator {
-            current_register: 0,
-            current_chunk_pointer: 0,
-            chunks: vec![Chunk {
-                debug_line_info: vec![],
-                constant_pool: vec![],
-                gc_ref_data: vec![],
-                instructions: vec![],
-                variable_map: HashMap::new(),
-            }],
-        };
+pub struct BytecodeGenerator<'a> {
+    codegen_context: &'a mut CodegenContext,
+}
+
+impl BytecodeGenerator<'_> {
+    pub fn new(codegen_context: &mut CodegenContext) -> BytecodeGenerator {
+        return BytecodeGenerator { codegen_context };
     }
 
     pub fn generate(&mut self, ast: &ASTNode) -> Chunk {
@@ -120,56 +112,62 @@ impl BytecodeGenerator {
 
         self.visit(ast);
 
-        return self.chunks[self.current_chunk_pointer].clone();
+        return self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].clone();
     }
 
     fn get_available_register(&mut self) -> u8 {
-        let next = self.current_register;
-        self.current_register += 1;
+        let next = self.codegen_context.current_register;
+        self.codegen_context.current_register += 1;
         next
     }
 
     fn push_instruction(&mut self, instruction: Instruction, line: usize) {
-        self.chunks[self.current_chunk_pointer]
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .instructions
             .push(instruction);
-        self.chunks[self.current_chunk_pointer]
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .debug_line_info
             .push(line);
     }
 
     fn push_gc_ref_data(&mut self, gc_ref_data: GCRefData) -> u8 {
-        self.chunks[self.current_chunk_pointer]
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .gc_ref_data
             .push(gc_ref_data);
-        return (self.chunks[self.current_chunk_pointer].gc_ref_data.len() - 1)
-            .try_into()
-            .unwrap();
+        return (self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .gc_ref_data
+            .len()
+            - 1)
+        .try_into()
+        .unwrap();
     }
     fn push_constant(&mut self, constant: Object) -> u8 {
-        self.chunks[self.current_chunk_pointer]
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .constant_pool
             .push(constant);
-        return (self.chunks[self.current_chunk_pointer].constant_pool.len() - 1)
-            .try_into()
-            .unwrap();
+        return (self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .constant_pool
+            .len()
+            - 1)
+        .try_into()
+        .unwrap();
     }
 
     fn push_chunk(&mut self) {
-        self.chunks.push(Chunk {
+        self.codegen_context.chunks.push(Chunk {
             debug_line_info: vec![],
             constant_pool: vec![],
             gc_ref_data: vec![],
             instructions: vec![],
             variable_map: HashMap::new(),
         });
-        self.current_chunk_pointer += 1;
+        self.codegen_context.current_chunk_pointer += 1;
     }
 
     fn pop_chunk(&mut self) -> Chunk {
-        let c = self.chunks[self.current_chunk_pointer].clone();
-        self.chunks.pop();
-        self.current_chunk_pointer -= 1;
+        let c = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].clone();
+        self.codegen_context.chunks.pop();
+        self.codegen_context.current_chunk_pointer -= 1;
         return c;
     }
 
@@ -207,7 +205,9 @@ impl BytecodeGenerator {
     fn gen_if(&mut self, position: Position, cond: &ASTNode, body: &ASTNode) -> u8 {
         // todo
         let value_register = self.visit(cond);
-        let saved_if_ip = self.chunks[self.current_chunk_pointer].instructions.len();
+        let saved_if_ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .instructions
+            .len();
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::IF_JMP_FALSE,
@@ -219,9 +219,12 @@ impl BytecodeGenerator {
         );
         self.visit(body);
 
-        let ip = self.chunks[self.current_chunk_pointer].instructions.len();
-        self.chunks[self.current_chunk_pointer].instructions[saved_if_ip].arg_1 =
-            ip.try_into().unwrap();
+        let ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .instructions
+            .len();
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
+            [saved_if_ip]
+            .arg_1 = ip.try_into().unwrap();
 
         0
     }
@@ -272,7 +275,7 @@ impl BytecodeGenerator {
     // todo we need a map or something to map these to registers
     fn gen_variable(&mut self, pos: Position, t: &Token) -> u8 {
         // todo we assume it exists so return the map
-        let result = self.chunks[self.current_chunk_pointer]
+        let result = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .get(&t.typ);
 
@@ -283,7 +286,7 @@ impl BytecodeGenerator {
     }
 
     fn get_variable(&mut self, pos: Position, t: &Token) -> u8 {
-        let result = self.chunks[self.current_chunk_pointer]
+        let result = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .get(&t.typ);
         if let Some(v) = result {
@@ -297,7 +300,7 @@ impl BytecodeGenerator {
             Some(v) => {
                 let location = self.visit(&v);
                 // todo what happened here
-                self.chunks[self.current_chunk_pointer]
+                self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
                     .insert(var.typ.clone(), location);
                 return location;
@@ -446,7 +449,7 @@ impl BytecodeGenerator {
 
         let location = self.get_available_register();
 
-        self.chunks[self.current_chunk_pointer]
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(token.typ.clone(), location);
 
@@ -485,7 +488,7 @@ impl BytecodeGenerator {
             },
             token.pos.line.try_into().unwrap(),
         );
-        self.chunks[self.current_chunk_pointer]
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(token.typ.clone(), reg);
         // this is TERRIBLE, we need to somehow reference constants as variables

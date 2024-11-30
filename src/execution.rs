@@ -149,7 +149,7 @@ impl Heap<'_> {
     }
 }
 
-pub struct Environment<'a> {
+pub struct ExecutionContext<'a> {
     pub stack_frames: std::vec::Vec<StackFrame>,
     pub stack_frame_pointer: usize,
     pub heap: Heap<'a>,
@@ -158,13 +158,13 @@ pub struct Environment<'a> {
 pub struct ExecutionEngine<'a> {
     pub config: &'a Config,
     pub running: bool,
-    pub environment: &'a mut Environment<'a>,
+    pub environment: &'a mut ExecutionContext<'a>,
 }
 
 impl ExecutionEngine<'_> {
     pub fn new<'a>(
         config: &'a Config,
-        environment: &'a mut Environment<'a>,
+        environment: &'a mut ExecutionContext<'a>,
     ) -> ExecutionEngine<'a> {
         ExecutionEngine {
             config,

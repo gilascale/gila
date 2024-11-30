@@ -7,22 +7,34 @@ mod lex;
 mod parse;
 mod r#type;
 
+use std::collections::HashMap;
 use std::time::Instant;
 use std::{
     fs,
     io::{self, Write},
 };
 
-use codegen::BytecodeGenerator;
+use codegen::{BytecodeGenerator, Chunk, CodegenContext};
 use config::Config;
 use deepsize::DeepSizeOf;
-use execution::Environment;
+use execution::ExecutionContext;
 use execution::ExecutionEngine;
 use execution::Heap;
 
 fn repl() {
     let config = Config { max_memory: 1000 };
-    let mut environment = Environment {
+    let mut codegen_context = CodegenContext {
+        current_register: 0,
+        current_chunk_pointer: 0,
+        chunks: vec![Chunk {
+            debug_line_info: vec![],
+            constant_pool: vec![],
+            gc_ref_data: vec![],
+            instructions: vec![],
+            variable_map: HashMap::new(),
+        }],
+    };
+    let mut environment = ExecutionContext {
         stack_frame_pointer: 0,
         stack_frames: vec![],
         heap: Heap {
@@ -32,11 +44,11 @@ fn repl() {
         },
     };
 
-    let mut bytecode_generator = BytecodeGenerator::new();
+    let lexer = lex::Lexer {};
+    let mut bytecode_generator = BytecodeGenerator::new(&mut codegen_context);
     let mut exec_engine = ExecutionEngine::new(&config, &mut environment);
 
     loop {
-        let lexer = lex::Lexer {};
         let mut line = String::new();
         print!(">>");
         io::stdout().flush();
@@ -60,7 +72,18 @@ fn repl() {
 
 fn exec() {
     let config = Config { max_memory: 1000 };
-    let mut environment = Environment {
+    let mut codegen_context = CodegenContext {
+        current_register: 0,
+        current_chunk_pointer: 0,
+        chunks: vec![Chunk {
+            debug_line_info: vec![],
+            constant_pool: vec![],
+            gc_ref_data: vec![],
+            instructions: vec![],
+            variable_map: HashMap::new(),
+        }],
+    };
+    let mut environment = ExecutionContext {
         stack_frame_pointer: 0,
         stack_frames: vec![],
         heap: Heap {
@@ -83,7 +106,7 @@ fn exec() {
     // println!("{:#?}", ast);
 
     // let analyser = analyse::Analyser {};
-    let mut bytecode_generator = BytecodeGenerator::new();
+    let mut bytecode_generator = BytecodeGenerator::new(&mut codegen_context);
 
     // analyser.analyse(&ast);
     let bytecode = bytecode_generator.generate(&ast);
