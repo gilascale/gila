@@ -304,11 +304,6 @@ impl BytecodeGenerator<'_> {
         match value {
             Some(v) => {
                 let location = self.visit(&v);
-                println!(
-                    "doing define setting value {:?} to {:?}",
-                    var.typ.clone(),
-                    location
-                );
                 // todo what happened here
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map

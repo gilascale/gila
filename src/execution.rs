@@ -174,23 +174,33 @@ impl ExecutionEngine<'_> {
         }
     }
 
-    // todo rethink how we execute this bytecode for repl
-    pub fn exec(&mut self, bytecode: Chunk) -> Result<Object, RuntimeError> {
+    pub fn exec(&mut self, bytecode: Chunk, is_repl: bool) -> Result<Object, RuntimeError> {
         self.running = true;
 
-        // fixme i think this needs to differ if were in repl, in repl
-        // we don't want to zero all this stuff each time
-        self.init_startup_stack(Box::new(FnObject {
-            chunk: bytecode,
-            name: "main".to_string(),
-        }));
-        self.zero_stack();
-        self.init_constants();
+        if is_repl {
+            if self.environment.stack_frames.len() == 0 {
+                self.init_startup_stack(Box::new(FnObject {
+                    chunk: bytecode,
+                    name: "main".to_string(),
+                }));
+                self.zero_stack();
+                self.init_constants();
+            } else {
+                self.environment.stack_frames[self.environment.stack_frame_pointer]
+                    .fn_object
+                    .chunk = bytecode;
+            }
+        } else {
+            self.init_startup_stack(Box::new(FnObject {
+                chunk: bytecode,
+                name: "main".to_string(),
+            }));
+            self.zero_stack();
+            self.init_constants();
+        }
 
         let mut reg = 0;
         while self.running {
-            // fixme, the issue here is when we incrementally compile, the stack frame's
-            // reference isn't updated
             let instr = {
                 let current_frame =
                     &self.environment.stack_frames[self.environment.stack_frame_pointer];
@@ -205,8 +215,6 @@ impl ExecutionEngine<'_> {
             }
 
             reg = reg_result.unwrap();
-
-            // println!("{:#?}", self.environment.stack_frames);
 
             if self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer
