@@ -27,6 +27,7 @@ pub enum Type {
     RETURN,
     LPAREN,
     RPAREN,
+    COMMA,
     ASSIGN,
     EQUALS,
     PASS,
@@ -322,6 +323,15 @@ impl Lexer {
                         index += 2;
                     }
                 }
+                ',' => v.push(Token {
+                    typ: Type::COMMA,
+                    pos: Position {
+                        index,
+                        line,
+                        index_end: index + 1,
+                        line_end: line,
+                    },
+                }),
                 '(' => v.push(Token {
                     typ: Type::LPAREN,
                     pos: Position {

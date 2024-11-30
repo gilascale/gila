@@ -141,7 +141,7 @@ fn exec() {
 }
 
 fn main() {
-    let should_repl = true;
+    let should_repl = false;
 
     if should_repl {
         repl()

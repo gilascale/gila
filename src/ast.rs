@@ -20,7 +20,7 @@ pub enum Op {
 
 #[derive(Debug)]
 pub enum Statement {
-    CALL(Box<ASTNode>),
+    CALL(Box<ASTNode>, Vec<ASTNode>),
     ATOM(Token),
     VARIABLE(Token),
     BIN_OP(Box<ASTNode>, Box<ASTNode>, Op),

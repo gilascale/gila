@@ -180,7 +180,7 @@ impl BytecodeGenerator<'_> {
             Statement::DEFINE(var, typ, value) => self.gen_define(ast.position.clone(), var, value),
             Statement::LITERAL_NUM(n) => self.gen_literal_num(ast.position.clone(), n),
             Statement::STRING(s) => self.gen_string(ast.position.clone(), s),
-            Statement::CALL(b) => self.gen_call(ast.position.clone(), b),
+            Statement::CALL(b, args) => self.gen_call(ast.position.clone(), b),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
             Statement::NAMED_FUNCTION(t, statement) => self.gen_named_function(&t, &statement),
             Statement::NAMED_TYPE_DECL(t, decls) => self.gen_named_type(&t, &decls),

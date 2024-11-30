@@ -1,13 +1,7 @@
 
 
-
-
-
-main fn
-2
+foo fn 
+1
 end
 
-
-main()
-
-1+2
+foo(1,3)

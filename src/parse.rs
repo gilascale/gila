@@ -56,11 +56,28 @@ impl<'a> Parser<'a> {
         if !self.end() && self.tokens[self.counter].typ == Type::LPAREN {
             self.counter += 1;
             let lhs_pos = higher_precedence.position.clone();
-            let rhs_pos = self.tokens[self.counter].pos.clone();
-            self.counter += 1;
+
+            let mut args: Vec<ASTNode> = vec![];
+
+            let mut rhs_pos: Position;
+            if self.tokens[self.counter].typ != Type::RPAREN {
+                loop {
+                    args.push(self.expression());
+                    if self.tokens[self.counter].typ == Type::RPAREN {
+                        rhs_pos = self.tokens[self.counter].pos.clone();
+                        self.counter += 1;
+                        break;
+                    }
+                    // skip ,
+                    self.counter += 1;
+                }
+            } else {
+                rhs_pos = self.tokens[self.counter].pos.clone();
+                self.counter += 1;
+            }
 
             return ASTNode {
-                statement: Statement::CALL(Box::new(higher_precedence)),
+                statement: Statement::CALL(Box::new(higher_precedence), args),
                 position: lhs_pos.join(rhs_pos),
             };
         }
