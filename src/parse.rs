@@ -182,11 +182,17 @@ impl<'a> Parser<'a> {
         println!("parsed if body {:?}", body);
         let body_pos = body.position.clone();
 
+        let mut else_body: Option<Box<ASTNode>> = None;
+        if self.tokens[self.counter].typ == Type::ELSE {
+            self.counter += 1;
+            println!("parsing else body!");
+            else_body = Some(Box::new(self.statement()));
+        }
         // consume end
         self.counter += 1;
 
         ASTNode {
-            statement: Statement::IF(Box::new(condition), Box::new(body)),
+            statement: Statement::IF(Box::new(condition), Box::new(body), else_body),
             position: if_pos.join(body_pos),
         }
     }

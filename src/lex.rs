@@ -32,6 +32,7 @@ pub enum Type {
     PASS,
     FN,
     IF,
+    ELSE,
     DO,
     THEN,
     TYPE,
@@ -159,6 +160,7 @@ impl Lexer {
                         index += 1;
                     }
                 }
+
                 'f' => {
                     if chars[counter + 1] == 'n' {
                         v.push(Token {
@@ -202,6 +204,21 @@ impl Lexer {
                         });
                         counter += 2;
                         index += 2;
+                    } else if chars[counter + 1] == 'l'
+                        && chars[counter + 2] == 's'
+                        && chars[counter + 3] == 'e'
+                    {
+                        v.push(Token {
+                            typ: Type::ELSE,
+                            pos: Position {
+                                index,
+                                line,
+                                index_end: index + 4,
+                                line_end: line,
+                            },
+                        });
+                        counter += 3;
+                        index += 3;
                     }
                 }
                 'l' => {

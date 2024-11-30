@@ -33,7 +33,7 @@ pub enum Statement {
     DEFINE(Token, Option<DataType>, Option<Box<ASTNode>>),
     NAMED_FUNCTION(Token, Box<ASTNode>),
     NAMED_TYPE_DECL(Token, Vec<ASTNode>),
-    IF(Box<ASTNode>, Box<ASTNode>),
+    IF(Box<ASTNode>, Box<ASTNode>, Option<Box<ASTNode>>),
 }
 
 #[derive(Debug)]

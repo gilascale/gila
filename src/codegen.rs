@@ -177,7 +177,7 @@ impl BytecodeGenerator {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(&p),
             Statement::BLOCK(b) => self.gen_block(&b),
-            Statement::IF(cond, body) => self.gen_if(ast.position.clone(), &cond, &body),
+            Statement::IF(cond, body, else_body) => self.gen_if(ast.position.clone(), &cond, &body),
             Statement::VARIABLE(v) => self.gen_variable(ast.position.clone(), v),
             Statement::DEFINE(var, typ, value) => self.gen_define(ast.position.clone(), var, value),
             Statement::LITERAL_NUM(n) => self.gen_literal_num(ast.position.clone(), n),
