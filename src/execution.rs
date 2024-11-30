@@ -149,27 +149,27 @@ impl Heap<'_> {
     }
 }
 
-pub struct ExecutionEngine<'a> {
-    pub config: &'a Config,
-    pub running: bool,
+pub struct Environment<'a> {
     pub stack_frames: std::vec::Vec<StackFrame>,
     pub stack_frame_pointer: usize,
-    // todo we need a sort of heap
     pub heap: Heap<'a>,
 }
 
+pub struct ExecutionEngine<'a> {
+    pub config: &'a Config,
+    pub running: bool,
+    pub environment: &'a mut Environment<'a>,
+}
+
 impl ExecutionEngine<'_> {
-    pub fn new(config: &Config) -> ExecutionEngine {
+    pub fn new<'a>(
+        config: &'a Config,
+        environment: &'a mut Environment<'a>,
+    ) -> ExecutionEngine<'a> {
         ExecutionEngine {
             config,
-            stack_frame_pointer: 0,
             running: true,
-            stack_frames: vec![],
-            heap: Heap {
-                config: config,
-                live_slots: vec![],
-                dead_objects: vec![],
-            },
+            environment,
         }
     }
 
@@ -181,7 +181,8 @@ impl ExecutionEngine<'_> {
         while self.running {
             // let current_instruction = self.current_instruction().clone();
             let instr = {
-                let current_frame = &self.stack_frames[self.stack_frame_pointer];
+                let current_frame =
+                    &self.environment.stack_frames[self.environment.stack_frame_pointer];
                 &current_frame.fn_object.chunk.instructions[current_frame.instruction_pointer]
                     .clone()
             };
@@ -194,8 +195,9 @@ impl ExecutionEngine<'_> {
 
             reg = reg_result.unwrap();
 
-            if self.stack_frames[self.stack_frame_pointer].instruction_pointer
-                == self.stack_frames[self.stack_frame_pointer]
+            if self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer
+                == self.environment.stack_frames[self.environment.stack_frame_pointer]
                     .fn_object
                     .chunk
                     .instructions
@@ -206,14 +208,17 @@ impl ExecutionEngine<'_> {
         }
 
         // todo return reference
-        return Ok(self.stack_frames[self.stack_frame_pointer].stack[reg as usize].clone());
+        return Ok(
+            self.environment.stack_frames[self.environment.stack_frame_pointer].stack[reg as usize]
+                .clone(),
+        );
     }
 
     fn init_constants(&mut self) -> Result<(), RuntimeError> {
         // todo
         // for each gc ref data constant on the current chunk, put it in the heap and update the reference
 
-        let stack_frame = &mut self.stack_frames[self.stack_frame_pointer];
+        let stack_frame = &mut self.environment.stack_frames[self.environment.stack_frame_pointer];
 
         let constant_pool = &mut stack_frame.fn_object.chunk.constant_pool;
         // todo this is HORRIBLE
@@ -224,7 +229,7 @@ impl ExecutionEngine<'_> {
                 let gc_ref_data = &gc_ref_data[gc_ref.index];
 
                 // now lets heap allocate!
-                let alloc = self.heap.alloc(gc_ref_data.clone());
+                let alloc = self.environment.heap.alloc(gc_ref_data.clone());
                 match alloc {
                     Ok(_) => gc_ref.index = alloc.unwrap().index,
                     Err(e) => return Err(e),
@@ -250,43 +255,44 @@ impl ExecutionEngine<'_> {
     }
 
     fn init_startup_stack(&mut self, fn_object: Box<FnObject>) {
-        self.stack_frames.push(StackFrame {
+        self.environment.stack_frames.push(StackFrame {
             stack: vec![],
             fn_object: fn_object,
             instruction_pointer: 0,
         });
-        self.stack_frame_pointer = 0;
+        self.environment.stack_frame_pointer = 0;
     }
 
     fn push_stack_frame(&mut self, fn_object: Box<FnObject>) {
-        self.stack_frames.push(StackFrame {
+        self.environment.stack_frames.push(StackFrame {
             stack: vec![],
             fn_object: fn_object,
             instruction_pointer: 0,
         });
-        self.stack_frame_pointer += 1;
+        self.environment.stack_frame_pointer += 1;
     }
 
     fn zero_stack(&mut self) {
         // setup stack
         for _ in 0..5 {
-            self.stack_frames[self.stack_frame_pointer]
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .stack
                 .push(Object::I64(0));
         }
     }
 
     fn exec_return(&mut self, ret: &Instruction) -> Result<u8, RuntimeError> {
-        if self.stack_frames.len() == 1 {
-            println!("stack: {:#?}", self.stack_frames);
+        if self.environment.stack_frames.len() == 1 {
+            println!("stack: {:#?}", self.environment.stack_frames);
         }
 
-        self.stack_frames.pop();
-        if self.stack_frames.len() == 0 {
+        self.environment.stack_frames.pop();
+        if self.environment.stack_frames.len() == 0 {
             self.running = false;
         } else {
-            self.stack_frame_pointer -= 1;
-            self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+            self.environment.stack_frame_pointer -= 1;
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer += 1;
         }
 
         // fixme
@@ -294,30 +300,36 @@ impl ExecutionEngine<'_> {
     }
 
     fn exec_addi(&mut self, addi: &Instruction) -> Result<u8, RuntimeError> {
-        self.stack_frames[self.stack_frame_pointer].stack[addi.arg_2 as usize] =
-            Object::I64((addi.arg_0 + addi.arg_1).into());
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [addi.arg_2 as usize] = Object::I64((addi.arg_0 + addi.arg_1).into());
 
-        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
+            1;
 
         Ok(addi.arg_2)
     }
     fn exec_subi(&mut self, subi: &Instruction) -> Result<u8, RuntimeError> {
-        self.stack_frames[self.stack_frame_pointer].stack[subi.arg_2 as usize] =
-            Object::I64((subi.arg_0 - subi.arg_1).into());
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [subi.arg_2 as usize] = Object::I64((subi.arg_0 - subi.arg_1).into());
 
-        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
+            1;
 
         Ok(subi.arg_2)
     }
 
     fn exec_add(&mut self, add: &Instruction) -> Result<u8, RuntimeError> {
-        let lhs = &self.stack_frames[self.stack_frame_pointer].stack[add.arg_0 as usize];
-        let rhs = &self.stack_frames[self.stack_frame_pointer].stack[add.arg_1 as usize];
+        let lhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [add.arg_0 as usize];
+        let rhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [add.arg_1 as usize];
 
         let addition: Result<Object, RuntimeError> = lhs.add(rhs.clone());
         if let Ok(res) = addition {
-            self.stack_frames[self.stack_frame_pointer].stack[add.arg_2 as usize] = res;
-            self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+            self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                [add.arg_2 as usize] = res;
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer += 1;
 
             return Ok(add.arg_2);
         } else {
@@ -326,13 +338,14 @@ impl ExecutionEngine<'_> {
     }
 
     fn exec_call(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
-        let fn_object = &self.stack_frames[self.stack_frame_pointer].stack[call.arg_0 as usize];
+        let fn_object = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [call.arg_0 as usize];
         let gc_ref_object: &GCRef = match &fn_object {
             Object::GC_REF(r) => r,
             _ => panic!("can only call func or constructor"),
         };
 
-        let dereferenced_data = self.heap.deref(gc_ref_object);
+        let dereferenced_data = self.environment.heap.deref(gc_ref_object);
 
         match &dereferenced_data {
             GCRefData::FN(f) => {
@@ -345,6 +358,7 @@ impl ExecutionEngine<'_> {
             GCRefData::DYNAMIC_OBJECT(d) => {
                 let fields: HashMap<String, Object> = HashMap::new();
                 let gc_ref = self
+                    .environment
                     .heap
                     .alloc(GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }));
 
@@ -352,12 +366,14 @@ impl ExecutionEngine<'_> {
                     return Err(gc_ref.err().unwrap());
                 }
 
-                self.stack_frames[self.stack_frame_pointer].stack[call.arg_2 as usize] =
-                    Object::GC_REF(gc_ref.unwrap());
-                self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+                self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                    [call.arg_2 as usize] = Object::GC_REF(gc_ref.unwrap());
+                self.environment.stack_frames[self.environment.stack_frame_pointer]
+                    .instruction_pointer += 1;
             }
             _ => {
-                self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+                self.environment.stack_frames[self.environment.stack_frame_pointer]
+                    .instruction_pointer += 1;
             }
         }
 
@@ -380,7 +396,7 @@ impl ExecutionEngine<'_> {
 
         //         // todo put object on the heap
 
-        //         self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+        //         self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer += 1;
         //     }
         //     _ => panic!(),
         // }
@@ -395,36 +411,41 @@ impl ExecutionEngine<'_> {
         self.mark_and_sweep();
 
         // get the type from the stack
-        let type_object = &self.stack_frames[self.stack_frame_pointer].stack[new.arg_0 as usize];
+        let type_object = &self.environment.stack_frames[self.environment.stack_frame_pointer]
+            .stack[new.arg_0 as usize];
 
-        // self.heap.mark_and_sweep();
-        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+        // self.environment.heap.mark_and_sweep();
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
+            1;
 
         // fixme
         Ok(0)
     }
 
     fn exec_load_const(&mut self, load_const: &Instruction) -> Result<u8, RuntimeError> {
-        let const_obj = &self.stack_frames[self.stack_frame_pointer]
+        let const_obj = &self.environment.stack_frames[self.environment.stack_frame_pointer]
             .fn_object
             .chunk
             .constant_pool[load_const.arg_0 as usize];
 
-        self.stack_frames[self.stack_frame_pointer].stack[load_const.arg_2 as usize] =
-            const_obj.clone();
-        self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [load_const.arg_2 as usize] = const_obj.clone();
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
+            1;
 
         Ok(load_const.arg_2)
     }
 
     fn exec_if_jmp_false(&mut self, if_jmp_else: &Instruction) -> Result<u8, RuntimeError> {
-        let val = &self.stack_frames[self.stack_frame_pointer].stack[if_jmp_else.arg_0 as usize];
+        let val = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [if_jmp_else.arg_0 as usize];
 
         if !val.truthy() {
-            self.stack_frames[self.stack_frame_pointer].instruction_pointer =
-                if_jmp_else.arg_1 as usize
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer = if_jmp_else.arg_1 as usize
         } else {
-            self.stack_frames[self.stack_frame_pointer].instruction_pointer += 1;
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer += 1;
         }
 
         // fixme
@@ -439,7 +460,7 @@ impl ExecutionEngine<'_> {
         // // 2. sweep
 
         // // lets go through the stack first
-        // let current_frame = &self.stack_frames[self.stack_frame_pointer];
+        // let current_frame = &self.environment.stack_frames[self.environment.stack_frame_pointer];
         // for obj in current_frame.stack.iter() {
         //     match obj {
         //         _ => continue,
@@ -447,10 +468,10 @@ impl ExecutionEngine<'_> {
         //             // lets check if its reachable on the heap
         //             // todo probably have object ids?
 
-        //             if self.heap.objects.is_none() {
+        //             if self.environment.heap.objects.is_none() {
         //                 return;
         //             }
-        //             let mut next = self.heap.objects.as_ref().unwrap();
+        //             let mut next = self.environment.heap.objects.as_ref().unwrap();
         //             while true {
         //                 break;
         //                 // if next == heap_object.data
