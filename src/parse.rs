@@ -177,9 +177,7 @@ impl<'a> Parser<'a> {
         self.counter += 1;
 
         let condition = self.expression();
-        println!("parsed if condition {:?}", condition);
         let body = self.statement();
-        println!("parsed if body {:?}", body);
         let body_pos = body.position.clone();
 
         let mut else_body: Option<Box<ASTNode>> = None;
@@ -189,6 +187,8 @@ impl<'a> Parser<'a> {
             else_body = Some(Box::new(self.statement()));
         }
         // consume end
+        // fixme this needs to be done properly
+        // because right now we can't do else if
         self.counter += 1;
 
         ASTNode {

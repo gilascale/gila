@@ -127,7 +127,7 @@ pub struct GCRef {
 }
 
 impl Heap<'_> {
-    pub fn new(&mut self, gc_ref_dat: GCRefData) -> Result<GCRef, RuntimeError> {
+    pub fn alloc(&mut self, gc_ref_dat: GCRefData) -> Result<GCRef, RuntimeError> {
         if self.free_space_available_bytes() >= self.config.max_memory {
             return Err(RuntimeError::OUT_OF_MEMORY);
         }
@@ -224,7 +224,7 @@ impl ExecutionEngine<'_> {
                 let gc_ref_data = &gc_ref_data[gc_ref.index];
 
                 // now lets heap allocate!
-                let alloc = self.heap.new(gc_ref_data.clone());
+                let alloc = self.heap.alloc(gc_ref_data.clone());
                 match alloc {
                     Ok(_) => gc_ref.index = alloc.unwrap().index,
                     Err(e) => return Err(e),
@@ -346,7 +346,7 @@ impl ExecutionEngine<'_> {
                 let fields: HashMap<String, Object> = HashMap::new();
                 let gc_ref = self
                     .heap
-                    .new(GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }));
+                    .alloc(GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }));
 
                 if gc_ref.is_err() {
                     return Err(gc_ref.err().unwrap());
