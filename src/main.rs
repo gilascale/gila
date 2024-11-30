@@ -59,13 +59,17 @@ fn repl() {
             counter: 0,
         };
         let ast = parser.parse();
+        // each time this iterates, it incrementally compiles, is this what we want... probably?
         let bytecode = bytecode_generator.generate(&ast);
         let result = exec_engine.exec(bytecode);
         match result {
             Ok(o) => {
                 println!("={}", o.print());
             }
-            Err(e) => println!("encountered runtime exception {:?}", e),
+            Err(e) => {
+                println!("encountered runtime exception {:?}", e);
+                exec_engine.print_stacktrace();
+            }
         }
     }
 }
@@ -122,7 +126,10 @@ fn exec() {
         Ok(o) => {
             println!("={}", o.print());
         }
-        Err(e) => println!("encountered runtime exception {:?}", e),
+        Err(e) => {
+            println!("encountered runtime exception {:?}", e);
+            execution_engine.print_stacktrace();
+        }
     }
     let denominator = 1000_000;
     println!(
@@ -135,7 +142,7 @@ fn exec() {
 fn main() {
     let should_repl = true;
 
-    if (should_repl) {
+    if should_repl {
         repl()
     } else {
         exec();

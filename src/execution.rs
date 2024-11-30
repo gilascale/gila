@@ -29,6 +29,7 @@ impl DynamicObject {
 #[derive(DeepSizeOf, Debug, Clone)]
 pub struct FnObject {
     pub chunk: Chunk,
+    pub name: String,
 }
 
 // todo should this be Rc'd?
@@ -173,13 +174,23 @@ impl ExecutionEngine<'_> {
         }
     }
 
+    // todo rethink how we execute this bytecode for repl
     pub fn exec(&mut self, bytecode: Chunk) -> Result<Object, RuntimeError> {
-        self.init_startup_stack(Box::new(FnObject { chunk: bytecode }));
+        self.running = true;
+
+        // fixme i think this needs to differ if were in repl, in repl
+        // we don't want to zero all this stuff each time
+        self.init_startup_stack(Box::new(FnObject {
+            chunk: bytecode,
+            name: "main".to_string(),
+        }));
         self.zero_stack();
         self.init_constants();
+
         let mut reg = 0;
         while self.running {
-            // let current_instruction = self.current_instruction().clone();
+            // fixme, the issue here is when we incrementally compile, the stack frame's
+            // reference isn't updated
             let instr = {
                 let current_frame =
                     &self.environment.stack_frames[self.environment.stack_frame_pointer];
@@ -194,6 +205,8 @@ impl ExecutionEngine<'_> {
             }
 
             reg = reg_result.unwrap();
+
+            // println!("{:#?}", self.environment.stack_frames);
 
             if self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer
@@ -278,6 +291,18 @@ impl ExecutionEngine<'_> {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .stack
                 .push(Object::I64(0));
+        }
+    }
+
+    pub fn print_stacktrace(&mut self) {
+        println!("stacktrace:");
+        let mut i = 0;
+        while i <= 0 {
+            println!("--- {}", self.environment.stack_frames[i].fn_object.name);
+            if i == 0 {
+                break;
+            }
+            i -= 1;
         }
     }
 

@@ -295,10 +295,20 @@ impl BytecodeGenerator<'_> {
         panic!();
     }
 
+    // todo we need to check if the symbol exists, if it does, then do a assign not define
     fn gen_define(&mut self, pos: Position, var: &Token, value: &Option<Box<ASTNode>>) -> u8 {
+        if value.is_none() {
+            // todo definitely define, lets initialise to 'blank'
+        }
+
         match value {
             Some(v) => {
                 let location = self.visit(&v);
+                println!(
+                    "doing define setting value {:?} to {:?}",
+                    var.typ.clone(),
+                    location
+                );
                 // todo what happened here
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
@@ -438,7 +448,15 @@ impl BytecodeGenerator<'_> {
 
         let c = self.pop_chunk();
 
-        let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::FN(FnObject { chunk: c }));
+        let mut name = "anon".to_string();
+        if let Type::IDENTIFIER(i) = &token.typ {
+            name = i.to_string();
+        }
+
+        let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::FN(FnObject {
+            chunk: c,
+            name: name.to_string(),
+        }));
 
         let constant = self.push_constant(Object::GC_REF(GCRef {
             index: gc_ref_data_idx as usize,

@@ -3,5 +3,11 @@
 
 
 
-x:u32 = 1
-x = 3
+main fn
+2
+end
+
+
+main()
+
+1+2
