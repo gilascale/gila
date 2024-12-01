@@ -19,6 +19,7 @@
 - error handling
     - stack traces
     - print error locations
+- sandboxing
 
 ## Bugs
 - Can't seem to have multiple symbols in repl

@@ -99,7 +99,7 @@ fn exec() {
     };
 
     let start = Instant::now();
-    let source = fs::read_to_string("C:/Users/james/dev/gila/example/test.gila")
+    let source = fs::read_to_string("C:/Users/jking/dev/gila/example/test.gila")
         .expect("Unable to read file");
     let lexer = lex::Lexer {};
     let tokens = lexer.lex(source);
@@ -116,7 +116,7 @@ fn exec() {
     // analyser.analyse(&ast);
     let bytecode = bytecode_generator.generate(&ast);
 
-    // println!("bytecode: \n{:#?}", bytecode);
+    println!("bytecode: \n{:#?}", bytecode);
 
     let mut execution_engine = ExecutionEngine::new(&config, &mut environment);
 

@@ -180,7 +180,7 @@ impl BytecodeGenerator<'_> {
             Statement::DEFINE(var, typ, value) => self.gen_define(ast.position.clone(), var, value),
             Statement::LITERAL_NUM(n) => self.gen_literal_num(ast.position.clone(), n),
             Statement::STRING(s) => self.gen_string(ast.position.clone(), s),
-            Statement::CALL(b, args) => self.gen_call(ast.position.clone(), b),
+            Statement::CALL(b, args) => self.gen_call(ast.position.clone(), b, args),
             Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
             Statement::NAMED_FUNCTION(t, params, statement) => {
                 self.gen_named_function(&t, &params, &statement)
@@ -324,16 +324,23 @@ impl BytecodeGenerator<'_> {
         }
     }
 
-    fn gen_call(&mut self, pos: Position, callee: &Box<ASTNode>) -> u8 {
+    fn gen_call(&mut self, pos: Position, callee: &Box<ASTNode>, args: &Vec<ASTNode>) -> u8 {
         let callee_register = self.visit(&callee);
 
         // todo uhh how do we construct a tuple literally...
+
+        // todo we need to find some contiguous registers, for now just alloc
+
+        let mut arg_registers: Vec<u8> = vec![];
+        for arg in args {
+            arg_registers.push(self.visit(arg));
+        }
 
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::CALL,
                 arg_0: callee_register,
-                arg_1: 0,
+                arg_1: arg_registers[0],
                 arg_2: 0,
             },
             pos.line.try_into().unwrap(),

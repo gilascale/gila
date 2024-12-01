@@ -298,7 +298,7 @@ impl ExecutionEngine<'_> {
 
     fn zero_stack(&mut self) {
         // setup stack
-        for _ in 0..5 {
+        for _ in 0..10 {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .stack
                 .push(Object::I64(0));
@@ -390,6 +390,19 @@ impl ExecutionEngine<'_> {
                 self.push_stack_frame(Box::new(f.clone()));
                 self.zero_stack();
                 self.init_constants();
+
+                // pass the args by value
+                let starting_reg = call.arg_1;
+                let num_args = f.param_slots.len();
+
+                for i in 0..num_args {
+                    let arg_register = starting_reg as usize + i;
+                    let arg = &self.environment.stack_frames
+                        [self.environment.stack_frame_pointer - 1]
+                        .stack[arg_register];
+                    self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                        [f.param_slots[i] as usize] = arg.clone();
+                }
             }
             GCRefData::DYNAMIC_OBJECT(d) => {
                 let fields: HashMap<String, Object> = HashMap::new();

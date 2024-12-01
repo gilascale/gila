@@ -1,3 +1,5 @@
 foo fn(x,y)
-1
+x+y
 end
+
+foo(9,2)
