@@ -61,27 +61,36 @@ pub struct Token {
 }
 
 #[derive(Debug)]
-pub struct Lexer {}
+pub struct Lexer {
+    pub counter: u32,
+    pub index: u32,
+    pub line: u32,
+}
 
 impl Lexer {
-    pub fn lex(&self, source: std::string::String) -> std::vec::Vec<Token> {
+    pub fn new() -> Self {
+        return Lexer {
+            counter: 0,
+            index: 0,
+            line: 0,
+        };
+    }
+
+    pub fn lex(&mut self, source: std::string::String) -> std::vec::Vec<Token> {
         let mut v = vec![];
-        let mut counter = 0;
-        let mut index = 0;
-        let mut line = 0;
         // let mut position: Position = Position { index: 0, line: 0 };
 
         let chars: Vec<char> = source.chars().collect();
 
-        while counter < chars.len() {
-            let current = chars[counter];
+        while self.counter < chars.len().try_into().unwrap() {
+            let current = chars[self.counter as usize];
 
             if current.is_whitespace() {
                 if current == '\n' {
-                    line += 1;
-                    index = 0;
+                    self.line += 1;
+                    self.index = 0;
                 }
-                counter += 1;
+                self.counter += 1;
                 continue;
             }
 
@@ -92,10 +101,10 @@ impl Lexer {
                     v.push(Token {
                         typ: Type::AMPERSAND,
                         pos: Position {
-                            index,
-                            line,
-                            index_end: index + 1,
-                            line_end: line,
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
                         },
                     });
                 }
@@ -103,10 +112,10 @@ impl Lexer {
                     v.push(Token {
                         typ: Type::LSQUARE,
                         pos: Position {
-                            index,
-                            line,
-                            index_end: index + 1,
-                            line_end: line,
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
                         },
                     });
                 }
@@ -114,10 +123,10 @@ impl Lexer {
                     v.push(Token {
                         typ: Type::RSQUARE,
                         pos: Position {
-                            index,
-                            line,
-                            index_end: index + 1,
-                            line_end: line,
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
                         },
                     });
                 }
@@ -125,10 +134,10 @@ impl Lexer {
                     v.push(Token {
                         typ: Type::ADD,
                         pos: Position {
-                            index,
-                            line,
-                            index_end: index + 1,
-                            line_end: line,
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
                         },
                     });
                 }
@@ -136,10 +145,10 @@ impl Lexer {
                     v.push(Token {
                         typ: Type::COLON,
                         pos: Position {
-                            index,
-                            line,
-                            index_end: index + 1,
-                            line_end: line,
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
                         },
                     });
                 }
@@ -147,10 +156,10 @@ impl Lexer {
                     v.push(Token {
                         typ: Type::SUB,
                         pos: Position {
-                            index,
-                            line,
-                            index_end: index + 1,
-                            line_end: line,
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
                         },
                     });
                 }
@@ -158,10 +167,10 @@ impl Lexer {
                     v.push(Token {
                         typ: Type::MUL,
                         pos: Position {
-                            index,
-                            line,
-                            index_end: index + 1,
-                            line_end: line,
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
                         },
                     });
                 }
@@ -169,297 +178,334 @@ impl Lexer {
                     v.push(Token {
                         typ: Type::DIV,
                         pos: Position {
-                            index,
-                            line,
-                            index_end: index + 1,
-                            line_end: line,
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
                         },
                     });
                 }
                 '.' => {
-                    if chars[counter + 1] == '.' && chars[counter + 2] == '.' {
-                        counter += 2;
-                        index += 2;
+                    if chars[self.counter as usize + 1] == '.'
+                        && chars[self.counter as usize + 2] == '.'
+                    {
+                        self.counter += 2;
+                        self.index += 2;
                     }
                 }
                 'd' => {
-                    if chars[counter + 1] == 'o' {
+                    if chars[self.counter as usize + 1] == 'o' {
                         v.push(Token {
                             typ: Type::DO,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 2,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 2,
+                                line_end: self.line,
                             },
                         });
-                        counter += 1;
-                        index += 1;
+                        self.counter += 1;
+                        self.index += 1;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
 
                 'f' => {
-                    if chars[counter + 1] == 'n' {
+                    if chars[self.counter as usize + 1] == 'n' {
                         v.push(Token {
                             typ: Type::FN,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 2,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 2,
+                                line_end: self.line,
                             },
                         });
-                        counter += 1;
-                        index += 1;
+                        self.counter += 1;
+                        self.index += 1;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 'i' => {
-                    if chars[counter + 1] == 'f' {
+                    if chars[self.counter as usize + 1] == 'f' {
                         v.push(Token {
                             typ: Type::IF,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 2,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 2,
+                                line_end: self.line,
                             },
                         });
-                        counter += 1;
-                        index += 1;
+                        self.counter += 1;
+                        self.index += 1;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 'e' => {
-                    if chars[counter + 1] == 'n' && chars[counter + 2] == 'd' {
+                    if chars[self.counter as usize + 1] == 'n'
+                        && chars[self.counter as usize + 2] == 'd'
+                    {
                         v.push(Token {
                             typ: Type::END,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 3,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 3,
+                                line_end: self.line,
                             },
                         });
-                        counter += 2;
-                        index += 2;
-                    } else if chars[counter + 1] == 'l'
-                        && chars[counter + 2] == 's'
-                        && chars[counter + 3] == 'e'
+                        self.counter += 2;
+                        self.index += 2;
+                    } else if chars[self.counter as usize + 1] == 'l'
+                        && chars[self.counter as usize + 2] == 's'
+                        && chars[self.counter as usize + 3] == 'e'
                     {
                         v.push(Token {
                             typ: Type::ELSE,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 4,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 4,
+                                line_end: self.line,
                             },
                         });
-                        counter += 3;
-                        index += 3;
+                        self.counter += 3;
+                        self.index += 3;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 'l' => {
-                    if chars[counter + 1] == 'e' && chars[counter + 2] == 't' {
+                    if chars[self.counter as usize + 1] == 'e'
+                        && chars[self.counter as usize + 2] == 't'
+                    {
                         v.push(Token {
                             typ: Type::LET,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 3,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 3,
+                                line_end: self.line,
                             },
                         });
-                        counter += 2;
-                        index += 2;
+                        self.counter += 2;
+                        self.index += 2;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 't' => {
-                    if chars[counter + 1] == 'h'
-                        && chars[counter + 2] == 'e'
-                        && chars[counter + 3] == 'n'
+                    if chars[self.counter as usize + 1] == 'h'
+                        && chars[self.counter as usize + 2] == 'e'
+                        && chars[self.counter as usize + 3] == 'n'
                     {
                         v.push(Token {
                             typ: Type::THEN,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 4,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 4,
+                                line_end: self.line,
                             },
                         });
-                        counter += 3;
-                        index += 3;
-                    } else if chars[counter + 1] == 'y'
-                        && chars[counter + 2] == 'p'
-                        && chars[counter + 3] == 'e'
+                        self.counter += 3;
+                        self.index += 3;
+                    } else if chars[self.counter as usize + 1] == 'y'
+                        && chars[self.counter as usize + 2] == 'p'
+                        && chars[self.counter as usize + 3] == 'e'
                     {
                         v.push(Token {
                             typ: Type::TYPE,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 4,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 4,
+                                line_end: self.line,
                             },
                         });
-                        counter += 3;
-                        index += 3;
+                        self.counter += 3;
+                        self.index += 3;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 'p' => {
-                    if chars[counter + 1] == 'a'
-                        && chars[counter + 2] == 's'
-                        && chars[counter + 3] == 's'
+                    if chars[self.counter as usize + 1] == 'a'
+                        && chars[self.counter as usize + 2] == 's'
+                        && chars[self.counter as usize + 3] == 's'
                     {
                         v.push(Token {
                             typ: Type::PASS,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 4,
-                                line_end: line,
+                                index: self.index,
+                                line: self.index,
+                                index_end: self.index + 4,
+                                line_end: self.line,
                             },
                         });
-                        counter += 3;
-                        index += 3;
+                        self.counter += 3;
+                        self.index += 3;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 'r' => {
-                    if chars[counter + 1] == 'e'
-                        && chars[counter + 2] == 't'
-                        && chars[counter + 3] == 'u'
-                        && chars[counter + 4] == 'r'
-                        && chars[counter + 5] == 'n'
+                    if chars[self.counter as usize + 1] == 'e'
+                        && chars[self.counter as usize + 2] == 't'
+                        && chars[self.counter as usize + 3] == 'u'
+                        && chars[self.counter as usize + 4] == 'r'
+                        && chars[self.counter as usize + 5] == 'n'
                     {
                         v.push(Token {
                             typ: Type::RETURN,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 6,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 6,
+                                line_end: self.line,
                             },
                         });
-                        counter += 5;
-                        index += 5;
+                        self.counter += 5;
+                        self.index += 5;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 'u' => {
-                    if chars[counter + 1] == '3' && chars[counter + 2] == '2' {
+                    if chars[self.counter as usize + 1] == '3'
+                        && chars[self.counter as usize + 2] == '2'
+                    {
                         v.push(Token {
                             typ: Type::U32,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 3,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 3,
+                                line_end: self.line,
                             },
                         });
-                        counter += 2;
-                        index += 2;
+                        self.counter += 2;
+                        self.index += 2;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 ',' => v.push(Token {
                     typ: Type::COMMA,
                     pos: Position {
-                        index,
-                        line,
-                        index_end: index + 1,
-                        line_end: line,
+                        index: self.index,
+                        line: self.line,
+                        index_end: self.index + 1,
+                        line_end: self.line,
                     },
                 }),
                 '(' => v.push(Token {
                     typ: Type::LPAREN,
                     pos: Position {
-                        index,
-                        line,
-                        index_end: index + 1,
-                        line_end: line,
+                        index: self.index,
+                        line: self.line,
+                        index_end: self.index + 1,
+                        line_end: self.line,
                     },
                 }),
                 ')' => v.push(Token {
                     typ: Type::RPAREN,
                     pos: Position {
-                        index,
-                        line,
-                        index_end: index + 1,
-                        line_end: line,
+                        index: self.index,
+                        line: self.line,
+                        index_end: self.index + 1,
+                        line_end: self.line,
                     },
                 }),
                 '=' => {
-                    if chars[counter + 1] == '=' {
+                    if chars[self.counter as usize + 1] == '=' {
                         v.push(Token {
                             typ: Type::EQUALS,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 2,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 2,
+                                line_end: self.line,
                             },
                         });
-                        index += 1;
-                        counter += 1;
+                        self.index += 1;
+                        self.counter += 1;
                     } else {
                         v.push(Token {
                             typ: Type::ASSIGN,
                             pos: Position {
-                                index,
-                                line,
-                                index_end: index + 1,
-                                line_end: line,
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
                             },
                         })
                     }
                 }
                 '"' => {
                     // fixme deal with multiline
-                    let tmp_index = index;
+                    let tmp_index = self.index;
                     let mut s = "".to_string();
-                    index += 1;
-                    counter += 1;
+                    self.index += 1;
+                    self.counter += 1;
 
-                    while counter < chars.len() {
-                        let next = chars[counter];
+                    while self.counter < chars.len().try_into().unwrap() {
+                        let next = chars[self.counter as usize];
                         if next == '"' {
                             break;
                         };
                         s.push(next);
-                        index += 1;
-                        counter += 1;
+                        self.index += 1;
+                        self.counter += 1;
                     }
                     v.push(Token {
                         typ: Type::STRING(s.into()),
                         pos: Position {
                             index: tmp_index,
-                            line: line,
-                            index_end: index,
-                            line_end: line,
+                            line: self.line,
+                            index_end: self.index,
+                            line_end: self.line,
                         },
                     });
                 }
                 ':' => {
-                    index += 1;
-                    counter += 1;
+                    self.index += 1;
+                    self.counter += 1;
                     if current.is_alphabetic() {
-                        let tmp_index = index;
+                        let tmp_index = self.index;
                         let mut identifier = "".to_string();
-                        while counter < chars.len() {
-                            if !(chars[counter].is_alphabetic() || chars[counter] == '_') {
+                        while self.counter < chars.len().try_into().unwrap() {
+                            if !(chars[self.counter as usize].is_alphabetic()
+                                || chars[self.counter as usize] == '_')
+                            {
                                 break;
                             }
-                            let next = chars[counter];
+                            let next = chars[self.counter as usize];
                             identifier.push(next);
-                            index += 1;
-                            counter += 1;
+                            self.index += 1;
+                            self.counter += 1;
                         }
                         // identifier
                         v.push(Token {
                             typ: Type::ATOM(identifier.into()),
                             pos: Position {
                                 index: tmp_index,
-                                line,
-                                index_end: index + 1,
-                                line_end: line,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
                             },
                         });
                         continue;
@@ -467,49 +513,31 @@ impl Lexer {
                 }
                 _ => {
                     if current.is_alphabetic() {
-                        let tmp_index = index;
-                        let mut identifier = "".to_string();
-                        while counter < chars.len() {
-                            if !(chars[counter].is_alphabetic() || chars[counter] == '_') {
-                                break;
-                            }
-                            let next = chars[counter];
-                            identifier.push(next);
-                            index += 1;
-                            counter += 1;
-                        }
-                        // identifier
-                        v.push(Token {
-                            typ: Type::IDENTIFIER(identifier.into()),
-                            pos: Position {
-                                index: tmp_index,
-                                line,
-                                index_end: index + 1,
-                                line_end: line,
-                            },
-                        });
+                        self.identifier(&chars, &mut v);
                         continue;
                     }
                     if current.is_numeric() {
                         let mut identifier = "".to_string();
-                        let tmp_index = index;
-                        while counter < chars.len() {
-                            if chars[counter].is_whitespace() || !chars[counter].is_numeric() {
+                        let tmp_index = self.index;
+                        while self.counter < chars.len().try_into().unwrap() {
+                            if chars[self.counter as usize].is_whitespace()
+                                || !chars[self.counter as usize].is_numeric()
+                            {
                                 break;
                             }
-                            let next = chars[counter];
+                            let next = chars[self.counter as usize];
                             identifier.push(next);
-                            index += 1;
-                            counter += 1;
+                            self.index += 1;
+                            self.counter += 1;
                         }
                         // identifier
                         v.push(Token {
                             typ: Type::NUMBER(identifier.into()),
                             pos: Position {
                                 index: tmp_index,
-                                line,
-                                index_end: index + 1,
-                                line_end: line,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
                             },
                         });
                         continue;
@@ -517,10 +545,36 @@ impl Lexer {
                 }
             }
 
-            index += 1;
-            counter += 1;
+            self.index += 1;
+            self.counter += 1;
         }
 
         return v;
+    }
+
+    fn identifier(&mut self, chars: &Vec<char>, v: &mut Vec<Token>) {
+        let tmp_index = self.index;
+        let mut identifier = "".to_string();
+        while self.counter < chars.len().try_into().unwrap() {
+            if !(chars[self.counter as usize].is_alphabetic()
+                || chars[self.counter as usize] == '_')
+            {
+                break;
+            }
+            let next = chars[self.counter as usize];
+            identifier.push(next);
+            self.index += 1;
+            self.counter += 1;
+        }
+        // identifier
+        v.push(Token {
+            typ: Type::IDENTIFIER(identifier.into()),
+            pos: Position {
+                index: tmp_index,
+                line: self.line,
+                index_end: self.index + 1,
+                line_end: self.line,
+            },
+        });
     }
 }

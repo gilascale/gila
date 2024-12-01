@@ -152,12 +152,33 @@ impl<'a> Parser<'a> {
                 self.counter += 1;
                 let annotation = self.tokens[self.counter].clone();
                 self.counter += 1;
+
+                let mut args: Vec<Token> = vec![];
+                if self.tokens[self.counter].typ == Type::LPAREN {
+                    self.counter += 1;
+                    if self.tokens[self.counter].typ != Type::RPAREN {
+                        loop {
+                            args.push(self.tokens[self.counter].clone());
+                            self.counter += 1;
+
+                            if self.tokens[self.counter].typ == Type::RPAREN {
+                                self.counter += 1;
+                                break;
+                            }
+                            // consume ,
+                            self.counter += 1;
+                        }
+                    } else {
+                        self.counter += 1;
+                    }
+                }
+
                 // FIXME should probably do this with statements...
                 let expr = self.expression();
                 let rhs_pos = expr.position.clone();
 
                 return ASTNode {
-                    statement: Statement::ANNOTATION(annotation, Box::new(expr)),
+                    statement: Statement::ANNOTATION(annotation, args, Box::new(expr)),
                     position: lhs_pos.join(rhs_pos),
                 };
             }

@@ -28,7 +28,7 @@ fn load_prelude<'a>(
 ) {
     // todo this should work the same way an import works basically
 
-    let lexer = lex::Lexer {};
+    let mut lexer = lex::Lexer::new();
     let mut bytecode_generator = BytecodeGenerator::new(&config, codegen_context);
 
     let mut exec_engine = ExecutionEngine::new(config, execution_context);
@@ -68,7 +68,9 @@ fn repl() {
         },
     };
 
-    let lexer = lex::Lexer {};
+    load_prelude(&config, &mut codegen_context, &mut environment);
+
+    let mut lexer = lex::Lexer::new();
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
     let mut exec_engine = ExecutionEngine::new(&config, &mut environment);
 
@@ -132,13 +134,15 @@ fn exec() {
     let file_to_exec: String = args[3].to_string();
 
     let source = fs::read_to_string(file_to_exec).expect("Unable to read file");
-    let lexer = lex::Lexer {};
+    let mut lexer = lex::Lexer::new();
     let tokens = lexer.lex(source);
+    println!("tokens {:#?}", tokens);
     let mut parser = parse::Parser {
         tokens: &tokens,
         counter: 0,
     };
     let ast = parser.parse();
+    // println!("ast {:#?}", ast);
 
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 

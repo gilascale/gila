@@ -224,8 +224,6 @@ impl<'a> ExecutionEngine<'a> {
     }
 
     pub fn exec(&mut self, bytecode: Chunk, is_repl: bool) -> Result<Object, RuntimeError> {
-        println!("executing! {:#?}", bytecode);
-
         self.register_native_fn("native_print".to_string(), native_print);
         self.register_native_fn("native_open_windows".to_string(), native_open_windows);
 

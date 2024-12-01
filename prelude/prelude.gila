@@ -4,3 +4,9 @@ print fn(x)
     @native_call native_print(x)
     return 33
 end
+
+open fn(path)
+    return @native_call native_open_windows(path)
+end
+
+PLATFORM = "windows"

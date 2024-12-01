@@ -81,6 +81,7 @@ pub struct Bytecode {
 
 #[derive(Clone, PartialEq)]
 pub enum Annotation {
+    DLL_CALL(String),
     NATIVE_CALL,
 }
 
@@ -208,8 +209,8 @@ impl BytecodeGenerator<'_> {
             }
             Statement::SLICE(items) => self.gen_slice(annotation_context, &items),
             Statement::INDEX(obj, index) => self.gen_index(annotation_context, &obj, &index),
-            Statement::ANNOTATION(annotation, expr) => {
-                self.gen_annotation(annotation_context, &annotation, &expr)
+            Statement::ANNOTATION(annotation, args, expr) => {
+                self.gen_annotation(annotation_context, &annotation, &args, &expr)
             }
             Statement::RETURN(value) => self.gen_return(annotation_context, &value),
             _ => panic!(),
@@ -782,12 +783,21 @@ impl BytecodeGenerator<'_> {
         &mut self,
         mut annotation_context: AnnotationContext,
         annotation: &Token,
+        args: &Vec<Token>,
         expr: &Box<ASTNode>,
     ) -> u8 {
-        //todo hmm
         if let Type::IDENTIFIER(i) = &annotation.typ {
             match i.as_str() {
-                "native_call" => annotation_context.annotations.push(Annotation::NATIVE_CALL),
+                "native_call" => {
+                    annotation_context.annotations.push(Annotation::NATIVE_CALL);
+                }
+                "dll_call" => {
+                    if let Type::IDENTIFIER(i) = &args[0].typ {
+                        annotation_context
+                            .annotations
+                            .push(Annotation::DLL_CALL(i.to_string()));
+                    }
+                }
                 _ => panic!("unknown annotation {:?}", i),
             }
             return self.visit(annotation_context, &expr);

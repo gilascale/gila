@@ -36,7 +36,7 @@ pub enum Statement {
     NAMED_TYPE_DECL(Token, Vec<ASTNode>),
     IF(Box<ASTNode>, Box<ASTNode>, Option<Box<ASTNode>>),
     INDEX(Box<ASTNode>, Box<ASTNode>),
-    ANNOTATION(Token, Box<ASTNode>),
+    ANNOTATION(Token, Vec<Token>, Box<ASTNode>),
 }
 
 #[derive(Debug)]
