@@ -294,9 +294,11 @@ impl<'a> Parser<'a> {
     fn ret(&mut self) -> ASTNode {
         let pos = &self.tokens[self.counter].pos;
         self.counter += 1;
+        let val = self.expression();
+        let rhs_pos = val.position.clone();
         return ASTNode {
-            statement: Statement::RETURN(None),
-            position: pos.clone(),
+            statement: Statement::RETURN(Some(Box::new(val))),
+            position: pos.clone().join(rhs_pos),
         };
     }
 

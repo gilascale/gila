@@ -10,13 +10,14 @@ use crate::{
 #[derive(Debug, Clone, DeepSizeOf)]
 #[repr(u8)]
 pub enum OpInstruction {
+    // RETURN <location of values> <num values>
     RETURN = 0,
     ADD,
     // ADDI <r1> <r2> <desination>
     ADDI,
     // ADDI <i1> <i2> <desination>
     SUBI,
-    // NEW <location of fn> <args starting register> <destination>
+    // CALL <location of fn> <args starting register> <num args>
     CALL,
     // NATIVE_CALL <name of fn string> <args starting register> <num args> <destination is implicitly the register after>
     NATIVE_CALL,
@@ -31,6 +32,7 @@ pub enum OpInstruction {
     INDEX,
 }
 
+// todo put these in the enum
 // #[repr(packed(1))]
 // all instructions are 32 bit
 #[derive(Debug, Clone, DeepSizeOf)]
@@ -223,6 +225,7 @@ impl BytecodeGenerator<'_> {
             Statement::ANNOTATION(annotation, expr) => {
                 self.gen_annotation(annotation_context, &annotation, &expr)
             }
+            Statement::RETURN(value) => self.gen_return(annotation_context, &value),
             _ => panic!(),
         }
     }
@@ -785,5 +788,43 @@ impl BytecodeGenerator<'_> {
             return self.visit(annotation_context, &expr);
         }
         panic!()
+    }
+
+    fn gen_return(
+        &mut self,
+        mut annotation_context: AnnotationContext,
+        expr: &Option<Box<ASTNode>>,
+    ) -> u8 {
+        let val_register = {
+            if let Some(expr_val) = expr.as_ref() {
+                self.visit(annotation_context.clone(), &expr_val)
+            } else {
+                0
+            }
+        };
+
+        let num_vals = {
+            if expr.is_some() {
+                1
+            } else {
+                0
+            }
+        };
+
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::RETURN,
+                arg_0: val_register,
+                arg_1: num_vals,
+                arg_2: 0,
+            },
+            0,
+        );
+
+        println!(
+            "ummm {:#?}",
+            self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+        );
+        0
     }
 }

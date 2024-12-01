@@ -122,6 +122,7 @@ fn exec() {
 
     // analyser.analyse(&ast);
     let bytecode = bytecode_generator.generate(&ast);
+    println!("{:#?}", bytecode);
 
     let mut execution_engine = ExecutionEngine::new(&config, &mut environment);
 

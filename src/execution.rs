@@ -124,6 +124,8 @@ impl Object {
 
 #[derive(Debug)]
 pub struct StackFrame {
+    // the register in the previous stack to place return values
+    pub return_register: u8,
     pub instruction_pointer: usize,
     pub stack: std::vec::Vec<Object>,
     // todo this sucks
@@ -322,15 +324,17 @@ impl ExecutionEngine<'_> {
             stack: vec![],
             fn_object: fn_object,
             instruction_pointer: 0,
+            return_register: 0,
         });
         self.environment.stack_frame_pointer = 0;
     }
 
-    fn push_stack_frame(&mut self, fn_object: Box<FnObject>) {
+    fn push_stack_frame(&mut self, fn_object: Box<FnObject>, return_register: u8) {
         self.environment.stack_frames.push(StackFrame {
             stack: vec![],
             fn_object: fn_object,
             instruction_pointer: 0,
+            return_register,
         });
         self.environment.stack_frame_pointer += 1;
     }
@@ -357,9 +361,11 @@ impl ExecutionEngine<'_> {
     }
 
     fn exec_return(&mut self, ret: &Instruction) -> Result<u8, RuntimeError> {
-        if self.environment.stack_frames.len() == 1 {
-            println!("stack: {:#?}", self.environment.stack_frames);
-        }
+        let return_register =
+            self.environment.stack_frames[self.environment.stack_frame_pointer].return_register;
+        let return_val = self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [ret.arg_0 as usize]
+            .clone();
 
         self.environment.stack_frames.pop();
         if self.environment.stack_frames.len() == 0 {
@@ -368,10 +374,14 @@ impl ExecutionEngine<'_> {
             self.environment.stack_frame_pointer -= 1;
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer += 1;
+
+            if ret.arg_1 > 0 {
+                self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                    [return_register as usize] = return_val;
+            }
         }
 
-        // fixme
-        Ok(0)
+        Ok(return_register)
     }
 
     fn exec_addi(&mut self, addi: &Instruction) -> Result<u8, RuntimeError> {
@@ -424,9 +434,16 @@ impl ExecutionEngine<'_> {
 
         match &dereferenced_data {
             GCRefData::FN(f) => {
+                let destination = {
+                    if call.arg_2 > 0 {
+                        call.arg_1 + call.arg_2
+                    } else {
+                        (call.arg_1 + 1).into()
+                    }
+                };
                 // fixme this sucks, we shouldn't clone functions it's so expensive
                 // fixme why is this a Box?
-                self.push_stack_frame(Box::new(f.clone()));
+                self.push_stack_frame(Box::new(f.clone()), destination);
                 self.zero_stack();
                 self.init_constants();
 

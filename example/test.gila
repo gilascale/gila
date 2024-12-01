@@ -1,6 +1,9 @@
-print fn(x)
-@native_call native_print(x)
+
+
+
+
+test fn
+    return 12
 end
 
-
-print("foo")
+test()
