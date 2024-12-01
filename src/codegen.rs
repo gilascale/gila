@@ -186,6 +186,7 @@ impl BytecodeGenerator<'_> {
                 self.gen_named_function(&t, &params, &statement)
             }
             Statement::NAMED_TYPE_DECL(t, decls) => self.gen_named_type(&t, &decls),
+            Statement::SLICE(items) => self.gen_slice(&items),
             _ => panic!(),
         }
     }
@@ -539,5 +540,9 @@ impl BytecodeGenerator<'_> {
             .insert(token.typ.clone(), reg);
         // this is TERRIBLE, we need to somehow reference constants as variables
         reg
+    }
+
+    fn gen_slice(&mut self, items: &Vec<ASTNode>) -> u8 {
+        0
     }
 }

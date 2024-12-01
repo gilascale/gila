@@ -27,6 +27,8 @@ pub enum Type {
     RETURN,
     LPAREN,
     RPAREN,
+    LSQUARE,
+    RSQUARE,
     COMMA,
     ASSIGN,
     EQUALS,
@@ -85,6 +87,28 @@ impl Lexer {
             // potential identifier?
 
             match current {
+                '[' => {
+                    v.push(Token {
+                        typ: Type::LSQUARE,
+                        pos: Position {
+                            index,
+                            line,
+                            index_end: index + 1,
+                            line_end: line,
+                        },
+                    });
+                }
+                ']' => {
+                    v.push(Token {
+                        typ: Type::RSQUARE,
+                        pos: Position {
+                            index,
+                            line,
+                            index_end: index + 1,
+                            line_end: line,
+                        },
+                    });
+                }
                 '+' => {
                     v.push(Token {
                         typ: Type::ADD,

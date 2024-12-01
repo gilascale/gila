@@ -20,6 +20,7 @@ pub enum Op {
 
 #[derive(Debug)]
 pub enum Statement {
+    SLICE(Vec<ASTNode>),
     CALL(Box<ASTNode>, Vec<ASTNode>),
     ATOM(Token),
     VARIABLE(Token),

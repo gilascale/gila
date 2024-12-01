@@ -39,10 +39,16 @@ pub struct StringObject {
     pub s: Rc<String>,
 }
 
+#[derive(Debug, Clone, DeepSizeOf)]
+pub struct SliceObject {
+    pub s: Vec<Object>,
+}
+
 #[derive(DeepSizeOf, Debug, Clone)]
 pub enum GCRefData {
     FN(FnObject),
     STRING(StringObject),
+    SLICE(SliceObject),
     DYNAMIC_OBJECT(DynamicObject),
 }
 

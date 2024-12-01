@@ -104,6 +104,27 @@ impl<'a> Parser<'a> {
                     position: next.pos.clone(),
                 };
             }
+            Type::LSQUARE => {
+                let lhs_pos = self.tokens[self.counter].pos.clone();
+                self.counter += 1;
+                let mut items: Vec<ASTNode> = vec![];
+                if self.tokens[self.counter].typ != Type::RSQUARE {
+                    loop {
+                        items.push(self.expression());
+                        if self.tokens[self.counter].typ == Type::RSQUARE {
+                            break;
+                        }
+                        // loop over the ,
+                        self.counter += 1;
+                    }
+                }
+                let rhs_pos = self.tokens[self.counter].pos.clone();
+                self.counter += 1;
+                return ASTNode {
+                    statement: Statement::SLICE(items),
+                    position: lhs_pos.join(rhs_pos),
+                };
+            }
             // _ => higher_precedence,
             _ => panic!("{:?}", next),
         }
