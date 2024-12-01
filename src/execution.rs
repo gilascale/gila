@@ -193,7 +193,6 @@ fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> 
 
 fn native_open_windows(execution_context: &mut ExecutionContext, args: Vec<Object>) -> Object {
     if let Object::GC_REF(gc_ref) = &args[0] {
-        println!("{:?}", execution_context.heap.deref(&gc_ref));
         if let GCRefData::STRING(s) = execution_context.heap.deref(&gc_ref) {
             let file = File::open(s.s.to_string());
             if let Ok(file) = file {
