@@ -496,8 +496,16 @@ impl ExecutionEngine<'_> {
 
                 let result = native_fn(self.environment, args);
 
+                let destination = {
+                    if instr.arg_2 > 0 {
+                        instr.arg_1 as usize + instr.arg_2 as usize
+                    } else {
+                        (instr.arg_1 + 1).into()
+                    }
+                };
+
                 self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                    [instr.arg_1 as usize + instr.arg_2 as usize] = result.clone();
+                    [destination] = result.clone();
 
                 return Ok(instr.arg_2 + instr.arg_2);
             }

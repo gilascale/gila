@@ -434,15 +434,32 @@ impl BytecodeGenerator<'_> {
                         arg_registers.push(self.visit(annotation_context.clone(), arg));
                     }
 
+                    let first_arg_register = {
+                        if arg_registers.len() > 0 {
+                            arg_registers[0]
+                        } else {
+                            self.get_available_register()
+                        }
+                    };
+
                     // increment one as we allocate end for the return
                     self.codegen_context.current_register += 1;
-                    let destination = arg_registers[arg_registers.len() - 1] + 1;
+                    // figure out where to put the result
+                    let destination: u8 = {
+                        if arg_registers.len() > 0 {
+                            arg_registers[0] + arg_registers.len() as u8
+                        } else {
+                            // todo
+                            // if we don't have any args, then allocate space for a register
+                            self.get_available_register()
+                        }
+                    };
 
                     self.push_instruction(
                         Instruction {
                             op_instruction: OpInstruction::NATIVE_CALL,
                             arg_0: name_reg,
-                            arg_1: arg_registers[0],
+                            arg_1: first_arg_register,
                             arg_2: arg_registers.len() as u8,
                         },
                         0,
@@ -467,21 +484,38 @@ impl BytecodeGenerator<'_> {
                 arg_registers.push(self.visit(annotation_context.clone(), arg));
             }
 
+            let first_arg_register = {
+                if arg_registers.len() > 0 {
+                    arg_registers[0]
+                } else {
+                    self.get_available_register()
+                }
+            };
+
             // increment one as we allocate end for the return
             self.codegen_context.current_register += 1;
-            let destination = arg_registers[arg_registers.len() - 1] + 1;
+            // figure out where to put the result
+            let destination: u8 = {
+                if arg_registers.len() > 0 {
+                    arg_registers[0] + arg_registers.len() as u8
+                } else {
+                    // todo
+                    // if we don't have any args, then allocate space for a register
+                    self.get_available_register()
+                }
+            };
 
             self.push_instruction(
                 Instruction {
                     op_instruction: OpInstruction::CALL,
                     arg_0: callee_register,
-                    arg_1: arg_registers[0],
+                    arg_1: first_arg_register,
                     arg_2: arg_registers.len() as u8,
                 },
                 pos.line.try_into().unwrap(),
             );
 
-            return destination;
+            return destination.try_into().unwrap();
         }
 
         0

@@ -1,6 +1,5 @@
 
 
+x = @native_call native_print("foo")
 
-
-x = @native_call native_print("hello, world")
-x+3
+x+2
