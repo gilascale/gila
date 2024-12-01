@@ -1,17 +1,7 @@
 
 
+print fn(x)
+    @native_call native_print(x)
+end
 
-
-
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
-@native_call native_print(12)
+print(12)

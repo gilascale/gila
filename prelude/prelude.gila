@@ -1,3 +1,6 @@
-Type type
-    fields: map<string,type>
+print fn(x)
+    @native_call native_print(x)
 end
+
+
+print("hi")

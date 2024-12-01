@@ -158,7 +158,7 @@ impl Heap<'_> {
     }
 }
 
-type NativeFn = fn(Object) -> Object;
+type NativeFn = fn(Vec<Object>) -> Object;
 
 pub struct ExecutionContext<'a> {
     pub stack_frames: std::vec::Vec<StackFrame>,
@@ -167,9 +167,9 @@ pub struct ExecutionContext<'a> {
     pub native_fns: HashMap<String, NativeFn>,
 }
 
-fn native_print(obj: Object) -> Object {
-    println!("{}", obj.print());
-    return obj;
+fn native_print(args: Vec<Object>) -> Object {
+    println!("{}", args[0].print());
+    return Object::I64(0);
 }
 
 pub struct ExecutionEngine<'a> {
@@ -417,15 +417,15 @@ impl ExecutionEngine<'_> {
 
                 // pass the args by value
                 let starting_reg = call.arg_1;
-                let num_args = f.param_slots.len();
+                let num_args = call.arg_2;
 
                 for i in 0..num_args {
-                    let arg_register = starting_reg as usize + i;
+                    let arg_register = starting_reg as usize + i as usize;
                     let arg = &self.environment.stack_frames
                         [self.environment.stack_frame_pointer - 1]
                         .stack[arg_register];
                     self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                        [f.param_slots[i] as usize] = arg.clone();
+                        [f.param_slots[i as usize] as usize] = arg.clone();
                 }
             }
             GCRefData::DYNAMIC_OBJECT(d) => {
@@ -491,10 +491,20 @@ impl ExecutionEngine<'_> {
             if let GCRefData::STRING(s) = name_obj {
                 let ss = s.s.to_string();
                 let native_fn = &self.environment.native_fns[&ss];
-                let result = native_fn(Object::I64(0));
+
+                let mut args: Vec<Object> = vec![];
+                for i in instr.arg_1..instr.arg_2 {
+                    args.push(
+                        self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                            [i as usize]
+                            .clone(),
+                    );
+                }
+
+                let result = native_fn(args);
 
                 self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                    [instr.arg_2 as usize] = result.clone();
+                    [instr.arg_1 as usize + instr.arg_2 as usize] = result.clone();
 
                 return Ok(instr.arg_2);
             }

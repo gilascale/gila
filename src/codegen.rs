@@ -18,7 +18,7 @@ pub enum OpInstruction {
     SUBI,
     // NEW <location of fn> <args starting register> <destination>
     CALL,
-    // NATIVE_CALL <name of fn string> <args starting register> <destination>
+    // NATIVE_CALL <name of fn string> <args starting register> <num args> <destination is implicitly the register after>
     NATIVE_CALL,
     // NEW <location of type> <args starting register> <number of args>
     NEW,
@@ -428,17 +428,25 @@ impl BytecodeGenerator<'_> {
                         0,
                     );
 
-                    let result = self.get_available_register();
+                    let mut arg_registers: Vec<u8> = vec![];
+                    for arg in args {
+                        arg_registers.push(self.visit(annotation_context.clone(), arg));
+                    }
+
+                    // increment one as we allocate end for the return
+                    self.codegen_context.current_register += 1;
+                    let destination = arg_registers[arg_registers.len() - 1] + 1;
+
                     self.push_instruction(
                         Instruction {
                             op_instruction: OpInstruction::NATIVE_CALL,
                             arg_0: name_reg,
-                            arg_1: 0,
-                            arg_2: result,
+                            arg_1: arg_registers[0],
+                            arg_2: arg_registers.len() as u8,
                         },
                         0,
                     );
-                    return result;
+                    return destination;
                 }
             }
 
@@ -458,15 +466,21 @@ impl BytecodeGenerator<'_> {
                 arg_registers.push(self.visit(annotation_context.clone(), arg));
             }
 
+            // increment one as we allocate end for the return
+            self.codegen_context.current_register += 1;
+            let destination = arg_registers[arg_registers.len() - 1] + 1;
+
             self.push_instruction(
                 Instruction {
                     op_instruction: OpInstruction::CALL,
                     arg_0: callee_register,
                     arg_1: arg_registers[0],
-                    arg_2: 0,
+                    arg_2: arg_registers.len() as u8,
                 },
                 pos.line.try_into().unwrap(),
             );
+
+            return destination;
         }
 
         0

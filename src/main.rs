@@ -103,8 +103,11 @@ fn exec() {
     };
 
     let start = Instant::now();
-    let source = fs::read_to_string("C:/Users/james/dev/gila/example/test.gila")
-        .expect("Unable to read file");
+
+    let args: Vec<String> = std::env::args().collect();
+    let file_to_exec: String = args[3].to_string();
+
+    let source = fs::read_to_string(file_to_exec).expect("Unable to read file");
     let lexer = lex::Lexer {};
     let tokens = lexer.lex(source);
     let mut parser = parse::Parser {
