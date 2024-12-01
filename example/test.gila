@@ -1,5 +1,6 @@
+print fn(x)
+@native_call native_print(x)
+end
 
 
-x = @native_call native_print("foo")
-
-x+2
+print("foo")

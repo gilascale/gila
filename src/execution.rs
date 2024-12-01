@@ -183,7 +183,7 @@ fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> 
         _ => panic!(),
     };
 
-    println!("umm {}", s);
+    println!("{}", s);
     return Object::I64(0);
 }
 
