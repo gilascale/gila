@@ -552,11 +552,17 @@ impl ExecutionEngine<'_> {
             println!("indexing {:?}", obj);
 
             if let GCRefData::SLICE(s) = obj {
-                let index_val = 0;
-                self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                    [instr.arg_2 as usize] = s.s[index_val].clone();
+                // now lets get the index
+                let index_obj = &self.environment.stack_frames
+                    [self.environment.stack_frame_pointer]
+                    .stack[instr.arg_1 as usize];
+                if let Object::I64(i) = index_obj {
+                    let index_val: i64 = *i;
+                    self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                        [instr.arg_2 as usize] = s.s[index_val as usize].clone();
 
-                return Ok(instr.arg_2);
+                    return Ok(instr.arg_2);
+                }
             }
         }
 
