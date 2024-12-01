@@ -25,6 +25,8 @@ pub enum OpInstruction {
     // LOAD_CONST <constant index> <> <destination>
     LOAD_CONST,
     IF_JMP_FALSE, // IF <value> <jump to instruction> <>
+    // BUILD_SLICE <starting reg> <num args> <destination>
+    BUILD_SLICE,
 }
 
 // #[repr(packed(1))]
@@ -543,6 +545,23 @@ impl BytecodeGenerator<'_> {
     }
 
     fn gen_slice(&mut self, items: &Vec<ASTNode>) -> u8 {
-        0
+        // todo we should probably do what python does and do a BUILD_SLICE command
+
+        let mut registers: Vec<u8> = vec![];
+        for item in items {
+            registers.push(self.visit(item));
+        }
+
+        let dest = self.get_available_register();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::BUILD_SLICE,
+                arg_0: registers[0],
+                arg_1: registers.len() as u8,
+                arg_2: dest,
+            },
+            0,
+        );
+        dest
     }
 }

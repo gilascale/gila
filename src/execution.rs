@@ -1,3 +1,4 @@
+use core::slice;
 use deepsize::DeepSizeOf;
 use std::{collections::HashMap, fmt::format, rc::Rc};
 
@@ -280,6 +281,7 @@ impl ExecutionEngine<'_> {
             OpInstruction::NEW => self.exec_new(instr),
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
             OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
+            OpInstruction::BUILD_SLICE => self.exec_build_slice(instr),
             _ => panic!("unknown instruction {:?}", instr.op_instruction),
         }
     }
@@ -505,6 +507,34 @@ impl ExecutionEngine<'_> {
 
         // fixme
         Ok(0)
+    }
+
+    fn exec_build_slice(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let mut slice_objects: Vec<Object> = vec![];
+        for i in 0..instr.arg_1 {
+            slice_objects.push(
+                self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                    [instr.arg_0 as usize + i as usize]
+                    .clone(),
+            );
+        }
+
+        let slice_obj = self
+            .environment
+            .heap
+            .alloc(GCRefData::SLICE(SliceObject { s: slice_objects }));
+
+        if slice_obj.is_err() {
+            // fixme correct error
+            return Err(RuntimeError::OUT_OF_MEMORY);
+        }
+
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [instr.arg_2 as usize] = Object::GC_REF(slice_obj.unwrap());
+
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
+            1;
+        Ok(instr.arg_2)
     }
 
     fn mark_and_sweep(&mut self) {
