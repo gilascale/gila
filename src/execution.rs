@@ -520,7 +520,7 @@ impl ExecutionEngine<'_> {
                 let native_fn = &self.environment.native_fns[&ss];
 
                 let mut args: Vec<Object> = vec![];
-                for i in instr.arg_1..instr.arg_2 + 1 {
+                for i in instr.arg_1..instr.arg_1 + instr.arg_2 {
                     args.push(
                         self.environment.stack_frames[self.environment.stack_frame_pointer].stack
                             [i as usize]
