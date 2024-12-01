@@ -168,7 +168,7 @@ pub struct ExecutionContext<'a> {
 }
 
 fn native_print(obj: Object) -> Object {
-    println!("NATIVE::native_print:: {:?}", obj);
+    println!("{}", obj.print());
     return obj;
 }
 
@@ -321,8 +321,8 @@ impl ExecutionEngine<'_> {
     }
 
     fn zero_stack(&mut self) {
-        // setup stack
-        for _ in 0..10 {
+        // fixme dynamically setup stack
+        for _ in 0..255 {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .stack
                 .push(Object::I64(0));
