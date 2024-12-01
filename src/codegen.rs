@@ -1,5 +1,5 @@
 use deepsize::DeepSizeOf;
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, rc::Rc, vec};
 
 use crate::{
     ast::{ASTNode, Op, Statement},
@@ -304,27 +304,28 @@ impl BytecodeGenerator<'_> {
         s: &Token,
     ) -> u8 {
         //FIXME
-        0
-        // if let Type::STRING(str) = &s.typ {
-        //     let index = self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
-        //         data: HeapObjectData::STRING(StringObject { s: str.clone() }),
-        //         is_marked: false,
-        //     })));
+        if let Type::STRING(str) = &s.typ {
+            let gc_ref_index = self.push_gc_ref_data(GCRefData::STRING(StringObject {
+                s: Rc::new(str.to_string()),
+            }));
+            let constant = self.push_constant(Object::GC_REF(GCRef {
+                index: gc_ref_index as usize,
+                marked: false,
+            }));
 
-        //     let reg = self.get_available_register();
-        //     self.push_instruction(
-        //         Instruction {
-        //             op_instruction: OpInstruction::LOAD_CONST,
-        //             arg_0: index,
-        //             arg_1: 0,
-        //             arg_2: reg,
-        //         },
-        //         pos.line.try_into().unwrap(),
-        //     );
-
-        //     return reg;
-        // }
-        // panic!();
+            let dest = self.get_available_register();
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::LOAD_CONST,
+                    arg_0: constant,
+                    arg_1: 0,
+                    arg_2: dest,
+                },
+                0,
+            );
+            return dest;
+        }
+        panic!()
     }
 
     // todo we need a map or something to map these to registers

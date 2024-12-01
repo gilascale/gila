@@ -53,6 +53,15 @@ pub enum GCRefData {
     DYNAMIC_OBJECT(DynamicObject),
 }
 
+impl GCRefData {
+    pub fn print(&self) -> String {
+        match self {
+            Self::STRING(s) => s.s.to_string(),
+            _ => panic!(),
+        }
+    }
+}
+
 #[derive(DeepSizeOf, Debug, Clone)]
 pub enum Object {
     F64(f64),
@@ -158,7 +167,7 @@ impl Heap<'_> {
     }
 }
 
-type NativeFn = fn(Vec<Object>) -> Object;
+type NativeFn = fn(&mut ExecutionContext, Vec<Object>) -> Object;
 
 pub struct ExecutionContext<'a> {
     pub stack_frames: std::vec::Vec<StackFrame>,
@@ -167,8 +176,14 @@ pub struct ExecutionContext<'a> {
     pub native_fns: HashMap<String, NativeFn>,
 }
 
-fn native_print(args: Vec<Object>) -> Object {
-    println!("{}", args[0].print());
+fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> Object {
+    let s: String = match &args[0] {
+        Object::GC_REF(gc_ref) => execution_context.heap.deref(&gc_ref).print(),
+        Object::I64(i) => i.to_string(),
+        _ => panic!(),
+    };
+
+    println!("umm {}", s);
     return Object::I64(0);
 }
 
@@ -493,7 +508,7 @@ impl ExecutionEngine<'_> {
                 let native_fn = &self.environment.native_fns[&ss];
 
                 let mut args: Vec<Object> = vec![];
-                for i in instr.arg_1..instr.arg_2 {
+                for i in instr.arg_1..instr.arg_2 + 1 {
                     args.push(
                         self.environment.stack_frames[self.environment.stack_frame_pointer].stack
                             [i as usize]
@@ -501,7 +516,7 @@ impl ExecutionEngine<'_> {
                     );
                 }
 
-                let result = native_fn(args);
+                let result = native_fn(self.environment, args);
 
                 self.environment.stack_frames[self.environment.stack_frame_pointer].stack
                     [instr.arg_1 as usize + instr.arg_2 as usize] = result.clone();

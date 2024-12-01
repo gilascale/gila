@@ -1,7 +1,3 @@
 
 
-print fn(x)
-    @native_call native_print(x)
-end
-
-print(12)
+@native_call native_print("foooo")

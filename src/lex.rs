@@ -421,8 +421,6 @@ impl Lexer {
                     while counter < chars.len() {
                         let next = chars[counter];
                         if next == '"' {
-                            counter += 1;
-                            index += 1;
                             break;
                         };
                         s.push(next);
