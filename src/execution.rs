@@ -282,6 +282,7 @@ impl ExecutionEngine<'_> {
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
             OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
             OpInstruction::BUILD_SLICE => self.exec_build_slice(instr),
+            OpInstruction::INDEX => self.exec_index(instr),
             _ => panic!("unknown instruction {:?}", instr.op_instruction),
         }
     }
@@ -535,6 +536,31 @@ impl ExecutionEngine<'_> {
         self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
             1;
         Ok(instr.arg_2)
+    }
+
+    fn exec_index(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        // todo for now only slices can be indexed
+        let obj_to_index = self.environment.stack_frames[self.environment.stack_frame_pointer]
+            .stack[instr.arg_0 as usize]
+            .clone();
+
+        if let Object::GC_REF(gc_ref) = obj_to_index {
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer += 1;
+
+            let obj = self.environment.heap.deref(&gc_ref);
+            println!("indexing {:?}", obj);
+
+            if let GCRefData::SLICE(s) = obj {
+                let index_val = 0;
+                self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                    [instr.arg_2 as usize] = s.s[index_val].clone();
+
+                return Ok(instr.arg_2);
+            }
+        }
+
+        Err(RuntimeError::INVALID_OPERATION)
     }
 
     fn mark_and_sweep(&mut self) {

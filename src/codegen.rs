@@ -27,6 +27,8 @@ pub enum OpInstruction {
     IF_JMP_FALSE, // IF <value> <jump to instruction> <>
     // BUILD_SLICE <starting reg> <num args> <destination>
     BUILD_SLICE,
+    // INDEX <item> <index> <destination>
+    INDEX,
 }
 
 // #[repr(packed(1))]
@@ -189,6 +191,7 @@ impl BytecodeGenerator<'_> {
             }
             Statement::NAMED_TYPE_DECL(t, decls) => self.gen_named_type(&t, &decls),
             Statement::SLICE(items) => self.gen_slice(&items),
+            Statement::INDEX(obj, index) => self.gen_index(&obj, &index),
             _ => panic!(),
         }
     }
@@ -562,6 +565,24 @@ impl BytecodeGenerator<'_> {
             },
             0,
         );
+        dest
+    }
+
+    fn gen_index(&mut self, obj: &Box<ASTNode>, index: &Box<ASTNode>) -> u8 {
+        let dest = self.get_available_register();
+
+        let obj_reg = self.visit(&obj);
+        let val_reg = self.visit(&index);
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::INDEX,
+                arg_0: obj_reg,
+                arg_1: val_reg,
+                arg_2: dest,
+            },
+            0,
+        );
+
         dest
     }
 }

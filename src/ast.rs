@@ -35,6 +35,7 @@ pub enum Statement {
     NAMED_FUNCTION(Token, Vec<ASTNode>, Box<ASTNode>),
     NAMED_TYPE_DECL(Token, Vec<ASTNode>),
     IF(Box<ASTNode>, Box<ASTNode>, Option<Box<ASTNode>>),
+    INDEX(Box<ASTNode>, Box<ASTNode>),
 }
 
 #[derive(Debug)]

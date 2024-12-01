@@ -51,7 +51,7 @@ impl<'a> Parser<'a> {
     }
 
     fn call(&mut self) -> ASTNode {
-        let higher_precedence = self.single();
+        let higher_precedence = self.index();
 
         if !self.end() && self.tokens[self.counter].typ == Type::LPAREN {
             self.counter += 1;
@@ -82,6 +82,27 @@ impl<'a> Parser<'a> {
             };
         }
 
+        higher_precedence
+    }
+
+    fn index(&mut self) -> ASTNode {
+        let higher_precedence = self.single();
+        if !self.end() && self.tokens[self.counter].typ == Type::LSQUARE {
+            let lhs_pos = higher_precedence.position.clone();
+            // consume [
+            self.counter += 1;
+
+            let the_index = self.single();
+
+            let rhs_pos = self.tokens[self.counter].pos.clone();
+            // consume ]
+            self.counter += 1;
+
+            return ASTNode {
+                statement: Statement::INDEX(Box::new(higher_precedence), Box::new(the_index)),
+                position: lhs_pos.join(rhs_pos),
+            };
+        }
         higher_precedence
     }
 
