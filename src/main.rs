@@ -37,6 +37,7 @@ fn repl() {
     let mut environment = ExecutionContext {
         stack_frame_pointer: 0,
         stack_frames: vec![],
+        native_fns: HashMap::new(),
         heap: Heap {
             config: &config,
             live_slots: vec![],
@@ -93,6 +94,7 @@ fn exec() {
     let mut environment = ExecutionContext {
         stack_frame_pointer: 0,
         stack_frames: vec![],
+        native_fns: HashMap::new(),
         heap: Heap {
             config: &config,
             live_slots: vec![],

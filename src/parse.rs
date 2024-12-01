@@ -146,6 +146,21 @@ impl<'a> Parser<'a> {
                     position: lhs_pos.join(rhs_pos),
                 };
             }
+            Type::AMPERSAND => {
+                // doing annotation
+                let lhs_pos = self.tokens[self.counter].pos.clone();
+                self.counter += 1;
+                let annotation = self.tokens[self.counter].clone();
+                self.counter += 1;
+                // FIXME should probably do this with statements...
+                let expr = self.expression();
+                let rhs_pos = expr.position.clone();
+
+                return ASTNode {
+                    statement: Statement::ANNOTATION(annotation, Box::new(expr)),
+                    position: lhs_pos.join(rhs_pos),
+                };
+            }
             // _ => higher_precedence,
             _ => panic!("{:?}", next),
         }

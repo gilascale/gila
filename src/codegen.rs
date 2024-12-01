@@ -18,8 +18,8 @@ pub enum OpInstruction {
     SUBI,
     // NEW <location of fn> <args starting register> <destination>
     CALL,
-    //
-    CALL_EXTERN,
+    // NATIVE_CALL <name of fn string> <args starting register> <destination>
+    NATIVE_CALL,
     // NEW <location of type> <args starting register> <number of args>
     NEW,
     // LOAD_CONST <constant index> <> <destination>
@@ -40,6 +40,7 @@ pub struct Instruction {
     pub arg_1: u8,
     pub arg_2: u8,
 }
+
 #[derive(DeepSizeOf, Debug, Clone)]
 pub struct Chunk {
     pub instructions: std::vec::Vec<Instruction>,
@@ -72,6 +73,16 @@ impl Chunk {
 #[derive(Debug)]
 pub struct Bytecode {
     pub instructions: std::vec::Vec<Instruction>,
+}
+
+#[derive(Clone, PartialEq)]
+pub enum Annotation {
+    NATIVE_CALL,
+}
+
+#[derive(Clone)]
+pub struct AnnotationContext {
+    pub annotations: Vec<Annotation>,
 }
 
 pub struct CodegenContext {
@@ -114,7 +125,10 @@ impl BytecodeGenerator<'_> {
         //     is_marked: false,
         // })));
 
-        self.visit(ast);
+        let annotation_context = AnnotationContext {
+            annotations: vec![],
+        };
+        self.visit(annotation_context, ast);
 
         return self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].clone();
     }
@@ -175,44 +189,67 @@ impl BytecodeGenerator<'_> {
         return c;
     }
 
-    fn visit(&mut self, ast: &ASTNode) -> u8 {
+    fn visit(&mut self, annotation_context: AnnotationContext, ast: &ASTNode) -> u8 {
         match &ast.statement {
-            Statement::PROGRAM(p) => self.gen_program(&p),
-            Statement::BLOCK(b) => self.gen_block(&b),
-            Statement::IF(cond, body, else_body) => self.gen_if(ast.position.clone(), &cond, &body),
-            Statement::VARIABLE(v) => self.gen_variable(ast.position.clone(), v),
-            Statement::DEFINE(var, typ, value) => self.gen_define(ast.position.clone(), var, value),
-            Statement::LITERAL_NUM(n) => self.gen_literal_num(ast.position.clone(), n),
-            Statement::STRING(s) => self.gen_string(ast.position.clone(), s),
-            Statement::CALL(b, args) => self.gen_call(ast.position.clone(), b, args),
-            Statement::BIN_OP(e1, e2, op) => self.gen_bin_op(ast.position.clone(), &e1, &e2, &op),
-            Statement::NAMED_FUNCTION(t, params, statement) => {
-                self.gen_named_function(&t, &params, &statement)
+            Statement::PROGRAM(p) => self.gen_program(annotation_context, &p),
+            Statement::BLOCK(b) => self.gen_block(annotation_context, &b),
+            Statement::IF(cond, body, else_body) => {
+                self.gen_if(annotation_context, ast.position.clone(), &cond, &body)
             }
-            Statement::NAMED_TYPE_DECL(t, decls) => self.gen_named_type(&t, &decls),
-            Statement::SLICE(items) => self.gen_slice(&items),
-            Statement::INDEX(obj, index) => self.gen_index(&obj, &index),
+            Statement::VARIABLE(v) => {
+                self.gen_variable(annotation_context, ast.position.clone(), v)
+            }
+            Statement::DEFINE(var, typ, value) => {
+                self.gen_define(annotation_context, ast.position.clone(), var, value)
+            }
+            Statement::LITERAL_NUM(n) => {
+                self.gen_literal_num(annotation_context, ast.position.clone(), n)
+            }
+            Statement::STRING(s) => self.gen_string(annotation_context, ast.position.clone(), s),
+            Statement::CALL(b, args) => {
+                self.gen_call(annotation_context, ast.position.clone(), b, args)
+            }
+            Statement::BIN_OP(e1, e2, op) => {
+                self.gen_bin_op(annotation_context, ast.position.clone(), &e1, &e2, &op)
+            }
+            Statement::NAMED_FUNCTION(t, params, statement) => {
+                self.gen_named_function(annotation_context, &t, &params, &statement)
+            }
+            Statement::NAMED_TYPE_DECL(t, decls) => {
+                self.gen_named_type(annotation_context, &t, &decls)
+            }
+            Statement::SLICE(items) => self.gen_slice(annotation_context, &items),
+            Statement::INDEX(obj, index) => self.gen_index(annotation_context, &obj, &index),
+            Statement::ANNOTATION(annotation, expr) => {
+                self.gen_annotation(annotation_context, &annotation, &expr)
+            }
             _ => panic!(),
         }
     }
 
-    fn gen_program(&mut self, p: &Vec<ASTNode>) -> u8 {
+    fn gen_program(&mut self, annotation_context: AnnotationContext, p: &Vec<ASTNode>) -> u8 {
         for instruction in p {
-            self.visit(instruction);
+            self.visit(annotation_context.clone(), instruction);
         }
         0
     }
 
-    fn gen_block(&mut self, b: &Vec<ASTNode>) -> u8 {
+    fn gen_block(&mut self, annotation_context: AnnotationContext, b: &Vec<ASTNode>) -> u8 {
         for instruction in b {
-            self.visit(instruction);
+            self.visit(annotation_context.clone(), instruction);
         }
         0
     }
 
-    fn gen_if(&mut self, position: Position, cond: &ASTNode, body: &ASTNode) -> u8 {
+    fn gen_if(
+        &mut self,
+        annotation_context: AnnotationContext,
+        position: Position,
+        cond: &ASTNode,
+        body: &ASTNode,
+    ) -> u8 {
         // todo
-        let value_register = self.visit(cond);
+        let value_register = self.visit(annotation_context.clone(), cond);
         let saved_if_ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .instructions
             .len();
@@ -225,7 +262,7 @@ impl BytecodeGenerator<'_> {
             },
             position.line.try_into().unwrap(),
         );
-        self.visit(body);
+        self.visit(annotation_context.clone(), body);
 
         let ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .instructions
@@ -237,7 +274,12 @@ impl BytecodeGenerator<'_> {
         0
     }
 
-    fn gen_literal_num(&mut self, pos: Position, t: &Token) -> u8 {
+    fn gen_literal_num(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        t: &Token,
+    ) -> u8 {
         // so currently we just add to a new register
         if let Some(n) = self.parse_embedding_instruction_number(&t.typ) {
             let reg = self.get_available_register();
@@ -255,7 +297,12 @@ impl BytecodeGenerator<'_> {
         panic!();
     }
 
-    fn gen_string(&mut self, pos: Position, s: &Token) -> u8 {
+    fn gen_string(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        s: &Token,
+    ) -> u8 {
         //FIXME
         0
         // if let Type::STRING(str) = &s.typ {
@@ -281,7 +328,12 @@ impl BytecodeGenerator<'_> {
     }
 
     // todo we need a map or something to map these to registers
-    fn gen_variable(&mut self, pos: Position, t: &Token) -> u8 {
+    fn gen_variable(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        t: &Token,
+    ) -> u8 {
         // todo we assume it exists so return the map
         let result = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
@@ -293,7 +345,12 @@ impl BytecodeGenerator<'_> {
         panic!("{:?}", t)
     }
 
-    fn get_variable(&mut self, pos: Position, t: &Token) -> u8 {
+    fn get_variable(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        t: &Token,
+    ) -> u8 {
         let result = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .get(&t.typ);
@@ -304,14 +361,20 @@ impl BytecodeGenerator<'_> {
     }
 
     // todo we need to check if the symbol exists, if it does, then do a assign not define
-    fn gen_define(&mut self, pos: Position, var: &Token, value: &Option<Box<ASTNode>>) -> u8 {
+    fn gen_define(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        var: &Token,
+        value: &Option<Box<ASTNode>>,
+    ) -> u8 {
         if value.is_none() {
             // todo definitely define, lets initialise to 'blank'
         }
 
         match value {
             Some(v) => {
-                let location = self.visit(&v);
+                let location = self.visit(annotation_context, &v);
                 // todo what happened here
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
@@ -330,32 +393,93 @@ impl BytecodeGenerator<'_> {
         }
     }
 
-    fn gen_call(&mut self, pos: Position, callee: &Box<ASTNode>, args: &Vec<ASTNode>) -> u8 {
-        let callee_register = self.visit(&callee);
+    fn gen_call(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        callee: &Box<ASTNode>,
+        args: &Vec<ASTNode>,
+    ) -> u8 {
+        if annotation_context
+            .annotations
+            .contains(&Annotation::NATIVE_CALL)
+        {
+            if let Statement::VARIABLE(v) = &callee.statement {
+                if let Type::IDENTIFIER(i) = &v.typ {
+                    // gen string
 
-        // todo uhh how do we construct a tuple literally...
+                    let gc_ref_index =
+                        self.push_gc_ref_data(GCRefData::STRING(StringObject { s: i.clone() }));
+                    let string_object = Object::GC_REF(GCRef {
+                        index: gc_ref_index as usize,
+                        marked: false,
+                    });
 
-        // todo we need to find some contiguous registers, for now just alloc
+                    let const_index = self.push_constant(string_object);
 
-        let mut arg_registers: Vec<u8> = vec![];
-        for arg in args {
-            arg_registers.push(self.visit(arg));
+                    let name_reg = self.get_available_register();
+                    self.push_instruction(
+                        Instruction {
+                            op_instruction: OpInstruction::LOAD_CONST,
+                            arg_0: const_index,
+                            arg_1: 0,
+                            arg_2: name_reg,
+                        },
+                        0,
+                    );
+
+                    let result = self.get_available_register();
+                    self.push_instruction(
+                        Instruction {
+                            op_instruction: OpInstruction::NATIVE_CALL,
+                            arg_0: name_reg,
+                            arg_1: 0,
+                            arg_2: result,
+                        },
+                        0,
+                    );
+                    return result;
+                }
+            }
+
+            panic!();
+
+            // todo
+            // push arg
+        } else {
+            let callee_register = self.visit(annotation_context.clone(), &callee);
+
+            // todo uhh how do we construct a tuple literally...
+
+            // todo we need to find some contiguous registers, for now just alloc
+
+            let mut arg_registers: Vec<u8> = vec![];
+            for arg in args {
+                arg_registers.push(self.visit(annotation_context.clone(), arg));
+            }
+
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::CALL,
+                    arg_0: callee_register,
+                    arg_1: arg_registers[0],
+                    arg_2: 0,
+                },
+                pos.line.try_into().unwrap(),
+            );
         }
-
-        self.push_instruction(
-            Instruction {
-                op_instruction: OpInstruction::CALL,
-                arg_0: callee_register,
-                arg_1: arg_registers[0],
-                arg_2: 0,
-            },
-            pos.line.try_into().unwrap(),
-        );
 
         0
     }
 
-    fn gen_bin_op(&mut self, pos: Position, e1: &Box<ASTNode>, e2: &Box<ASTNode>, op: &Op) -> u8 {
+    fn gen_bin_op(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        e1: &Box<ASTNode>,
+        e2: &Box<ASTNode>,
+        op: &Op,
+    ) -> u8 {
         // todo only do literals & we need to deal with slot allocation
 
         // lets see if e1 and e2 can fit in registers
@@ -388,7 +512,7 @@ impl BytecodeGenerator<'_> {
         } else if let Statement::LITERAL_NUM(i1) = &e1.statement {
             // store the number in register 0
 
-            let rhs_register = self.visit(&e2);
+            let rhs_register = self.visit(annotation_context, &e2);
             let register = self.get_available_register();
 
             self.push_instruction(
@@ -416,9 +540,9 @@ impl BytecodeGenerator<'_> {
             // dealing with an identifier here so load it and perform add
 
             let register = self.get_available_register();
-            let variable_register = self.get_variable(pos, v1);
+            let variable_register = self.get_variable(annotation_context.clone(), pos, v1);
 
-            let rhs_register = self.visit(e2);
+            let rhs_register = self.visit(annotation_context.clone(), e2);
 
             self.push_instruction(
                 Instruction {
@@ -432,8 +556,8 @@ impl BytecodeGenerator<'_> {
 
             return register;
         } else {
-            let lhs_register = self.visit(&e1);
-            let rhs_register = self.visit(&e2);
+            let lhs_register = self.visit(annotation_context.clone(), &e1);
+            let rhs_register = self.visit(annotation_context.clone(), &e2);
 
             let register = self.get_available_register();
             self.push_instruction(
@@ -452,6 +576,7 @@ impl BytecodeGenerator<'_> {
 
     fn gen_named_function(
         &mut self,
+        annotation_context: AnnotationContext,
         token: &Token,
         params: &Vec<ASTNode>,
         statement: &ASTNode,
@@ -517,7 +642,12 @@ impl BytecodeGenerator<'_> {
         0
     }
 
-    fn gen_named_type(&mut self, token: &Token, decls: &Vec<ASTNode>) -> u8 {
+    fn gen_named_type(
+        &mut self,
+        annotation_context: AnnotationContext,
+        token: &Token,
+        decls: &Vec<ASTNode>,
+    ) -> u8 {
         // FIXME
         let field_definitions: HashMap<String, Object> =
             HashMap::from([("x".to_string(), Object::ATOM("u32".to_string().into()))]);
@@ -547,12 +677,12 @@ impl BytecodeGenerator<'_> {
         reg
     }
 
-    fn gen_slice(&mut self, items: &Vec<ASTNode>) -> u8 {
+    fn gen_slice(&mut self, annotation_context: AnnotationContext, items: &Vec<ASTNode>) -> u8 {
         // todo we should probably do what python does and do a BUILD_SLICE command
 
         let mut registers: Vec<u8> = vec![];
         for item in items {
-            registers.push(self.visit(item));
+            registers.push(self.visit(annotation_context.clone(), item));
         }
 
         let dest = self.get_available_register();
@@ -568,11 +698,16 @@ impl BytecodeGenerator<'_> {
         dest
     }
 
-    fn gen_index(&mut self, obj: &Box<ASTNode>, index: &Box<ASTNode>) -> u8 {
+    fn gen_index(
+        &mut self,
+        annotation_context: AnnotationContext,
+        obj: &Box<ASTNode>,
+        index: &Box<ASTNode>,
+    ) -> u8 {
         let dest = self.get_available_register();
 
-        let obj_reg = self.visit(&obj);
-        let val_reg = self.visit(&index);
+        let obj_reg = self.visit(annotation_context.clone(), &obj);
+        let val_reg = self.visit(annotation_context.clone(), &index);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::INDEX,
@@ -584,5 +719,22 @@ impl BytecodeGenerator<'_> {
         );
 
         dest
+    }
+
+    fn gen_annotation(
+        &mut self,
+        mut annotation_context: AnnotationContext,
+        annotation: &Token,
+        expr: &Box<ASTNode>,
+    ) -> u8 {
+        //todo hmm
+        if let Type::IDENTIFIER(i) = &annotation.typ {
+            match i.as_str() {
+                "native_call" => annotation_context.annotations.push(Annotation::NATIVE_CALL),
+                _ => panic!("unknown annotation {:?}", i),
+            }
+            return self.visit(annotation_context, &expr);
+        }
+        panic!()
     }
 }

@@ -1,3 +1,6 @@
-x = [88,2,3]
 
-x[1]
+
+
+
+
+@native_call native_print(12)

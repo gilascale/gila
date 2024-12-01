@@ -24,6 +24,7 @@ impl Position {
 
 #[derive(Eq, PartialEq, Debug, Clone, Hash, DeepSizeOf)]
 pub enum Type {
+    AMPERSAND,
     RETURN,
     LPAREN,
     RPAREN,
@@ -87,6 +88,17 @@ impl Lexer {
             // potential identifier?
 
             match current {
+                '@' => {
+                    v.push(Token {
+                        typ: Type::AMPERSAND,
+                        pos: Position {
+                            index,
+                            line,
+                            index_end: index + 1,
+                            line_end: line,
+                        },
+                    });
+                }
                 '[' => {
                     v.push(Token {
                         typ: Type::LSQUARE,
@@ -434,7 +446,7 @@ impl Lexer {
                         let tmp_index = index;
                         let mut identifier = "".to_string();
                         while counter < chars.len() {
-                            if !chars[counter].is_alphabetic() {
+                            if !(chars[counter].is_alphabetic() || chars[counter] == '_') {
                                 break;
                             }
                             let next = chars[counter];
@@ -460,7 +472,7 @@ impl Lexer {
                         let tmp_index = index;
                         let mut identifier = "".to_string();
                         while counter < chars.len() {
-                            if !chars[counter].is_alphabetic() {
+                            if !(chars[counter].is_alphabetic() || chars[counter] == '_') {
                                 break;
                             }
                             let next = chars[counter];

@@ -158,10 +158,18 @@ impl Heap<'_> {
     }
 }
 
+type NativeFn = fn(Object) -> Object;
+
 pub struct ExecutionContext<'a> {
     pub stack_frames: std::vec::Vec<StackFrame>,
     pub stack_frame_pointer: usize,
     pub heap: Heap<'a>,
+    pub native_fns: HashMap<String, NativeFn>,
+}
+
+fn native_print(obj: Object) -> Object {
+    println!("NATIVE::native_print:: {:?}", obj);
+    return obj;
 }
 
 pub struct ExecutionEngine<'a> {
@@ -182,7 +190,13 @@ impl ExecutionEngine<'_> {
         }
     }
 
+    pub fn register_native_fn(&mut self, name: String, native_fn: NativeFn) {
+        self.environment.native_fns.insert(name, native_fn);
+    }
+
     pub fn exec(&mut self, bytecode: Chunk, is_repl: bool) -> Result<Object, RuntimeError> {
+        self.register_native_fn("native_print".to_string(), native_print);
+
         self.running = true;
 
         if is_repl {
@@ -278,6 +292,7 @@ impl ExecutionEngine<'_> {
             OpInstruction::SUBI => self.exec_subi(instr),
             OpInstruction::ADD => self.exec_add(instr),
             OpInstruction::CALL => self.exec_call(instr),
+            OpInstruction::NATIVE_CALL => self.exec_native_call(instr),
             OpInstruction::NEW => self.exec_new(instr),
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
             OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
@@ -461,6 +476,32 @@ impl ExecutionEngine<'_> {
 
         // fixme we need a way of tracking the last register used, maybe return does this?
         Ok(0)
+    }
+
+    fn exec_native_call(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let name = self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [instr.arg_0 as usize]
+            .clone();
+        if let Object::GC_REF(gc_ref) = name {
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer += 1;
+
+            let name_obj = self.environment.heap.deref(&gc_ref);
+
+            if let GCRefData::STRING(s) = name_obj {
+                let ss = s.s.to_string();
+                let native_fn = &self.environment.native_fns[&ss];
+                let result = native_fn(Object::I64(0));
+
+                self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                    [instr.arg_2 as usize] = result.clone();
+
+                return Ok(instr.arg_2);
+            }
+        }
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
+            1;
+        return Err(RuntimeError::INVALID_OPERATION);
     }
 
     fn exec_new(&mut self, new: &Instruction) -> Result<u8, RuntimeError> {
