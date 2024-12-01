@@ -2,8 +2,10 @@
 
 
 
-test fn
+test fn(x)
+    @native_call native_print(x)
     return 12
 end
 
-test()
+test("hi")
+test("hi")

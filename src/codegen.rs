@@ -52,6 +52,7 @@ pub struct Chunk {
     pub constant_pool: std::vec::Vec<Object>,
     pub gc_ref_data: std::vec::Vec<GCRefData>,
     pub variable_map: HashMap<Type, u8>,
+    pub string_interns: HashMap<String, u8>,
 }
 
 impl Chunk {
@@ -180,6 +181,7 @@ impl BytecodeGenerator<'_> {
             gc_ref_data: vec![],
             instructions: vec![],
             variable_map: HashMap::new(),
+            string_interns: HashMap::new(),
         });
         self.codegen_context.current_chunk_pointer += 1;
     }
@@ -300,6 +302,31 @@ impl BytecodeGenerator<'_> {
         panic!();
     }
 
+    fn gen_string_constant(&mut self, s: String) -> u8 {
+        if self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .string_interns
+            .get(&s)
+            .is_some()
+        {
+            return *self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+                .string_interns
+                .get(&s)
+                .unwrap();
+        } else {
+            let gc_ref_index = self.push_gc_ref_data(GCRefData::STRING(StringObject {
+                s: Rc::new(s.to_string()),
+            }));
+            let constant_idx = self.push_constant(Object::GC_REF(GCRef {
+                index: gc_ref_index as usize,
+                marked: false,
+            }));
+            self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+                .string_interns
+                .insert(s, constant_idx);
+            return constant_idx;
+        }
+    }
+
     fn gen_string(
         &mut self,
         annotation_context: AnnotationContext,
@@ -308,13 +335,7 @@ impl BytecodeGenerator<'_> {
     ) -> u8 {
         //FIXME
         if let Type::STRING(str) = &s.typ {
-            let gc_ref_index = self.push_gc_ref_data(GCRefData::STRING(StringObject {
-                s: Rc::new(str.to_string()),
-            }));
-            let constant = self.push_constant(Object::GC_REF(GCRef {
-                index: gc_ref_index as usize,
-                marked: false,
-            }));
+            let constant = self.gen_string_constant(str.to_string());
 
             let dest = self.get_available_register();
             self.push_instruction(
@@ -821,10 +842,6 @@ impl BytecodeGenerator<'_> {
             0,
         );
 
-        println!(
-            "ummm {:#?}",
-            self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-        );
         0
     }
 }

@@ -32,6 +32,7 @@ fn repl() {
             gc_ref_data: vec![],
             instructions: vec![],
             variable_map: HashMap::new(),
+            string_interns: HashMap::new(),
         }],
     };
     let mut environment = ExecutionContext {
@@ -89,6 +90,7 @@ fn exec() {
             gc_ref_data: vec![],
             instructions: vec![],
             variable_map: HashMap::new(),
+            string_interns: HashMap::new(),
         }],
     };
     let mut environment = ExecutionContext {
@@ -122,7 +124,7 @@ fn exec() {
 
     // analyser.analyse(&ast);
     let bytecode = bytecode_generator.generate(&ast);
-    println!("{:#?}", bytecode);
+    // println!("{:#?}", bytecode);
 
     let mut execution_engine = ExecutionEngine::new(&config, &mut environment);
 
