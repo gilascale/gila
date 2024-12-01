@@ -21,6 +21,29 @@ use execution::ExecutionContext;
 use execution::ExecutionEngine;
 use execution::Heap;
 
+fn load_prelude<'a>(
+    config: &'a Config,
+    codegen_context: &mut CodegenContext,
+    execution_context: &'a mut ExecutionContext,
+) {
+    // todo this should work the same way an import works basically
+
+    let lexer = lex::Lexer {};
+    let mut bytecode_generator = BytecodeGenerator::new(&config, codegen_context);
+
+    let mut exec_engine = ExecutionEngine::new(config, execution_context);
+    let source = fs::read_to_string("C:/Users/jking/dev/gila/prelude/prelude.gila")
+        .expect("Unable to read file");
+    let tokens = lexer.lex(source);
+    let mut parser = parse::Parser {
+        tokens: &tokens,
+        counter: 0,
+    };
+    let ast = parser.parse();
+    let bytecode = bytecode_generator.generate(&ast);
+    exec_engine.exec(bytecode, false);
+}
+
 fn repl() {
     let config = Config { max_memory: 1000 };
     let mut codegen_context = CodegenContext {
@@ -40,14 +63,13 @@ fn repl() {
         stack_frames: vec![],
         native_fns: HashMap::new(),
         heap: Heap {
-            config: &config,
             live_slots: vec![],
             dead_objects: vec![],
         },
     };
 
     let lexer = lex::Lexer {};
-    let mut bytecode_generator = BytecodeGenerator::new(&mut codegen_context);
+    let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
     let mut exec_engine = ExecutionEngine::new(&config, &mut environment);
 
     loop {
@@ -78,6 +100,7 @@ fn repl() {
 }
 
 fn exec() {
+    let start = Instant::now();
     let config = Config {
         max_memory: 100_000,
     };
@@ -98,13 +121,12 @@ fn exec() {
         stack_frames: vec![],
         native_fns: HashMap::new(),
         heap: Heap {
-            config: &config,
             live_slots: vec![],
             dead_objects: vec![],
         },
     };
 
-    let start = Instant::now();
+    load_prelude(&config, &mut codegen_context, &mut environment);
 
     let args: Vec<String> = std::env::args().collect();
     let file_to_exec: String = args[3].to_string();
@@ -117,12 +139,9 @@ fn exec() {
         counter: 0,
     };
     let ast = parser.parse();
-    // println!("{:#?}", ast);
 
-    // let analyser = analyse::Analyser {};
-    let mut bytecode_generator = BytecodeGenerator::new(&mut codegen_context);
+    let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 
-    // analyser.analyse(&ast);
     let bytecode = bytecode_generator.generate(&ast);
     // println!("{:#?}", bytecode);
 

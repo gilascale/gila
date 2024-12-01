@@ -3,6 +3,7 @@ use std::{collections::HashMap, rc::Rc, vec};
 
 use crate::{
     ast::{ASTNode, Op, Statement},
+    config::Config,
     execution::{DynamicObject, FnObject, GCRef, GCRefData, Heap, Object, StringObject},
     lex::{Position, Token, Type},
 };
@@ -95,39 +96,22 @@ pub struct CodegenContext {
 }
 
 pub struct BytecodeGenerator<'a> {
+    config: &'a Config,
     codegen_context: &'a mut CodegenContext,
 }
 
 impl BytecodeGenerator<'_> {
-    pub fn new(codegen_context: &mut CodegenContext) -> BytecodeGenerator {
-        return BytecodeGenerator { codegen_context };
+    pub fn new<'a>(
+        config: &'a Config,
+        codegen_context: &'a mut CodegenContext,
+    ) -> BytecodeGenerator<'a> {
+        return BytecodeGenerator {
+            config,
+            codegen_context,
+        };
     }
 
     pub fn generate(&mut self, ast: &ASTNode) -> Chunk {
-        // let mut print_chunk = Chunk {
-        //     instructions: vec![Instruction {
-        //         op_instruction: OpInstruction::RETURN,
-        //         arg_0: 0,
-        //         arg_1: 0,
-        //         arg_2: 0,
-        //     }],
-        //     debug_line_info: vec![],
-        //     constant_pool: vec![],
-        // };
-        // self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
-        //     data: HeapObjectData::FN(FnObject { chunk: print_chunk }),
-        //     is_marked: false,
-        // })));
-
-        // todo do i want first class maps???
-        // FIXME
-        // self.push_constant(Object::HEAP_OBJECT(Box::new(HeapObject {
-        //     data: HeapObjectData::DYNAMIC_OBJECT(DynamicObject {
-        //         fields: HashMap::from([("field_definitions".to_string(), Object::I64(1))]),
-        //     }),
-        //     is_marked: false,
-        // })));
-
         let annotation_context = AnnotationContext {
             annotations: vec![],
         };

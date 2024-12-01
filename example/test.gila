@@ -1,10 +1,5 @@
 
-asdg = @native_call 
-    native_open_windows("C:/Users/jking/dev/gila/example/test.gila")
 
-print fn(x)
-    @native_call native_print(x)
-    return 5
-end
 
-print(12)
+
+print(99)

@@ -135,8 +135,7 @@ pub struct StackFrame {
 }
 
 #[derive(Debug, DeepSizeOf)]
-pub struct Heap<'a> {
-    pub config: &'a Config,
+pub struct Heap {
     // linked list of objects
     pub live_slots: Vec<GCRefData>,
     pub dead_objects: Vec<usize>,
@@ -148,9 +147,9 @@ pub struct GCRef {
     pub marked: bool,
 }
 
-impl Heap<'_> {
-    pub fn alloc(&mut self, gc_ref_dat: GCRefData) -> Result<GCRef, RuntimeError> {
-        if self.free_space_available_bytes() >= self.config.max_memory {
+impl Heap {
+    pub fn alloc(&mut self, gc_ref_dat: GCRefData, config: &Config) -> Result<GCRef, RuntimeError> {
+        if self.free_space_available_bytes() >= config.max_memory {
             return Err(RuntimeError::OUT_OF_MEMORY);
         }
 
@@ -173,10 +172,10 @@ impl Heap<'_> {
 
 type NativeFn = fn(&mut ExecutionContext, Vec<Object>) -> Object;
 
-pub struct ExecutionContext<'a> {
+pub struct ExecutionContext {
     pub stack_frames: std::vec::Vec<StackFrame>,
     pub stack_frame_pointer: usize,
-    pub heap: Heap<'a>,
+    pub heap: Heap,
     pub native_fns: HashMap<String, NativeFn>,
 }
 
@@ -208,14 +207,11 @@ fn native_open_windows(execution_context: &mut ExecutionContext, args: Vec<Objec
 pub struct ExecutionEngine<'a> {
     pub config: &'a Config,
     pub running: bool,
-    pub environment: &'a mut ExecutionContext<'a>,
+    pub environment: &'a mut ExecutionContext,
 }
 
-impl ExecutionEngine<'_> {
-    pub fn new<'a>(
-        config: &'a Config,
-        environment: &'a mut ExecutionContext<'a>,
-    ) -> ExecutionEngine<'a> {
+impl<'a> ExecutionEngine<'a> {
+    pub fn new(config: &'a Config, environment: &'a mut ExecutionContext) -> ExecutionEngine<'a> {
         ExecutionEngine {
             config,
             running: true,
@@ -228,26 +224,16 @@ impl ExecutionEngine<'_> {
     }
 
     pub fn exec(&mut self, bytecode: Chunk, is_repl: bool) -> Result<Object, RuntimeError> {
+        println!("executing! {:#?}", bytecode);
+
         self.register_native_fn("native_print".to_string(), native_print);
         self.register_native_fn("native_open_windows".to_string(), native_open_windows);
 
         self.running = true;
 
-        if is_repl {
-            if self.environment.stack_frames.len() == 0 {
-                self.init_startup_stack(Box::new(FnObject {
-                    chunk: bytecode,
-                    name: "main".to_string(),
-                    param_slots: vec![],
-                }));
-                self.zero_stack();
-                self.init_constants();
-            } else {
-                self.environment.stack_frames[self.environment.stack_frame_pointer]
-                    .fn_object
-                    .chunk = bytecode;
-            }
-        } else {
+        // todo think how do do this with preludes...
+        // if is_repl {
+        if self.environment.stack_frames.len() == 0 {
             self.init_startup_stack(Box::new(FnObject {
                 chunk: bytecode,
                 name: "main".to_string(),
@@ -255,7 +241,20 @@ impl ExecutionEngine<'_> {
             }));
             self.zero_stack();
             self.init_constants();
+        } else {
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .fn_object
+                .chunk = bytecode;
         }
+        // } else {
+        //     self.init_startup_stack(Box::new(FnObject {
+        //         chunk: bytecode,
+        //         name: "main".to_string(),
+        //         param_slots: vec![],
+        //     }));
+        //     self.zero_stack();
+        //     self.init_constants();
+        // }
 
         let mut reg = 0;
         while self.running {
@@ -283,6 +282,8 @@ impl ExecutionEngine<'_> {
                     .len()
             {
                 self.running = false;
+                self.environment.stack_frames[self.environment.stack_frame_pointer]
+                    .instruction_pointer = 0;
             }
         }
 
@@ -308,7 +309,10 @@ impl ExecutionEngine<'_> {
                 let gc_ref_data = &gc_ref_data[gc_ref.index];
 
                 // now lets heap allocate!
-                let alloc = self.environment.heap.alloc(gc_ref_data.clone());
+                let alloc = self
+                    .environment
+                    .heap
+                    .alloc(gc_ref_data.clone(), &self.config);
                 match alloc {
                     Ok(_) => gc_ref.index = alloc.unwrap().index,
                     Err(e) => return Err(e),
@@ -481,10 +485,10 @@ impl ExecutionEngine<'_> {
             }
             GCRefData::DYNAMIC_OBJECT(d) => {
                 let fields: HashMap<String, Object> = HashMap::new();
-                let gc_ref = self
-                    .environment
-                    .heap
-                    .alloc(GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }));
+                let gc_ref = self.environment.heap.alloc(
+                    GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }),
+                    &self.config,
+                );
 
                 if gc_ref.is_err() {
                     return Err(gc_ref.err().unwrap());
@@ -606,10 +610,10 @@ impl ExecutionEngine<'_> {
             );
         }
 
-        let slice_obj = self
-            .environment
-            .heap
-            .alloc(GCRefData::SLICE(SliceObject { s: slice_objects }));
+        let slice_obj = self.environment.heap.alloc(
+            GCRefData::SLICE(SliceObject { s: slice_objects }),
+            &self.config,
+        );
 
         if slice_obj.is_err() {
             // fixme correct error

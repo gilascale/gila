@@ -1,3 +1,6 @@
+
+
 print fn(x)
     @native_call native_print(x)
+    return 33
 end
