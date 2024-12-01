@@ -5,6 +5,7 @@
 
 ### Non functional features
 - parsing can 'consume' tokens and error
+- string constant duplication fixed
 
 ### Language Features
 - function args

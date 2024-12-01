@@ -442,6 +442,8 @@ impl ExecutionEngine<'_> {
                     self.environment.stack_frames[self.environment.stack_frame_pointer].stack
                         [f.param_slots[i as usize] as usize] = arg.clone();
                 }
+
+                return Ok(call.arg_1 + call.arg_2);
             }
             GCRefData::DYNAMIC_OBJECT(d) => {
                 let fields: HashMap<String, Object> = HashMap::new();
@@ -464,30 +466,6 @@ impl ExecutionEngine<'_> {
                     .instruction_pointer += 1;
             }
         }
-
-        // match &heap_object.data {
-        //     HeapObjectData::FN(fnn) => {
-        //         // fixme this sucks, we shouldn't clone functions it's so expensive
-        //         self.push_stack_frame(Box::new(fnn.clone()));
-        //         self.zero_stack();
-        //          self.init_constants();
-        //     }
-        //     HeapObjectData::DYNAMIC_OBJECT(obj) => {
-        //         println!("calling new on Vec! {:?}", obj);
-
-        //         let fields: HashMap<String, Object> = HashMap::new();
-        //         // create a new instance of this
-        //         let new_object = Object::HEAP_OBJECT(Box::new(HeapObject {
-        //             data: HeapObjectData::DYNAMIC_OBJECT(DynamicObject { fields }),
-        //             is_marked: false,
-        //         }));
-
-        //         // todo put object on the heap
-
-        //         self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer += 1;
-        //     }
-        //     _ => panic!(),
-        // }
 
         // fixme we need a way of tracking the last register used, maybe return does this?
         Ok(0)
@@ -521,7 +499,7 @@ impl ExecutionEngine<'_> {
                 self.environment.stack_frames[self.environment.stack_frame_pointer].stack
                     [instr.arg_1 as usize + instr.arg_2 as usize] = result.clone();
 
-                return Ok(instr.arg_2);
+                return Ok(instr.arg_2 + instr.arg_2);
             }
         }
         self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
