@@ -1,6 +1,8 @@
 use core::slice;
 use deepsize::DeepSizeOf;
-use std::{collections::HashMap, fmt::format, rc::Rc};
+use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
+
+use std::os::windows::io::AsRawHandle;
 
 use crate::{
     codegen::{Chunk, Instruction, OpInstruction},
@@ -189,6 +191,21 @@ fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> 
     return Object::I64(0);
 }
 
+fn native_open_windows(execution_context: &mut ExecutionContext, args: Vec<Object>) -> Object {
+    if let Object::GC_REF(gc_ref) = &args[0] {
+        println!("{:?}", execution_context.heap.deref(&gc_ref));
+        if let GCRefData::STRING(s) = execution_context.heap.deref(&gc_ref) {
+            let file = File::open(s.s.to_string());
+            if let Ok(file) = file {
+                let handle = file.as_raw_handle();
+                return Object::I64(handle as i64);
+            }
+        }
+    }
+
+    return Object::I64(0);
+}
+
 pub struct ExecutionEngine<'a> {
     pub config: &'a Config,
     pub running: bool,
@@ -213,6 +230,7 @@ impl ExecutionEngine<'_> {
 
     pub fn exec(&mut self, bytecode: Chunk, is_repl: bool) -> Result<Object, RuntimeError> {
         self.register_native_fn("native_print".to_string(), native_print);
+        self.register_native_fn("native_open_windows".to_string(), native_open_windows);
 
         self.running = true;
 

@@ -1,11 +1,4 @@
 
+x = @native_call native_open_windows("C:/Users/jking/dev/gila/example/test.gila")
 
-
-
-test fn(x)
-    @native_call native_print(x)
-    return 12
-end
-
-test("hi")
-test("hi")
+x
