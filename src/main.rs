@@ -128,7 +128,7 @@ fn exec() {
         },
     };
 
-    // load_prelude(&config, &mut codegen_context, &mut environment);
+    load_prelude(&config, &mut codegen_context, &mut environment);
 
     let args: Vec<String> = std::env::args().collect();
     let file_to_exec: String = args[3].to_string();

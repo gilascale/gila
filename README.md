@@ -4,6 +4,7 @@
 ## Todo
 
 ### Non functional features
+- loading prelude has all sorts of weird behaviour
 - instruction data is all in the enum
 - macros for fetching instructions and counters etc
 - parsing can 'consume' tokens and error

@@ -1,12 +1,13 @@
 
-print fn(x)
-    @native_call native_print(x)
-    return 0
-end
 
 
 
 
-if "james"
-    print("whoo")
-end
+
+
+x = 3
+
+print(x)
+print(PLATFORM)
+
+
