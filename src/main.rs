@@ -17,9 +17,9 @@ use std::{
 use codegen::{BytecodeGenerator, Chunk, CodegenContext};
 use config::Config;
 use deepsize::DeepSizeOf;
-use execution::ExecutionContext;
 use execution::ExecutionEngine;
 use execution::Heap;
+use execution::{ExecutionContext, Object};
 
 fn load_prelude<'a>(
     config: &'a Config,

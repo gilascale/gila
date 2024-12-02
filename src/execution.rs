@@ -1,6 +1,7 @@
 use clap::builder::Str;
 use core::slice;
 use deepsize::DeepSizeOf;
+use std::vec;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
 
 use std::os::windows::io::AsRawHandle;
@@ -82,6 +83,17 @@ impl GCRefData {
         match self {
             Self::STRING(s) => s.s.to_string(),
             Self::FN(fn_object) => format!("fn {}", fn_object.name),
+            Self::SLICE(slice) => {
+                format!(
+                    "[{}]",
+                    slice
+                        .s
+                        .iter()
+                        .map(|item| item.print())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
             _ => panic!("Cant print self {:?}", self),
         }
     }

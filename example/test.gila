@@ -4,12 +4,16 @@ print fn(x)
     return 0
 end
 
-y = 99
+y = [1,2,3]
 
 foo fn
-    print("PLATFORM")
-    print("PLATFORM")
-    print(y)
+
+    bar fn
+
+        print(y)
+    end
+
+    bar()
 end
 
 foo()
