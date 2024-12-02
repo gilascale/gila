@@ -146,7 +146,7 @@ fn exec() {
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 
     let bytecode = bytecode_generator.generate(&ast);
-    println!("{:#?}", bytecode);
+    // println!("{:#?}", bytecode);
 
     let mut execution_engine = ExecutionEngine::new(&config, &mut environment);
 

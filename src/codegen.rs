@@ -98,6 +98,7 @@ pub struct AnnotationContext {
     pub annotations: Vec<Annotation>,
 }
 
+#[derive(Debug)]
 pub struct CodegenContext {
     pub current_register: u8,
     pub current_chunk_pointer: usize,
@@ -360,6 +361,8 @@ impl BytecodeGenerator<'_> {
         if let Some(v) = result {
             return *v;
         }
+
+        println!("ffs {:#?}", self.codegen_context);
         panic!("{:?}", t)
     }
 

@@ -1,5 +1,8 @@
 
 
-if 4>3
-  print(4)
-end
+
+
+print(2)
+
+
+
