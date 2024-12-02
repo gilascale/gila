@@ -3,7 +3,7 @@ use crate::{
     r#type::DataType,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Op {
     ADD,
     SUB,

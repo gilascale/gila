@@ -2,7 +2,7 @@
 
 print fn(x)
     @native_call native_print(x)
-    return 33
+    return 0
 end
 
 open fn(path)

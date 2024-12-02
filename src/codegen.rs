@@ -550,97 +550,117 @@ impl BytecodeGenerator<'_> {
 
         // lets see if e1 and e2 can fit in registers
 
-        if let (Statement::LITERAL_NUM(i1), Statement::LITERAL_NUM(i2)) =
-            (&e1.statement, &e2.statement)
-        {
-            if let (Some(n1), Some(n2)) = (
-                self.parse_embedding_instruction_number(&i1.typ),
-                self.parse_embedding_instruction_number(&i2.typ),
-            ) {
+        if op == &Op::ADD || op == &Op::SUB {
+            if let (Statement::LITERAL_NUM(i1), Statement::LITERAL_NUM(i2)) =
+                (&e1.statement, &e2.statement)
+            {
+                if let (Some(n1), Some(n2)) = (
+                    self.parse_embedding_instruction_number(&i1.typ),
+                    self.parse_embedding_instruction_number(&i2.typ),
+                ) {
+                    let register = self.get_available_register();
+
+                    // todo check instruction type
+                    self.push_instruction(
+                        Instruction {
+                            op_instruction: match op {
+                                Op::ADD => OpInstruction::ADDI,
+                                Op::SUB => OpInstruction::SUBI,
+                                Op::MUL => todo!(),
+                                Op::DIV => todo!(),
+                                _ => panic!(),
+                            },
+                            arg_0: n1,
+                            arg_1: n2,
+                            arg_2: register,
+                        },
+                        pos.line.try_into().unwrap(),
+                    );
+                    return register;
+                }
+            } else if let Statement::LITERAL_NUM(i1) = &e1.statement {
+                // store the number in register 0
+
+                let rhs_register = self.visit(annotation_context, &e2);
                 let register = self.get_available_register();
 
                 self.push_instruction(
                     Instruction {
-                        op_instruction: match op {
-                            Op::ADD => OpInstruction::ADDI,
-                            Op::SUB => OpInstruction::SUBI,
-                            Op::MUL => todo!(),
-                            Op::DIV => todo!(),
-                            Op::EQ => OpInstruction::EQUAL,
-                            Op::NEQ => OpInstruction::NOT_EQUALS,
-                            Op::GT => OpInstruction::GREATER_THAN,
-                            Op::GE => OpInstruction::GREATER_EQUAL,
-                            Op::LT => OpInstruction::LESS_THAN,
-                            Op::LE => OpInstruction::LESS_EQUAL,
-                        },
-                        arg_0: n1,
-                        arg_1: n2,
+                        op_instruction: OpInstruction::ADDI,
+                        arg_0: 0,
+                        arg_1: self.parse_embedding_instruction_number(&i1.typ).unwrap(),
                         arg_2: register,
                     },
-                    pos.line.try_into().unwrap(),
+                    0,
                 );
+
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::ADD,
+                        arg_0: register,
+                        arg_1: rhs_register,
+                        arg_2: register,
+                    },
+                    0,
+                );
+
                 return register;
+            } else if let Statement::VARIABLE(v1) = &e1.statement {
+                // dealing with an identifier here so load it and perform add
+
+                let register = self.get_available_register();
+                let variable_register = self.get_variable(annotation_context.clone(), pos, v1);
+
+                let rhs_register = self.visit(annotation_context.clone(), e2);
+
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::ADD,
+                        arg_0: variable_register,
+                        arg_1: rhs_register,
+                        arg_2: register,
+                    },
+                    0,
+                );
+
+                return register;
+            } else {
+                let lhs_register = self.visit(annotation_context.clone(), &e1);
+                let rhs_register = self.visit(annotation_context.clone(), &e2);
+
+                let register = self.get_available_register();
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::ADD,
+                        arg_0: lhs_register,
+                        arg_1: rhs_register,
+                        arg_2: register,
+                    },
+                    0,
+                );
             }
-        } else if let Statement::LITERAL_NUM(i1) = &e1.statement {
-            // store the number in register 0
-
-            let rhs_register = self.visit(annotation_context, &e2);
-            let register = self.get_available_register();
-
-            self.push_instruction(
-                Instruction {
-                    op_instruction: OpInstruction::ADDI,
-                    arg_0: 0,
-                    arg_1: self.parse_embedding_instruction_number(&i1.typ).unwrap(),
-                    arg_2: register,
-                },
-                0,
-            );
-
-            self.push_instruction(
-                Instruction {
-                    op_instruction: OpInstruction::ADD,
-                    arg_0: register,
-                    arg_1: rhs_register,
-                    arg_2: register,
-                },
-                0,
-            );
-
-            return register;
-        } else if let Statement::VARIABLE(v1) = &e1.statement {
-            // dealing with an identifier here so load it and perform add
-
-            let register = self.get_available_register();
-            let variable_register = self.get_variable(annotation_context.clone(), pos, v1);
-
-            let rhs_register = self.visit(annotation_context.clone(), e2);
-
-            self.push_instruction(
-                Instruction {
-                    op_instruction: OpInstruction::ADD,
-                    arg_0: variable_register,
-                    arg_1: rhs_register,
-                    arg_2: register,
-                },
-                0,
-            );
-
-            return register;
         } else {
-            let lhs_register = self.visit(annotation_context.clone(), &e1);
-            let rhs_register = self.visit(annotation_context.clone(), &e2);
-
+            let lhs = self.visit(annotation_context.clone(), e1);
+            let rhs = self.visit(annotation_context.clone(), e2);
             let register = self.get_available_register();
             self.push_instruction(
                 Instruction {
-                    op_instruction: OpInstruction::ADD,
-                    arg_0: lhs_register,
-                    arg_1: rhs_register,
+                    op_instruction: match op {
+                        Op::EQ => OpInstruction::EQUAL,
+                        Op::NEQ => OpInstruction::NOT_EQUALS,
+                        Op::GT => OpInstruction::GREATER_THAN,
+                        Op::GE => OpInstruction::GREATER_EQUAL,
+                        Op::LT => OpInstruction::LESS_THAN,
+                        Op::LE => OpInstruction::LESS_EQUAL,
+                        _ => panic!(),
+                    },
+                    arg_0: lhs,
+                    arg_1: rhs,
                     arg_2: register,
                 },
-                0,
+                pos.line.try_into().unwrap(),
             );
+            return register;
         }
 
         panic!();

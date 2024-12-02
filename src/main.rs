@@ -141,6 +141,7 @@ fn exec() {
         counter: 0,
     };
     let ast = parser.parse();
+    // println!("ast {:#?}", ast);
 
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 
