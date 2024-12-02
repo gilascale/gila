@@ -254,7 +254,7 @@ impl BytecodeGenerator<'_> {
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::IF_JMP_FALSE,
-                arg_0: 0,
+                arg_0: value_register,
                 arg_1: 0,
                 arg_2: 0,
             },

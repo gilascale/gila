@@ -223,6 +223,7 @@ impl Object {
 
     pub fn truthy(&self) -> bool {
         match self {
+            Self::BOOL(b) => return *b,
             Self::F64(f) => return f > &0.0,
             Self::I64(i) => return i > &0,
             _ => panic!(),
