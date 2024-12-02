@@ -5,9 +5,9 @@
 
 
 
-x = 3
+Vec type
+    x: u32
 
-print(x)
-print(PLATFORM)
+end
 
-
+Vec()

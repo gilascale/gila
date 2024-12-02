@@ -94,6 +94,7 @@ impl GCRefData {
                         .join(", ")
                 )
             }
+            Self::DYNAMIC_OBJECT(d) => format!("{:?}", d.fields),
             _ => panic!("Cant print self {:?}", self),
         }
     }
@@ -424,6 +425,7 @@ impl<'a> ExecutionEngine<'a> {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .fn_object
                 .chunk = bytecode;
+            self.init_constants();
         }
         let mut reg = 0;
         while self.running {
