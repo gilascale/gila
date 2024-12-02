@@ -4,16 +4,9 @@ print fn(x)
     return 0
 end
 
-y = [1,2,3]
 
-foo fn
 
-    bar fn
 
-        print(y)
-    end
-
-    bar()
+if "james"
+    print("whoo")
 end
-
-foo()

@@ -236,11 +236,19 @@ impl Object {
         }
     }
 
-    pub fn truthy(&self) -> bool {
+    pub fn truthy(&self, execution_context: &ExecutionContext) -> bool {
         match self {
             Self::BOOL(b) => return *b,
             Self::F64(f) => return f > &0.0,
             Self::I64(i) => return i > &0,
+            Self::GC_REF(i) => {
+                let res = execution_context.heap.deref(i);
+                if res.is_ok() {
+                    // todo this may not be the best because if its an actual error then we need to error!
+                    return true;
+                }
+                return false;
+            }
             _ => panic!(),
         }
     }
@@ -284,7 +292,7 @@ impl Heap {
         })
     }
 
-    pub fn deref(&mut self, gc_ref: &GCRef) -> Result<GCRefData, RuntimeError> {
+    pub fn deref(&self, gc_ref: &GCRef) -> Result<GCRefData, RuntimeError> {
         if gc_ref.index >= self.live_slots.len() {
             self.dump_heap();
             return Err(RuntimeError::INVALID_GC_REF);
@@ -846,7 +854,7 @@ impl<'a> ExecutionEngine<'a> {
         let val = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [if_jmp_else.arg_0 as usize];
 
-        if !val.truthy() {
+        if !val.truthy(&self.environment) {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer = if_jmp_else.arg_1 as usize
         } else {
