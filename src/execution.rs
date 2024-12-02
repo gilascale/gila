@@ -32,6 +32,7 @@ macro_rules! increment_ip {
 #[derive(Debug)]
 pub enum RuntimeError {
     INVALID_OPERATION,
+    INVALID_GC_REF,
     OUT_OF_MEMORY,
 }
 #[derive(DeepSizeOf, Debug, Clone)]
@@ -269,8 +270,16 @@ impl Heap {
         })
     }
 
-    pub fn deref(&mut self, gc_ref: &GCRef) -> GCRefData {
-        return self.live_slots[gc_ref.index].clone();
+    pub fn deref(&mut self, gc_ref: &GCRef) -> Result<GCRefData, RuntimeError> {
+        if gc_ref.index >= self.live_slots.len() {
+            self.dump_stacks();
+            return Err(RuntimeError::INVALID_GC_REF);
+        }
+        return Ok(self.live_slots[gc_ref.index].clone());
+    }
+
+    pub fn dump_stacks(&self) {
+        println!("{:#?}", self.live_slots);
     }
 
     pub fn free_space_available_bytes(&self) -> usize {
@@ -287,9 +296,26 @@ pub struct ExecutionContext {
     pub native_fns: HashMap<String, NativeFn>,
 }
 
+impl ExecutionContext {
+    fn dump_stack_regs(&mut self) {
+        for i in 0..self.stack_frame_pointer {
+            println!("frame {} ({}):", i, self.stack_frames[i].fn_object.name);
+            println!("  {:#?}", self.stack_frames[i].stack);
+        }
+    }
+}
+
 fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> Object {
     let s: String = match &args[0] {
-        Object::GC_REF(gc_ref) => execution_context.heap.deref(&gc_ref).print(),
+        Object::GC_REF(gc_ref) => {
+            let res = execution_context.heap.deref(&gc_ref);
+            if res.is_ok() {
+                res.unwrap().print();
+            }
+            execution_context.dump_stack_regs();
+            execution_context.heap.dump_stacks();
+            panic!("tried to deref {}", gc_ref.index);
+        }
         Object::I64(i) => i.to_string(),
         Object::F64(f) => f.to_string(),
         Object::BOOL(b) => b.to_string(),
@@ -301,15 +327,15 @@ fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> 
 }
 
 fn native_open_windows(execution_context: &mut ExecutionContext, args: Vec<Object>) -> Object {
-    if let Object::GC_REF(gc_ref) = &args[0] {
-        if let GCRefData::STRING(s) = execution_context.heap.deref(&gc_ref) {
-            let file = File::open(s.s.to_string());
-            if let Ok(file) = file {
-                let handle = file.as_raw_handle();
-                return Object::I64(handle as i64);
-            }
-        }
-    }
+    // if let Object::GC_REF(gc_ref) = &args[0] {
+    //     if let GCRefData::STRING(s) = execution_context.heap.deref(&gc_ref) {
+    //         let file = File::open(s.s.to_string());
+    //         if let Ok(file) = file {
+    //             let handle = file.as_raw_handle();
+    //             return Object::I64(handle as i64);
+    //         }
+    //     }
+    // }
 
     return Object::I64(0);
 }
@@ -331,7 +357,13 @@ impl<'a> ExecutionEngine<'a> {
 
     pub fn print_object(&mut self, object: Object) -> String {
         match &object {
-            Object::GC_REF(gc_ref) => self.environment.heap.deref(&gc_ref).print(),
+            Object::GC_REF(gc_ref) => {
+                let res = self.environment.heap.deref(&gc_ref);
+                if res.is_ok() {
+                    res.unwrap().print();
+                }
+                panic!();
+            }
             Object::I64(i) => i.to_string(),
             Object::F64(f) => f.to_string(),
             Object::BOOL(b) => b.to_string(),
@@ -477,7 +509,7 @@ impl<'a> ExecutionEngine<'a> {
 
     fn zero_stack(&mut self) {
         // fixme dynamically setup stack
-        for _ in 0..15 {
+        for _ in 0..25 {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .stack
                 .push(Object::I64(0));
@@ -649,8 +681,12 @@ impl<'a> ExecutionEngine<'a> {
         };
 
         let dereferenced_data = self.environment.heap.deref(gc_ref_object);
+        if dereferenced_data.is_err() {
+            self.environment.dump_stack_regs();
+            return Err(dereferenced_data.err().unwrap());
+        }
 
-        match &dereferenced_data {
+        match &dereferenced_data.unwrap() {
             GCRefData::FN(f) => {
                 let destination = {
                     if call.arg_2 > 0 {
@@ -715,8 +751,12 @@ impl<'a> ExecutionEngine<'a> {
                 .instruction_pointer += 1;
 
             let name_obj = self.environment.heap.deref(&gc_ref);
+            if name_obj.is_err() {
+                self.environment.dump_stack_regs();
+                return Err(name_obj.err().unwrap());
+            }
 
-            if let GCRefData::STRING(s) = name_obj {
+            if let GCRefData::STRING(s) = name_obj.unwrap() {
                 let ss = s.s.to_string();
                 let native_fn = &self.environment.native_fns[&ss];
 
@@ -836,9 +876,12 @@ impl<'a> ExecutionEngine<'a> {
                 .instruction_pointer += 1;
 
             let obj = self.environment.heap.deref(&gc_ref);
-            println!("indexing {:?}", obj);
+            if obj.is_err() {
+                self.environment.dump_stack_regs();
+                return Err(obj.err().unwrap());
+            }
 
-            if let GCRefData::SLICE(s) = obj {
+            if let GCRefData::SLICE(s) = obj.unwrap() {
                 // now lets get the index
                 let index_obj = &self.environment.stack_frames
                     [self.environment.stack_frame_pointer]
@@ -857,7 +900,6 @@ impl<'a> ExecutionEngine<'a> {
     }
 
     fn exec_load_closure(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
-        println!("doing exec closure");
         let val = &self.environment.stack_frames[instr.arg_0 as usize].stack[instr.arg_1 as usize];
         stack_set!(self, instr.arg_2, val.clone());
         increment_ip!(self);

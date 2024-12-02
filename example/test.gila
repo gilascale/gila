@@ -1,9 +1,26 @@
 
+print fn(x)
+    @native_call native_print(x)
+    return 0
+end
+
+open fn(path)
+    return @native_call native_open_windows(path)
+end
+
+PLATFORM = "windows"
+
+
+
+
+
 
 x = 3
+y = 99
 
 foo fn
-    return x
+    print(PLATFORM)
+    print(y)
 end
 
 foo()

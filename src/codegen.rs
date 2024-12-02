@@ -56,6 +56,7 @@ pub struct Instruction {
 
 #[derive(DeepSizeOf, Debug, Clone)]
 pub struct Chunk {
+    pub current_register: u8,
     pub instructions: std::vec::Vec<Instruction>,
     // todo only enable this in debug mode
     pub debug_line_info: std::vec::Vec<usize>,
@@ -102,7 +103,6 @@ pub struct AnnotationContext {
 
 #[derive(Debug)]
 pub struct CodegenContext {
-    pub current_register: u8,
     pub current_chunk_pointer: usize,
     pub chunks: Vec<Chunk>,
 }
@@ -133,8 +133,10 @@ impl BytecodeGenerator<'_> {
     }
 
     fn get_available_register(&mut self) -> u8 {
-        let next = self.codegen_context.current_register;
-        self.codegen_context.current_register += 1;
+        let next = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .current_register;
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].current_register +=
+            1;
         next
     }
 
@@ -172,6 +174,7 @@ impl BytecodeGenerator<'_> {
 
     fn push_chunk(&mut self) {
         self.codegen_context.chunks.push(Chunk {
+            current_register: 0,
             debug_line_info: vec![],
             constant_pool: vec![],
             gc_ref_data: vec![],
@@ -488,7 +491,8 @@ impl BytecodeGenerator<'_> {
                     };
 
                     // increment one as we allocate end for the return
-                    self.codegen_context.current_register += 1;
+                    self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+                        .current_register += 1;
                     // figure out where to put the result
                     let destination: u8 = {
                         if arg_registers.len() > 0 {
@@ -538,7 +542,8 @@ impl BytecodeGenerator<'_> {
             };
 
             // increment one as we allocate end for the return
-            self.codegen_context.current_register += 1;
+            self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+                .current_register += 1;
             // figure out where to put the result
             let destination: u8 = {
                 if arg_registers.len() > 0 {

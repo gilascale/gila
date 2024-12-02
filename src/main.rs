@@ -47,9 +47,9 @@ fn load_prelude<'a>(
 fn repl() {
     let config = Config { max_memory: 1000 };
     let mut codegen_context = CodegenContext {
-        current_register: 0,
         current_chunk_pointer: 0,
         chunks: vec![Chunk {
+            current_register: 0,
             debug_line_info: vec![],
             constant_pool: vec![],
             gc_ref_data: vec![],
@@ -107,9 +107,9 @@ fn exec() {
         max_memory: 100_000,
     };
     let mut codegen_context = CodegenContext {
-        current_register: 0,
         current_chunk_pointer: 0,
         chunks: vec![Chunk {
+            current_register: 0,
             debug_line_info: vec![],
             constant_pool: vec![],
             gc_ref_data: vec![],
