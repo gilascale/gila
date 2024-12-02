@@ -1,6 +1,3 @@
 
 
-
-
-@dll_call("fasdg.dll") print(12)
-
+12==3

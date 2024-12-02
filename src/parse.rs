@@ -37,7 +37,7 @@ impl<'a> Parser<'a> {
 
         match current.typ {
             Type::IF => self.iff(),
-            // Type::LET => self.lett(),
+            Type::FOR => self.forr(),
             Type::RETURN => self.ret(),
             Type::IDENTIFIER(_) => self.identifier(),
             _ => self.expression(),
@@ -47,7 +47,7 @@ impl<'a> Parser<'a> {
     fn expression(&mut self) -> ASTNode {
         // let higher_prece
 
-        return self.add_sub();
+        return self.equality();
     }
 
     fn call(&mut self) -> ASTNode {
@@ -187,6 +187,83 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn equality(&mut self) -> ASTNode {
+        let higher_precedence = self.add_sub();
+
+        if !self.end() && self.tokens[self.counter].typ == Type::EQUALS {
+            self.counter += 1;
+            let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
+            return ASTNode {
+                statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::EQ),
+                position: pos,
+            };
+        } else if !self.end() && self.tokens[self.counter].typ == Type::NOT_EQUALS {
+            self.counter += 1;
+            let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
+            return ASTNode {
+                statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::NEQ),
+                position: pos,
+            };
+        } else if !self.end() && self.tokens[self.counter].typ == Type::GREATER_THAN {
+            self.counter += 1;
+            let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
+            return ASTNode {
+                statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::GT),
+                position: pos,
+            };
+        }
+        if !self.end() && self.tokens[self.counter].typ == Type::GREATER_EQ {
+            self.counter += 1;
+            let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
+            return ASTNode {
+                statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::GE),
+                position: pos,
+            };
+        }
+        if !self.end() && self.tokens[self.counter].typ == Type::LESS_THAN {
+            self.counter += 1;
+            let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
+            return ASTNode {
+                statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::LT),
+                position: pos,
+            };
+        }
+        if !self.end() && self.tokens[self.counter].typ == Type::LESS_EQ {
+            self.counter += 1;
+            let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
+            return ASTNode {
+                statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::LE),
+                position: pos,
+            };
+        }
+
+        higher_precedence
+    }
+
     fn add_sub(&mut self) -> ASTNode {
         let higher_precedence = self.mul_div();
         if !self.end() && self.tokens[self.counter].typ == Type::ADD {
@@ -268,6 +345,31 @@ impl<'a> Parser<'a> {
     }
 
     fn iff(&mut self) -> ASTNode {
+        let if_pos = self.tokens[self.counter].pos.clone();
+        self.counter += 1;
+
+        let condition = self.expression();
+        let body = self.statement();
+        let body_pos = body.position.clone();
+
+        let mut else_body: Option<Box<ASTNode>> = None;
+        if self.tokens[self.counter].typ == Type::ELSE {
+            self.counter += 1;
+            println!("parsing else body!");
+            else_body = Some(Box::new(self.statement()));
+        }
+        // consume end
+        // fixme this needs to be done properly
+        // because right now we can't do else if
+        self.counter += 1;
+
+        ASTNode {
+            statement: Statement::IF(Box::new(condition), Box::new(body), else_body),
+            position: if_pos.join(body_pos),
+        }
+    }
+
+    fn forr(&mut self) -> ASTNode {
         let if_pos = self.tokens[self.counter].pos.clone();
         self.counter += 1;
 

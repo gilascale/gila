@@ -30,12 +30,19 @@ pub enum Type {
     RPAREN,
     LSQUARE,
     RSQUARE,
+    GREATER_THAN,
+    LESS_THAN,
+    GREATER_EQ,
+    LESS_EQ,
     COMMA,
     ASSIGN,
     EQUALS,
+    NOT_EQUALS,
     PASS,
     FN,
+    FOR,
     IF,
+    IN,
     ELSE,
     DO,
     THEN,
@@ -108,6 +115,56 @@ impl Lexer {
                         },
                     });
                 }
+                '>' => {
+                    if chars[self.counter as usize + 1] == '=' {
+                        v.push(Token {
+                            typ: Type::GREATER_EQ,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 1;
+                        self.index += 1;
+                    } else {
+                        v.push(Token {
+                            typ: Type::GREATER_THAN,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
+                            },
+                        });
+                    }
+                }
+                '<' => {
+                    if chars[self.counter as usize + 1] == '=' {
+                        v.push(Token {
+                            typ: Type::LESS_EQ,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 1;
+                        self.index += 1;
+                    } else {
+                        v.push(Token {
+                            typ: Type::LESS_THAN,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
+                            },
+                        });
+                    }
+                }
                 '[' => {
                     v.push(Token {
                         typ: Type::LSQUARE,
@@ -119,6 +176,7 @@ impl Lexer {
                         },
                     });
                 }
+
                 ']' => {
                     v.push(Token {
                         typ: Type::RSQUARE,
@@ -225,6 +283,20 @@ impl Lexer {
                         });
                         self.counter += 1;
                         self.index += 1;
+                    } else if chars[self.counter as usize + 1] == 'o'
+                        && chars[self.counter as usize + 2] == 'r'
+                    {
+                        v.push(Token {
+                            typ: Type::FOR,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 3,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 2;
+                        self.index += 2;
                     } else {
                         self.identifier(&chars, &mut v);
                         continue;
@@ -234,6 +306,18 @@ impl Lexer {
                     if chars[self.counter as usize + 1] == 'f' {
                         v.push(Token {
                             typ: Type::IF,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 2,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 1;
+                        self.index += 1;
+                    } else if chars[self.counter as usize + 1] == 'n' {
+                        v.push(Token {
+                            typ: Type::IN,
                             pos: Position {
                                 index: self.index,
                                 line: self.line,
@@ -453,6 +537,21 @@ impl Lexer {
                                 line_end: self.line,
                             },
                         })
+                    }
+                }
+                '!' => {
+                    if chars[self.counter as usize + 1] == '=' {
+                        v.push(Token {
+                            typ: Type::NOT_EQUALS,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 2,
+                                line_end: self.line,
+                            },
+                        });
+                        self.index += 1;
+                        self.counter += 1;
                     }
                 }
                 '"' => {

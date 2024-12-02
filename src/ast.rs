@@ -9,6 +9,12 @@ pub enum Op {
     SUB,
     MUL,
     DIV,
+    EQ,
+    NEQ,
+    GT,
+    GE,
+    LT,
+    LE,
 }
 
 // #[derive(Debug)]

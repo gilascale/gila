@@ -13,6 +13,14 @@ use crate::{
 pub enum OpInstruction {
     // RETURN <location of values> <num values>
     RETURN = 0,
+
+    EQUAL,
+    NOT_EQUALS,
+    GREATER_THAN,
+    GREATER_EQUAL,
+    LESS_THAN,
+    LESS_EQUAL,
+
     ADD,
     // ADDI <r1> <r2> <desination>
     ADDI,
@@ -558,6 +566,12 @@ impl BytecodeGenerator<'_> {
                             Op::SUB => OpInstruction::SUBI,
                             Op::MUL => todo!(),
                             Op::DIV => todo!(),
+                            Op::EQ => OpInstruction::EQUAL,
+                            Op::NEQ => OpInstruction::NOT_EQUALS,
+                            Op::GT => OpInstruction::GREATER_THAN,
+                            Op::GE => OpInstruction::GREATER_EQUAL,
+                            Op::LT => OpInstruction::LESS_THAN,
+                            Op::LE => OpInstruction::LESS_EQUAL,
                         },
                         arg_0: n1,
                         arg_1: n2,

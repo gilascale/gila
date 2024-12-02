@@ -66,6 +66,7 @@ impl GCRefData {
 
 #[derive(DeepSizeOf, Debug, Clone)]
 pub enum Object {
+    BOOL(bool),
     F64(f64),
     I64(i64),
     ATOM(Rc<String>),
@@ -93,6 +94,7 @@ impl Object {
 
     pub fn print(&self) -> std::string::String {
         match self {
+            Self::BOOL(b) => b.to_string(),
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
             Self::ATOM(a) => format!(":{:?}", a.to_string()),
@@ -107,6 +109,20 @@ impl Object {
                 // integer addition
                 match other {
                     Object::I64(i2) => return Ok(Object::I64(i1 + i2)),
+                    _ => return Err(RuntimeError::INVALID_OPERATION),
+                }
+            }
+            // Self::HEAP_OBJECT(h1) => h1.data.add(other),
+            _ => return Err(RuntimeError::INVALID_OPERATION),
+        }
+    }
+
+    pub fn equals(&self, other: Object) -> Result<bool, RuntimeError> {
+        match self {
+            Self::I64(i1) => {
+                // integer addition
+                match other {
+                    Object::I64(i2) => return Ok(*i1 == i2),
                     _ => return Err(RuntimeError::INVALID_OPERATION),
                 }
             }
@@ -324,6 +340,8 @@ impl<'a> ExecutionEngine<'a> {
     fn exec_instr(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
         match instr.op_instruction {
             OpInstruction::RETURN => self.exec_return(instr),
+            OpInstruction::EQUAL => self.exec_equal(instr),
+            OpInstruction::NOT_EQUALS => self.exec_nequal(instr),
             OpInstruction::ADDI => self.exec_addi(instr),
             OpInstruction::SUBI => self.exec_subi(instr),
             OpInstruction::ADD => self.exec_add(instr),
@@ -401,6 +419,41 @@ impl<'a> ExecutionEngine<'a> {
         }
 
         Ok(return_register)
+    }
+
+    fn exec_equal(&mut self, equal: &Instruction) -> Result<u8, RuntimeError> {
+        let lhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [equal.arg_0 as usize];
+        let rhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [equal.arg_1 as usize];
+
+        let result = lhs.equals(rhs.clone());
+        if result.is_err() {
+            return Err(result.err().unwrap());
+        }
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [equal.arg_2 as usize] = Object::BOOL(result.unwrap());
+
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
+            1;
+        Ok(equal.arg_2)
+    }
+
+    fn exec_nequal(&mut self, equal: &Instruction) -> Result<u8, RuntimeError> {
+        let lhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [equal.arg_0 as usize];
+        let rhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [equal.arg_1 as usize];
+
+        let result = lhs.equals(rhs.clone());
+        if result.is_err() {
+            return Err(result.err().unwrap());
+        }
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [equal.arg_2 as usize] = Object::BOOL(!result.unwrap());
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
+            1;
+        Ok(equal.arg_2)
     }
 
     fn exec_addi(&mut self, addi: &Instruction) -> Result<u8, RuntimeError> {

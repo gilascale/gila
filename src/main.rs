@@ -136,13 +136,11 @@ fn exec() {
     let source = fs::read_to_string(file_to_exec).expect("Unable to read file");
     let mut lexer = lex::Lexer::new();
     let tokens = lexer.lex(source);
-    println!("tokens {:#?}", tokens);
     let mut parser = parse::Parser {
         tokens: &tokens,
         counter: 0,
     };
     let ast = parser.parse();
-    // println!("ast {:#?}", ast);
 
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 
