@@ -5,15 +5,12 @@
 
 
 
+
 Vec type
     x: u32
-    y: u32
-    z: u32
-    foo: u32
-    bar: u32
 end
 
-v = Vec()
+print(Vec())
 
-print(v)
-print("this won't print :0")
+
+print("hi")

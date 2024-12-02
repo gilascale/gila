@@ -42,6 +42,7 @@ pub enum OpInstruction {
     BUILD_SLICE,
     // INDEX <item> <index> <destination>
     INDEX,
+    STRUCT_ACCESS,
 }
 
 // todo put these in the enum
@@ -228,6 +229,9 @@ impl BytecodeGenerator<'_> {
                 self.gen_annotation(annotation_context, &annotation, &args, &expr)
             }
             Statement::RETURN(value) => self.gen_return(annotation_context, &value),
+            Statement::STRUCT_ACCESS(expr, field) => {
+                self.gen_struct_access(annotation_context, &expr, &field)
+            }
             _ => panic!(),
         }
     }
@@ -327,6 +331,22 @@ impl BytecodeGenerator<'_> {
         }
     }
 
+    fn create_constant_string(&mut self, s: String) -> u8 {
+        let constant = self.gen_string_constant(s.to_string());
+
+        let dest = self.get_available_register();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::LOAD_CONST,
+                arg_0: constant,
+                arg_1: 0,
+                arg_2: dest,
+            },
+            0,
+        );
+        dest
+    }
+
     fn gen_string(
         &mut self,
         annotation_context: AnnotationContext,
@@ -335,19 +355,7 @@ impl BytecodeGenerator<'_> {
     ) -> u8 {
         //FIXME
         if let Type::STRING(str) = &s.typ {
-            let constant = self.gen_string_constant(str.to_string());
-
-            let dest = self.get_available_register();
-            self.push_instruction(
-                Instruction {
-                    op_instruction: OpInstruction::LOAD_CONST,
-                    arg_0: constant,
-                    arg_1: 0,
-                    arg_2: dest,
-                },
-                0,
-            );
-            return dest;
+            return self.create_constant_string(str.to_string());
         }
         panic!()
     }
@@ -483,11 +491,13 @@ impl BytecodeGenerator<'_> {
                         arg_registers.push(self.visit(annotation_context.clone(), arg));
                     }
 
+                    let destination = self.get_available_register();
                     let first_arg_register = {
                         if arg_registers.len() > 0 {
                             arg_registers[0]
                         } else {
-                            self.get_available_register()
+                            // if we have no args, just encode the destination!
+                            destination
                         }
                     };
 
@@ -499,9 +509,7 @@ impl BytecodeGenerator<'_> {
                         if arg_registers.len() > 0 {
                             arg_registers[0] + arg_registers.len() as u8
                         } else {
-                            // todo
-                            // if we don't have any args, then allocate space for a register
-                            self.get_available_register()
+                            destination
                         }
                     };
 
@@ -534,11 +542,14 @@ impl BytecodeGenerator<'_> {
                 arg_registers.push(self.visit(annotation_context.clone(), arg));
             }
 
+            let destination = self.get_available_register();
+
             let first_arg_register = {
                 if arg_registers.len() > 0 {
                     arg_registers[0]
                 } else {
-                    self.get_available_register()
+                    // if we have no args, just encode the destination!
+                    destination
                 }
             };
 
@@ -550,9 +561,8 @@ impl BytecodeGenerator<'_> {
                 if arg_registers.len() > 0 {
                     arg_registers[0] + arg_registers.len() as u8
                 } else {
-                    // todo
-                    // if we don't have any args, then allocate space for a register
-                    self.get_available_register()
+                    // if we have no args, then just encode the destination!
+                    destination
                 }
             };
 
@@ -922,5 +932,32 @@ impl BytecodeGenerator<'_> {
         );
 
         0
+    }
+
+    fn gen_struct_access(
+        &mut self,
+        mut annotation_context: AnnotationContext,
+        expr: &Box<ASTNode>,
+        field: &Token,
+    ) -> u8 {
+        // todo think how we do this... we should use indexes really
+
+        if let Type::IDENTIFIER(i) = &field.typ {
+            println!("lhs = {:?}", expr);
+            let lhs = self.visit(annotation_context.clone(), &expr);
+            let field = self.create_constant_string(i.to_string());
+            let register = self.get_available_register();
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::STRUCT_ACCESS,
+                    arg_0: lhs,
+                    arg_1: field,
+                    arg_2: register,
+                },
+                0,
+            );
+            return register;
+        }
+        panic!();
     }
 }

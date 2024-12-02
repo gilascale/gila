@@ -86,13 +86,13 @@ impl<'a> Parser<'a> {
     }
 
     fn index(&mut self) -> ASTNode {
-        let higher_precedence = self.single();
+        let higher_precedence = self.struct_access();
         if !self.end() && self.tokens[self.counter].typ == Type::LSQUARE {
             let lhs_pos = higher_precedence.position.clone();
             // consume [
             self.counter += 1;
 
-            let the_index = self.single();
+            let the_index = self.struct_access();
 
             let rhs_pos = self.tokens[self.counter].pos.clone();
             // consume ]
@@ -100,6 +100,22 @@ impl<'a> Parser<'a> {
 
             return ASTNode {
                 statement: Statement::INDEX(Box::new(higher_precedence), Box::new(the_index)),
+                position: lhs_pos.join(rhs_pos),
+            };
+        }
+        higher_precedence
+    }
+
+    fn struct_access(&mut self) -> ASTNode {
+        let higher_precedence = self.single();
+        if !self.end() && self.tokens[self.counter].typ == Type::DOT {
+            let lhs_pos = higher_precedence.position.clone();
+            self.counter += 1;
+            let field = self.tokens[self.counter].clone();
+            let rhs_pos = field.pos.clone();
+            self.counter += 1;
+            return ASTNode {
+                statement: Statement::STRUCT_ACCESS(Box::new(higher_precedence), field),
                 position: lhs_pos.join(rhs_pos),
             };
         }

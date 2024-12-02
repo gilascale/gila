@@ -35,6 +35,7 @@ macro_rules! increment_ip {
 pub enum RuntimeError {
     INVALID_OPERATION,
     INVALID_GC_REF,
+    INVALID_ACCESS,
     OUT_OF_MEMORY,
 }
 #[derive(DeepSizeOf, Debug, Clone)]
@@ -523,6 +524,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::BUILD_SLICE => self.exec_build_slice(instr),
             OpInstruction::INDEX => self.exec_index(instr),
             OpInstruction::LOAD_CLOSURE => self.exec_load_closure(instr),
+            OpInstruction::STRUCT_ACCESS => self.exec_struct_access(instr),
             _ => panic!("unknown instruction {:?}", instr.op_instruction),
         }
     }
@@ -732,7 +734,7 @@ impl<'a> ExecutionEngine<'a> {
                     if call.arg_2 > 0 {
                         call.arg_1 + call.arg_2
                     } else {
-                        (call.arg_1 + 1).into()
+                        call.arg_1.into()
                     }
                 };
                 // fixme this sucks, we shouldn't clone functions it's so expensive
@@ -759,6 +761,14 @@ impl<'a> ExecutionEngine<'a> {
             GCRefData::DYNAMIC_OBJECT(d) => {
                 // todo we need to set the fields
 
+                let destination = {
+                    if call.arg_2 > 0 {
+                        call.arg_1 + call.arg_2
+                    } else {
+                        call.arg_1.into()
+                    }
+                };
+
                 let mut fields: HashMap<String, Object> = HashMap::new();
 
                 for key in d.fields.keys() {
@@ -775,14 +785,19 @@ impl<'a> ExecutionEngine<'a> {
                     return Err(gc_ref.err().unwrap());
                 }
 
-                self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                    [call.arg_2 as usize] = Object::GC_REF(gc_ref.unwrap());
-                self.environment.stack_frames[self.environment.stack_frame_pointer]
-                    .instruction_pointer += 1;
+                println!("putting object at {:?}", destination);
+                stack_set!(self, destination, Object::GC_REF(gc_ref.unwrap()));
+                increment_ip!(self);
+                //
+                // self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                //     [call.arg_2 as usize] = Object::GC_REF(gc_ref.unwrap());
+                // self.environment.stack_frames[self.environment.stack_frame_pointer]
+                //     .instruction_pointer += 1;
             }
             _ => {
-                self.environment.stack_frames[self.environment.stack_frame_pointer]
-                    .instruction_pointer += 1;
+                increment_ip!(self);
+                // self.environment.stack_frames[self.environment.stack_frame_pointer]
+                //     .instruction_pointer += 1;
             }
         }
 
@@ -821,14 +836,15 @@ impl<'a> ExecutionEngine<'a> {
 
                 let destination = {
                     if instr.arg_2 > 0 {
-                        instr.arg_1 as usize + instr.arg_2 as usize
+                        instr.arg_1 + instr.arg_2
                     } else {
-                        (instr.arg_1 + 1).into()
+                        instr.arg_1.into()
                     }
                 };
 
-                self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                    [destination] = result.clone();
+                stack_set!(self, destination, result.clone());
+                // self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                //     [destination as usize] = result.clone();
 
                 return Ok(instr.arg_2 + instr.arg_2);
             }
@@ -951,6 +967,54 @@ impl<'a> ExecutionEngine<'a> {
         let val = &self.environment.stack_frames[instr.arg_0 as usize].stack[instr.arg_1 as usize];
         stack_set!(self, instr.arg_2, val.clone());
         increment_ip!(self);
+        Ok(0)
+    }
+
+    fn exec_struct_access(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let obj = stack_access!(self, instr.arg_0);
+        println!("umm {:?}", obj);
+        // fixme this is horrible nesting
+        match obj {
+            Object::GC_REF(gc_ref) => {
+                println!("got obj...");
+                let result = self.environment.heap.deref(gc_ref);
+                if result.is_err() {
+                    return Err(result.err().unwrap());
+                }
+                match result.unwrap() {
+                    GCRefData::DYNAMIC_OBJECT(o) => {
+                        // now we have the object we need to get the string
+
+                        let field = stack_access!(self, instr.arg_1);
+
+                        match field {
+                            Object::GC_REF(gc_ref) => {
+                                let result = self.environment.heap.deref(gc_ref);
+                                if result.is_err() {
+                                    return Err(result.err().unwrap());
+                                }
+                                match result.unwrap() {
+                                    GCRefData::STRING(s) => {
+                                        let result = o.fields.get(&s.s.to_string());
+
+                                        if result.is_none() {
+                                            return Err(RuntimeError::INVALID_ACCESS);
+                                        }
+                                        stack_set!(self, instr.arg_2, result.unwrap().clone());
+                                        increment_ip!(self);
+                                    }
+                                    _ => return Err(RuntimeError::INVALID_ACCESS),
+                                }
+                            }
+                            _ => return Err(RuntimeError::INVALID_ACCESS),
+                        }
+                    }
+                    _ => return Err(RuntimeError::INVALID_ACCESS),
+                }
+            }
+            _ => return Err(RuntimeError::INVALID_ACCESS),
+        }
+
         Ok(0)
     }
 

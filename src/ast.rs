@@ -43,6 +43,7 @@ pub enum Statement {
     IF(Box<ASTNode>, Box<ASTNode>, Option<Box<ASTNode>>),
     INDEX(Box<ASTNode>, Box<ASTNode>),
     ANNOTATION(Token, Vec<Token>, Box<ASTNode>),
+    STRUCT_ACCESS(Box<ASTNode>, Token),
 }
 
 #[derive(Debug)]

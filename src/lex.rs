@@ -25,6 +25,7 @@ impl Position {
 #[derive(Eq, PartialEq, Debug, Clone, Hash, DeepSizeOf)]
 pub enum Type {
     AMPERSAND,
+    DOT,
     RETURN,
     LPAREN,
     RPAREN,
@@ -107,6 +108,17 @@ impl Lexer {
                 '@' => {
                     v.push(Token {
                         typ: Type::AMPERSAND,
+                        pos: Position {
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
+                        },
+                    });
+                }
+                '.' => {
+                    v.push(Token {
+                        typ: Type::DOT,
                         pos: Position {
                             index: self.index,
                             line: self.line,
