@@ -6,6 +6,7 @@ use crate::{
     config::Config,
     execution::{DynamicObject, FnObject, GCRef, GCRefData, Heap, Object, StringObject},
     lex::{Position, Token, Type},
+    r#type::{DataType, DataTypeVariant},
 };
 
 #[derive(Debug, Clone, DeepSizeOf)]
@@ -768,6 +769,12 @@ impl BytecodeGenerator<'_> {
         0
     }
 
+    fn atom_from_type(&self, data_type: DataType) -> Object {
+        match data_type.variant {
+            DataTypeVariant::U32 => Object::ATOM(Rc::new("u32".to_string())),
+        }
+    }
+
     fn gen_named_type(
         &mut self,
         annotation_context: AnnotationContext,
@@ -775,8 +782,18 @@ impl BytecodeGenerator<'_> {
         decls: &Vec<ASTNode>,
     ) -> u8 {
         // FIXME
-        let field_definitions: HashMap<String, Object> =
-            HashMap::from([("x".to_string(), Object::ATOM("u32".to_string().into()))]);
+        let mut field_definitions: HashMap<String, Object> = HashMap::new();
+
+        for decl in decls {
+            if let Statement::DEFINE(token, typ, val) = &decl.statement {
+                if let Type::IDENTIFIER(i) = &token.typ {
+                    field_definitions
+                        .insert(i.to_string(), self.atom_from_type(typ.clone().unwrap()));
+                    continue;
+                }
+            }
+            panic!();
+        }
 
         let gc_ref_data_index = self.push_gc_ref_data(GCRefData::DYNAMIC_OBJECT(DynamicObject {
             fields: field_definitions,

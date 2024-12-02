@@ -520,16 +520,27 @@ impl<'a> Parser<'a> {
         if self.tokens[self.counter + 1].typ == Type::TYPE {
             self.counter += 1;
             let lhs_pos = identifier.pos.clone();
-            // move over the fn
+            // move over the type
             self.counter += 1;
 
-            // consume types
-            let first_type = self.parse_decl();
-            let decls: Vec<ASTNode> = vec![first_type];
+            let mut decls: Vec<ASTNode> = vec![];
 
-            let end = &self.tokens[self.counter];
-            let rhs_pos = end.pos.clone();
-            self.counter += 1;
+            let mut rhs_pos: Position;
+            if self.tokens[self.counter].typ != Type::END {
+                loop {
+                    // consume types
+                    decls.push(self.parse_decl());
+
+                    if self.tokens[self.counter].typ == Type::END {
+                        rhs_pos = self.tokens[self.counter].pos.clone();
+                        self.counter += 1;
+                        break;
+                    }
+                }
+            } else {
+                rhs_pos = self.tokens[self.counter].pos.clone();
+                self.counter += 1;
+            }
 
             return ASTNode {
                 statement: Statement::NAMED_TYPE_DECL(identifier.clone(), decls),

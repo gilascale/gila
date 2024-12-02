@@ -1,9 +1,9 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DataTypeVariant {
     U32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DataType {
     pub variant: DataTypeVariant,
 }

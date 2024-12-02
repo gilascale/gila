@@ -7,7 +7,7 @@
 
 Vec type
     x: u32
-
+    y: u32
 end
 
 Vec()

@@ -94,7 +94,16 @@ impl GCRefData {
                         .join(", ")
                 )
             }
-            Self::DYNAMIC_OBJECT(d) => format!("{:?}", d.fields),
+            Self::DYNAMIC_OBJECT(d) => {
+                format!(
+                    "{{{}}}",
+                    d.fields
+                        .iter()
+                        .map(|(key, value)| format!("{}={}", key, value.print()))
+                        .collect::<Vec<String>>()
+                        .join(" ")
+                )
+            }
             _ => panic!("Cant print self {:?}", self),
         }
     }
@@ -748,7 +757,15 @@ impl<'a> ExecutionEngine<'a> {
                 return Ok(call.arg_1 + call.arg_2);
             }
             GCRefData::DYNAMIC_OBJECT(d) => {
-                let fields: HashMap<String, Object> = HashMap::new();
+                // todo we need to set the fields
+
+                let mut fields: HashMap<String, Object> = HashMap::new();
+
+                for key in d.fields.keys() {
+                    let typ = d.fields.get(key).unwrap();
+                    fields.insert(key.to_string(), Object::I64(0));
+                }
+
                 let gc_ref = self.environment.heap.alloc(
                     GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }),
                     &self.config,
