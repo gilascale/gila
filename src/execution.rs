@@ -80,7 +80,8 @@ impl GCRefData {
     pub fn print(&self) -> String {
         match self {
             Self::STRING(s) => s.s.to_string(),
-            _ => panic!(),
+            Self::FN(fn_object) => format!("fn {}", fn_object.name),
+            _ => panic!("Cant print self {:?}", self),
         }
     }
 }
@@ -360,7 +361,7 @@ impl<'a> ExecutionEngine<'a> {
             Object::GC_REF(gc_ref) => {
                 let res = self.environment.heap.deref(&gc_ref);
                 if res.is_ok() {
-                    res.unwrap().print();
+                    return res.unwrap().print();
                 }
                 panic!();
             }

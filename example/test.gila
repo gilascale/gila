@@ -4,23 +4,8 @@ print fn(x)
     return 0
 end
 
-open fn(path)
-    return @native_call native_open_windows(path)
-end
-
-PLATFORM = "windows"
-
-
-
-
-
-
-x = 3
 y = 99
 
 foo fn
-    print(PLATFORM)
-    print(y)
+    print("PLATFORM")
 end
-
-foo()
