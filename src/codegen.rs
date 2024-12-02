@@ -21,6 +21,8 @@ pub enum OpInstruction {
     LESS_THAN,
     LESS_EQUAL,
 
+    LOAD_CLOSURE,
+
     ADD,
     // ADDI <r1> <r2> <desination>
     ADDI,
@@ -360,9 +362,32 @@ impl BytecodeGenerator<'_> {
 
         if let Some(v) = result {
             return *v;
+        } else {
+            let reg = self.get_available_register();
+            let mut counter = self.codegen_context.current_chunk_pointer;
+            loop {
+                let result = self.codegen_context.chunks[counter]
+                    .variable_map
+                    .get(&t.typ);
+                if let Some(v) = result {
+                    self.push_instruction(
+                        Instruction {
+                            op_instruction: OpInstruction::LOAD_CLOSURE,
+                            arg_0: counter as u8,
+                            arg_1: *v,
+                            arg_2: reg,
+                        },
+                        0,
+                    );
+                    return reg;
+                }
+                if counter == 0 {
+                    break;
+                }
+                counter -= 1;
+            }
         }
 
-        println!("ffs {:#?}", self.codegen_context);
         panic!("{:?}", t)
     }
 
@@ -725,6 +750,7 @@ impl BytecodeGenerator<'_> {
             .variable_map
             .insert(token.typ.clone(), location);
 
+        // fixme do we actually need to load this?...
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,

@@ -1,8 +1,9 @@
 
 
+x = 3
 
+foo fn
+    return x
+end
 
-print(1==2)
-
-
-
+foo()

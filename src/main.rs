@@ -128,7 +128,7 @@ fn exec() {
         },
     };
 
-    load_prelude(&config, &mut codegen_context, &mut environment);
+    // load_prelude(&config, &mut codegen_context, &mut environment);
 
     let args: Vec<String> = std::env::args().collect();
     let file_to_exec: String = args[3].to_string();
@@ -155,7 +155,7 @@ fn exec() {
 
     match result {
         Ok(o) => {
-            println!("={}", o.print());
+            println!("={}", execution_engine.print_object(o));
         }
         Err(e) => {
             println!("encountered runtime exception {:?}", e);

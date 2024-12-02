@@ -261,9 +261,10 @@ impl Heap {
         }
 
         // todo for now just push to end
+        let index = self.live_slots.len();
         self.live_slots.push(gc_ref_dat);
         Ok(GCRef {
-            index: self.live_slots.len() - 1,
+            index,
             marked: false,
         })
     }
@@ -328,6 +329,16 @@ impl<'a> ExecutionEngine<'a> {
         }
     }
 
+    pub fn print_object(&mut self, object: Object) -> String {
+        match &object {
+            Object::GC_REF(gc_ref) => self.environment.heap.deref(&gc_ref).print(),
+            Object::I64(i) => i.to_string(),
+            Object::F64(f) => f.to_string(),
+            Object::BOOL(b) => b.to_string(),
+            Object::ATOM(a) => a.to_string(),
+        }
+    }
+
     pub fn register_native_fn(&mut self, name: String, native_fn: NativeFn) {
         self.environment.native_fns.insert(name, native_fn);
     }
@@ -353,16 +364,6 @@ impl<'a> ExecutionEngine<'a> {
                 .fn_object
                 .chunk = bytecode;
         }
-        // } else {
-        //     self.init_startup_stack(Box::new(FnObject {
-        //         chunk: bytecode,
-        //         name: "main".to_string(),
-        //         param_slots: vec![],
-        //     }));
-        //     self.zero_stack();
-        //     self.init_constants();
-        // }
-
         let mut reg = 0;
         while self.running {
             let instr = {
@@ -449,6 +450,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
             OpInstruction::BUILD_SLICE => self.exec_build_slice(instr),
             OpInstruction::INDEX => self.exec_index(instr),
+            OpInstruction::LOAD_CLOSURE => self.exec_load_closure(instr),
             _ => panic!("unknown instruction {:?}", instr.op_instruction),
         }
     }
@@ -475,7 +477,7 @@ impl<'a> ExecutionEngine<'a> {
 
     fn zero_stack(&mut self) {
         // fixme dynamically setup stack
-        for _ in 0..255 {
+        for _ in 0..15 {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .stack
                 .push(Object::I64(0));
@@ -852,6 +854,14 @@ impl<'a> ExecutionEngine<'a> {
         }
 
         Err(RuntimeError::INVALID_OPERATION)
+    }
+
+    fn exec_load_closure(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        println!("doing exec closure");
+        let val = &self.environment.stack_frames[instr.arg_0 as usize].stack[instr.arg_1 as usize];
+        stack_set!(self, instr.arg_2, val.clone());
+        increment_ip!(self);
+        Ok(0)
     }
 
     fn mark_and_sweep(&mut self) {
