@@ -8,4 +8,8 @@ y = 99
 
 foo fn
     print("PLATFORM")
+    print("PLATFORM")
+    print(y)
 end
+
+foo()

@@ -1,3 +1,4 @@
+use clap::builder::Str;
 use core::slice;
 use deepsize::DeepSizeOf;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
@@ -273,14 +274,18 @@ impl Heap {
 
     pub fn deref(&mut self, gc_ref: &GCRef) -> Result<GCRefData, RuntimeError> {
         if gc_ref.index >= self.live_slots.len() {
-            self.dump_stacks();
+            self.dump_heap();
             return Err(RuntimeError::INVALID_GC_REF);
         }
         return Ok(self.live_slots[gc_ref.index].clone());
     }
 
-    pub fn dump_stacks(&self) {
-        println!("{:#?}", self.live_slots);
+    pub fn dump_heap(&self) {
+        println!(
+            "HEAP (len={}): {:#?}",
+            self.live_slots.len(),
+            self.live_slots
+        );
     }
 
     pub fn free_space_available_bytes(&self) -> usize {
@@ -310,12 +315,15 @@ fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> 
     let s: String = match &args[0] {
         Object::GC_REF(gc_ref) => {
             let res = execution_context.heap.deref(&gc_ref);
+            let obj: String;
             if res.is_ok() {
-                res.unwrap().print();
+                obj = res.unwrap().print();
+            } else {
+                execution_context.dump_stack_regs();
+                execution_context.heap.dump_heap();
+                panic!("tried to deref {}", gc_ref.index);
             }
-            execution_context.dump_stack_regs();
-            execution_context.heap.dump_stacks();
-            panic!("tried to deref {}", gc_ref.index);
+            obj
         }
         Object::I64(i) => i.to_string(),
         Object::F64(f) => f.to_string(),
