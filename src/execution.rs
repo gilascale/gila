@@ -290,7 +290,9 @@ fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> 
     let s: String = match &args[0] {
         Object::GC_REF(gc_ref) => execution_context.heap.deref(&gc_ref).print(),
         Object::I64(i) => i.to_string(),
-        _ => panic!(),
+        Object::F64(f) => f.to_string(),
+        Object::BOOL(b) => b.to_string(),
+        Object::ATOM(a) => a.to_string(),
     };
 
     println!("{}", s);
@@ -524,7 +526,6 @@ impl<'a> ExecutionEngine<'a> {
         if result.is_err() {
             return Err(result.err().unwrap());
         }
-        println!("ececuting equals {:?} {:?}", lhs, rhs);
         stack_set!(self, equal.arg_2, Object::BOOL(result.unwrap()));
         increment_ip!(self);
         Ok(equal.arg_2)
