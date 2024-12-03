@@ -1,3 +1,4 @@
+use crate::compiler::Compiler;
 use deepsize::DeepSizeOf;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
 use std::{fs, vec};
@@ -247,13 +248,17 @@ impl Object {
         }
     }
 
-    pub fn truthy(&self, execution_context: &ExecutionContext) -> bool {
+    pub fn truthy(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        execution_context: &ProcessContext,
+    ) -> bool {
         match self {
             Self::BOOL(b) => return *b,
             Self::F64(f) => return f > &0.0,
             Self::I64(i) => return i > &0,
             Self::GC_REF(i) => {
-                let res = execution_context.heap.deref(i);
+                let res = shared_execution_context.heap.deref(i);
                 if res.is_ok() {
                     // todo this may not be the best because if its an actual error then we need to error!
                     return true;
@@ -324,16 +329,19 @@ impl Heap {
     }
 }
 
-type NativeFn = fn(&mut ExecutionContext, Vec<Object>) -> Object;
+type NativeFn = fn(&mut SharedExecutionContext, &mut ProcessContext, Vec<Object>) -> Object;
 
-pub struct ExecutionContext {
+pub struct ProcessContext {
     pub stack_frames: std::vec::Vec<StackFrame>,
     pub stack_frame_pointer: usize,
-    pub heap: Heap,
     pub native_fns: HashMap<String, NativeFn>,
 }
 
-impl ExecutionContext {
+pub struct SharedExecutionContext {
+    pub heap: Heap,
+}
+
+impl ProcessContext {
     fn dump_stack_regs(&mut self) {
         for i in 0..self.stack_frame_pointer {
             println!("frame {} ({}):", i, self.stack_frames[i].fn_object.name);
@@ -342,16 +350,20 @@ impl ExecutionContext {
     }
 }
 
-fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> Object {
+fn native_print(
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
+    args: Vec<Object>,
+) -> Object {
     let s: String = match &args[0] {
         Object::GC_REF(gc_ref) => {
-            let res = execution_context.heap.deref(&gc_ref);
+            let res = shared_execution_context.heap.deref(&gc_ref);
             let obj: String;
             if res.is_ok() {
                 obj = res.unwrap().print();
             } else {
                 execution_context.dump_stack_regs();
-                execution_context.heap.dump_heap();
+                shared_execution_context.heap.dump_heap();
                 panic!("tried to deref {}", gc_ref.index);
             }
             obj
@@ -366,7 +378,11 @@ fn native_print(execution_context: &mut ExecutionContext, args: Vec<Object>) -> 
     return Object::I64(0);
 }
 
-fn native_open_windows(execution_context: &mut ExecutionContext, args: Vec<Object>) -> Object {
+fn native_open_windows(
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
+    args: Vec<Object>,
+) -> Object {
     // if let Object::GC_REF(gc_ref) = &args[0] {
     //     if let GCRefData::STRING(s) = execution_context.heap.deref(&gc_ref) {
     //         let file = File::open(s.s.to_string());
@@ -383,14 +399,20 @@ fn native_open_windows(execution_context: &mut ExecutionContext, args: Vec<Objec
 pub struct ExecutionEngine<'a> {
     pub config: &'a Config,
     pub running: bool,
-    pub environment: &'a mut ExecutionContext,
+    pub shared_execution_context: &'a mut SharedExecutionContext,
+    pub environment: &'a mut ProcessContext,
 }
 
 impl<'a> ExecutionEngine<'a> {
-    pub fn new(config: &'a Config, environment: &'a mut ExecutionContext) -> ExecutionEngine<'a> {
+    pub fn new(
+        config: &'a Config,
+        shared_execution_context: &'a mut SharedExecutionContext,
+        environment: &'a mut ProcessContext,
+    ) -> ExecutionEngine<'a> {
         ExecutionEngine {
             config,
             running: true,
+            shared_execution_context,
             environment,
         }
     }
@@ -398,7 +420,7 @@ impl<'a> ExecutionEngine<'a> {
     pub fn print_object(&mut self, object: Object) -> String {
         match &object {
             Object::GC_REF(gc_ref) => {
-                let res = self.environment.heap.deref(&gc_ref);
+                let res = self.shared_execution_context.heap.deref(&gc_ref);
                 if res.is_ok() {
                     return res.unwrap().print();
                 }
@@ -415,7 +437,12 @@ impl<'a> ExecutionEngine<'a> {
         self.environment.native_fns.insert(name, native_fn);
     }
 
-    pub fn exec(&mut self, bytecode: Chunk, is_repl: bool) -> Result<Object, RuntimeError> {
+    pub fn exec(
+        &mut self,
+        compilation_unit: String,
+        bytecode: Chunk,
+        is_repl: bool,
+    ) -> Result<Object, RuntimeError> {
         self.register_native_fn("native_print".to_string(), native_print);
         self.register_native_fn("native_open_windows".to_string(), native_open_windows);
 
@@ -435,8 +462,17 @@ impl<'a> ExecutionEngine<'a> {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .fn_object
                 .chunk = bytecode;
+            // todo is this right?
+            // fixme this only works for repl and prelude etc, it doesn't however work when importing a module, because we
+            // have code after that we need to run.
+            // i think this may actually be okay, because on a module import we just need to take the top level exports!
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer = 0;
             self.init_constants();
         }
+
+        // println!("{:#?}", self.environment.stack_frames);
+
         let mut reg = 0;
         while self.running {
             let instr = {
@@ -491,7 +527,7 @@ impl<'a> ExecutionEngine<'a> {
 
                 // now lets heap allocate!
                 let alloc = self
-                    .environment
+                    .shared_execution_context
                     .heap
                     .alloc(gc_ref_data.clone(), &self.config);
                 match alloc {
@@ -723,7 +759,7 @@ impl<'a> ExecutionEngine<'a> {
             _ => panic!("can only call func or constructor"),
         };
 
-        let dereferenced_data = self.environment.heap.deref(gc_ref_object);
+        let dereferenced_data = self.shared_execution_context.heap.deref(gc_ref_object);
         if dereferenced_data.is_err() {
             self.environment.dump_stack_regs();
             return Err(dereferenced_data.err().unwrap());
@@ -783,7 +819,7 @@ impl<'a> ExecutionEngine<'a> {
                     counter += 1;
                 }
 
-                let gc_ref = self.environment.heap.alloc(
+                let gc_ref = self.shared_execution_context.heap.alloc(
                     GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }),
                     &self.config,
                 );
@@ -819,7 +855,7 @@ impl<'a> ExecutionEngine<'a> {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer += 1;
 
-            let name_obj = self.environment.heap.deref(&gc_ref);
+            let name_obj = self.shared_execution_context.heap.deref(&gc_ref);
             if name_obj.is_err() {
                 self.environment.dump_stack_regs();
                 return Err(name_obj.err().unwrap());
@@ -838,7 +874,7 @@ impl<'a> ExecutionEngine<'a> {
                     );
                 }
 
-                let result = native_fn(self.environment, args);
+                let result = native_fn(self.shared_execution_context, self.environment, args);
 
                 let destination = {
                     if instr.arg_2 > 0 {
@@ -895,7 +931,7 @@ impl<'a> ExecutionEngine<'a> {
         let val = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [if_jmp_else.arg_0 as usize];
 
-        if !val.truthy(&self.environment) {
+        if !val.truthy(self.shared_execution_context, &self.environment) {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer = if_jmp_else.arg_1 as usize
         } else {
@@ -917,7 +953,7 @@ impl<'a> ExecutionEngine<'a> {
             );
         }
 
-        let slice_obj = self.environment.heap.alloc(
+        let slice_obj = self.shared_execution_context.heap.alloc(
             GCRefData::SLICE(SliceObject { s: slice_objects }),
             &self.config,
         );
@@ -945,7 +981,7 @@ impl<'a> ExecutionEngine<'a> {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer += 1;
 
-            let obj = self.environment.heap.deref(&gc_ref);
+            let obj = self.shared_execution_context.heap.deref(&gc_ref);
             if obj.is_err() {
                 self.environment.dump_stack_regs();
                 return Err(obj.err().unwrap());
@@ -981,7 +1017,7 @@ impl<'a> ExecutionEngine<'a> {
         // fixme this is horrible nesting
         match obj {
             Object::GC_REF(gc_ref) => {
-                let result = self.environment.heap.deref(gc_ref);
+                let result = self.shared_execution_context.heap.deref(gc_ref);
                 if result.is_err() {
                     return Err(result.err().unwrap());
                 }
@@ -993,7 +1029,7 @@ impl<'a> ExecutionEngine<'a> {
 
                         match field {
                             Object::GC_REF(gc_ref) => {
-                                let result = self.environment.heap.deref(gc_ref);
+                                let result = self.shared_execution_context.heap.deref(gc_ref);
                                 if result.is_err() {
                                     return Err(result.err().unwrap());
                                 }
@@ -1025,10 +1061,9 @@ impl<'a> ExecutionEngine<'a> {
     fn exec_import(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
         // todo
         let import_path = stack_access!(self, instr.arg_0);
-        println!("import path {:?}", import_path);
         match import_path {
             Object::GC_REF(gc_ref) => {
-                let data = self.environment.heap.deref(gc_ref);
+                let data = self.shared_execution_context.heap.deref(gc_ref);
                 if data.is_err() {
                     return Err(data.err().unwrap());
                 }
@@ -1043,6 +1078,56 @@ impl<'a> ExecutionEngine<'a> {
                                 .unwrap_or(false)
                             {
                                 // todo compile!
+
+                                for file in fs::read_dir(full_path).unwrap() {
+                                    let f = file.unwrap();
+
+                                    let normalized_path =
+                                        f.path().to_string_lossy().replace("\\", "/");
+                                    let code = fs::read_to_string(normalized_path.to_string())
+                                        .expect("Unable to read file");
+
+                                    // todo this is breaking
+                                    let mut compiler = Compiler::new();
+                                    let compilation_context = compiler.compile_and_exec(
+                                        f.file_name().into_string().unwrap(),
+                                        code,
+                                        &self.config,
+                                        &mut self.shared_execution_context,
+                                    );
+
+                                    // todo go through all exported variables
+
+                                    if let Some(ctx) = compilation_context {
+                                        for (key, val) in
+                                            ctx.codegen_context.chunks[0].variable_map.clone()
+                                        {
+                                            // lets put the variables in this module
+                                            let val = ctx.process_context.stack_frames[0].stack
+                                                [val as usize]
+                                                .clone();
+                                            println!("exported val {:?}={:?}", key, val);
+                                        }
+                                    }
+                                }
+
+                                let mut fields: HashMap<String, Object> = HashMap::new();
+
+                                // todo should the public fields be a list or a dict
+                                fields.insert("public".to_string(), Object::I64(0));
+                                let module_dynamic_object = DynamicObject { fields };
+                                let module = self.shared_execution_context.heap.alloc(
+                                    GCRefData::DYNAMIC_OBJECT(module_dynamic_object),
+                                    &self.config,
+                                );
+
+                                if module.is_err() {
+                                    return Err(module.err().unwrap());
+                                }
+
+                                stack_set!(self, instr.arg_1, Object::GC_REF(module.unwrap()));
+                                increment_ip!(self);
+                                return Ok(instr.arg_1);
                             }
                         }
                         return Err(RuntimeError::UNKNOWN_MODULE);
@@ -1052,9 +1137,6 @@ impl<'a> ExecutionEngine<'a> {
             }
             _ => panic!(),
         }
-
-        increment_ip!(self);
-        Ok(0)
     }
 
     fn mark_and_sweep(&mut self) {

@@ -1,6 +1,7 @@
 pub mod analyse;
 pub mod ast;
 pub mod codegen;
+pub mod compiler;
 pub mod config;
 pub mod execution;
 pub mod lex;

@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs};
 use gila::{
     codegen::{BytecodeGenerator, Chunk, CodegenContext},
     config::Config,
-    execution::{ExecutionContext, ExecutionEngine, Heap, Object, RuntimeError},
+    execution::{ProcessContext, ExecutionEngine, Heap, Object, RuntimeError},
     lex, parse,
 };
 
@@ -23,7 +23,7 @@ fn compile_and_execute(code: String) -> Result<Object, RuntimeError> {
             string_interns: HashMap::new(),
         }],
     };
-    let mut execution_context = ExecutionContext {
+    let mut execution_context = ProcessContext {
         stack_frame_pointer: 0,
         stack_frames: vec![],
         native_fns: HashMap::new(),
