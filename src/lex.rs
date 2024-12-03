@@ -35,6 +35,8 @@ pub enum Type {
     LESS_THAN,
     GREATER_EQ,
     LESS_EQ,
+    OR,
+    AND,
     COMMA,
     ASSIGN,
     EQUALS,
@@ -262,6 +264,27 @@ impl Lexer {
                     {
                         self.counter += 2;
                         self.index += 2;
+                    }
+                }
+                'o' => {
+                    if chars[self.counter as usize + 1] == 'r'
+                    // todo implement this end check
+                        && !chars[self.counter as usize + 2].is_alphabetic()
+                    {
+                        v.push(Token {
+                            typ: Type::OR,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 2,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 1;
+                        self.index += 1;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 'd' => {

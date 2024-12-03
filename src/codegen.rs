@@ -21,6 +21,7 @@ pub enum OpInstruction {
     GREATER_EQUAL,
     LESS_THAN,
     LESS_EQUAL,
+    LOGICAL_OR,
 
     LOAD_CLOSURE,
 
@@ -699,6 +700,7 @@ impl BytecodeGenerator<'_> {
                         Op::GE => OpInstruction::GREATER_EQUAL,
                         Op::LT => OpInstruction::LESS_THAN,
                         Op::LE => OpInstruction::LESS_EQUAL,
+                        Op::LOGICAL_OR => OpInstruction::LOGICAL_OR,
                         _ => panic!(),
                     },
                     arg_0: lhs,

@@ -1,0 +1,21 @@
+
+
+
+
+Vec type 
+    x: u32
+    y: u32
+end
+
+
+fib fn(x)
+    if x < 0
+        return 0
+    end
+
+    if x==1 or x==2
+        return 1
+    end
+
+    return fib(x-1) + fib(x-2)
+end

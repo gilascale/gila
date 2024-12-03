@@ -1,10 +1,15 @@
 
 
-
 std = import std
+p = std.io.print
+
+v = std.maths.Vec(1,2)
 
 
 
 
-std.io.print("hi")
-std.io.print(std.os.PLATFORM)
+p(v.x)
+p("hi!")
+
+
+std.maths.fib(7)

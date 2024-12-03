@@ -63,7 +63,7 @@ impl<'a> Parser<'a> {
             };
         }
 
-        return self.equality();
+        return self.logical_operators();
     }
 
     fn call(&mut self) -> ASTNode {
@@ -231,6 +231,29 @@ impl<'a> Parser<'a> {
             // _ => higher_precedence,
             _ => panic!("{:?}", next),
         }
+    }
+
+    fn logical_operators(&mut self) -> ASTNode {
+        let higher_precedence = self.equality();
+
+        if !self.end() && self.tokens[self.counter].typ == Type::OR {
+            self.counter += 1;
+            let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
+            return ASTNode {
+                statement: Statement::BIN_OP(
+                    Box::new(higher_precedence),
+                    Box::new(rhs),
+                    Op::LOGICAL_OR,
+                ),
+                position: pos,
+            };
+        }
+
+        higher_precedence
     }
 
     fn equality(&mut self) -> ASTNode {

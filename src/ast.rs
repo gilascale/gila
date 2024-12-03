@@ -15,6 +15,7 @@ pub enum Op {
     GE,
     LT,
     LE,
+    LOGICAL_OR,
 }
 
 // #[derive(Debug)]
