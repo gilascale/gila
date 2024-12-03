@@ -47,6 +47,22 @@ impl<'a> Parser<'a> {
     fn expression(&mut self) -> ASTNode {
         // let higher_prece
 
+        return self.import();
+    }
+
+    fn import(&mut self) -> ASTNode {
+        if self.tokens[self.counter].typ == Type::IMPORT {
+            let lhs = self.tokens[self.counter].pos.clone();
+            self.counter += 1;
+            // todo parse module path properly
+            let t = &self.tokens[self.counter];
+            self.counter += 1;
+            return ASTNode {
+                statement: Statement::IMPORT(t.clone()),
+                position: lhs.join(t.pos.clone()),
+            };
+        }
+
         return self.equality();
     }
 

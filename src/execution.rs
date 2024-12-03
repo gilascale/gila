@@ -524,6 +524,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::INDEX => self.exec_index(instr),
             OpInstruction::LOAD_CLOSURE => self.exec_load_closure(instr),
             OpInstruction::STRUCT_ACCESS => self.exec_struct_access(instr),
+            OpInstruction::IMPORT => self.exec_import(instr),
             _ => panic!("unknown instruction {:?}", instr.op_instruction),
         }
     }
@@ -1017,6 +1018,11 @@ impl<'a> ExecutionEngine<'a> {
             _ => return Err(RuntimeError::INVALID_ACCESS),
         }
 
+        Ok(0)
+    }
+
+    fn exec_import(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        increment_ip!(self);
         Ok(0)
     }
 

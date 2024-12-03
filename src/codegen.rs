@@ -43,6 +43,8 @@ pub enum OpInstruction {
     // INDEX <item> <index> <destination>
     INDEX,
     STRUCT_ACCESS,
+    // IMPORT <module path> <dest>
+    IMPORT,
 }
 
 // todo put these in the enum
@@ -232,6 +234,7 @@ impl BytecodeGenerator<'_> {
             Statement::STRUCT_ACCESS(expr, field) => {
                 self.gen_struct_access(annotation_context, &expr, &field)
             }
+            Statement::IMPORT(path) => self.gen_import(annotation_context, path),
             _ => panic!(),
         }
     }
@@ -961,5 +964,23 @@ impl BytecodeGenerator<'_> {
             return register;
         }
         panic!();
+    }
+
+    fn gen_import(&mut self, mut annotation_context: AnnotationContext, path: &Token) -> u8 {
+        if let Type::IDENTIFIER(i) = &path.typ {
+            let s = self.gen_string_constant(i.to_string());
+            let destination = self.get_available_register();
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::IMPORT,
+                    arg_0: s,
+                    arg_1: destination,
+                    arg_2: 0,
+                },
+                0,
+            );
+            return destination;
+        }
+        panic!()
     }
 }

@@ -1,30 +1,6 @@
 
 
-
-
-
-
-
-
-Vec type
-    x: u32
-    y: u32
-end
-
-
-dot fn(self: Vec)
-    return 1
-end
-
-
-
-
-
-
-
-
-
-
+import std
 
 
 

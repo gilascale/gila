@@ -49,6 +49,7 @@ pub enum Type {
     THEN,
     TYPE,
     LET,
+    IMPORT,
     END,
     ADD,
     SUB,
@@ -342,6 +343,24 @@ impl Lexer {
                         });
                         self.counter += 1;
                         self.index += 1;
+                    } else if chars[self.counter as usize + 1] == 'm'
+                        && chars[self.counter as usize + 2] == 'p'
+                        && chars[self.counter as usize + 3] == 'o'
+                        && chars[self.counter as usize + 4] == 'r'
+                        && chars[self.counter as usize + 5] == 't'
+                        && !chars[self.counter as usize + 6].is_alphabetic()
+                    {
+                        v.push(Token {
+                            typ: Type::IMPORT,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 6,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 5;
+                        self.index += 5;
                     } else {
                         self.identifier(&chars, &mut v);
                         continue;
