@@ -1,4 +1,5 @@
 # Design Primer
 
-## Memory Management...
+Inspired by Nim, Python, Odin
 
+    

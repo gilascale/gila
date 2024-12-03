@@ -8,8 +8,12 @@
 type AsyncEngine =
     task_queue Queue = []
 
+type Future =
+
+
+
 run fn (self AsyncEngine) =
-    
+
 
 
 my_task fn =

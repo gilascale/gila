@@ -1,0 +1,9 @@
+
+
+
+
+Test type
+    x: u32
+end
+
+Test(u32)

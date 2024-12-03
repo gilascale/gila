@@ -3,5 +3,9 @@ name = "gila"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "gila"
+path = "src/lib.rs"
+
 [dependencies]
 deepsize = "0.2.0"
