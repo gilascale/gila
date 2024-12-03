@@ -1,4 +1,15 @@
 # Gila
+```
+Vec type
+    x: u32
+    y: u32
+end
+
+
+vecs = [Vec(1,2), Vec(3,4)]
+
+print(vecs)
+```
 
 
 ## Todo
