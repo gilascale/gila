@@ -968,7 +968,7 @@ impl BytecodeGenerator<'_> {
 
     fn gen_import(&mut self, mut annotation_context: AnnotationContext, path: &Token) -> u8 {
         if let Type::IDENTIFIER(i) = &path.typ {
-            let s = self.gen_string_constant(i.to_string());
+            let s = self.create_constant_string(i.to_string());
             let destination = self.get_available_register();
             self.push_instruction(
                 Instruction {

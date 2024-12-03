@@ -1,6 +1,6 @@
 use deepsize::DeepSizeOf;
-use std::vec;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
+use std::{fs, vec};
 
 // todo deal with multi-platform
 // use std::os::windows::io::AsRawHandle;
@@ -36,6 +36,7 @@ pub enum RuntimeError {
     INVALID_GC_REF,
     INVALID_ACCESS,
     OUT_OF_MEMORY,
+    UNKNOWN_MODULE,
 }
 #[derive(DeepSizeOf, Debug, Clone)]
 pub struct DynamicObject {
@@ -1022,6 +1023,36 @@ impl<'a> ExecutionEngine<'a> {
     }
 
     fn exec_import(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        // todo
+        let import_path = stack_access!(self, instr.arg_0);
+        println!("import path {:?}", import_path);
+        match import_path {
+            Object::GC_REF(gc_ref) => {
+                let data = self.environment.heap.deref(gc_ref);
+                if data.is_err() {
+                    return Err(data.err().unwrap());
+                }
+                match data.unwrap() {
+                    GCRefData::STRING(s) => {
+                        // paths are the areas that we can find the module
+                        let paths = vec!["./".to_string()];
+                        for path in paths {
+                            let full_path = path + &s.s.to_string();
+                            if fs::metadata(full_path.to_string())
+                                .map(|m| m.is_dir())
+                                .unwrap_or(false)
+                            {
+                                // todo compile!
+                            }
+                        }
+                        return Err(RuntimeError::UNKNOWN_MODULE);
+                    }
+                    _ => panic!(),
+                }
+            }
+            _ => panic!(),
+        }
+
         increment_ip!(self);
         Ok(0)
     }
