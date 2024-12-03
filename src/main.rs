@@ -32,8 +32,7 @@ fn load_prelude<'a>(
     let mut bytecode_generator = BytecodeGenerator::new(&config, codegen_context);
 
     let mut exec_engine = ExecutionEngine::new(config, execution_context);
-    let source = fs::read_to_string("C:/Users/jking/dev/gila/prelude/prelude.gila")
-        .expect("Unable to read file");
+    let source = fs::read_to_string("./prelude/prelude.gila").expect("Unable to read file");
     let tokens = lexer.lex(source);
     let mut parser = parse::Parser {
         tokens: &tokens,
@@ -146,7 +145,7 @@ fn exec() {
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 
     let bytecode = bytecode_generator.generate(&ast);
-    println!("{:#?}", bytecode);
+    // println!("{:#?}", bytecode);
 
     let mut execution_engine = ExecutionEngine::new(&config, &mut environment);
 
