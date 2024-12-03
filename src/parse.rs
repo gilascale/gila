@@ -1,7 +1,7 @@
 use crate::{
     ast::{ASTNode, Op, Statement},
     lex::{Position, Token, Type},
-    r#type::{DataType, DataTypeVariant},
+    r#type::DataType,
 };
 
 pub struct Parser<'a> {
@@ -584,10 +584,17 @@ impl<'a> Parser<'a> {
     fn parse_type(&mut self) -> DataType {
         let current = &self.tokens[self.counter];
         self.counter += 1;
+        let mut t: DataType;
         match current.typ {
-            Type::U32 => DataType::new(DataTypeVariant::U32),
+            Type::U32 => t = DataType::U32,
             _ => panic!(),
         }
+        if self.tokens[self.counter].typ == Type::LSQUARE {
+            // todo do this properly - consume the []
+            self.counter += 2;
+            return DataType::SLICE(Box::new(t));
+        }
+        t
     }
 
     fn parse_decl(&mut self) -> ASTNode {

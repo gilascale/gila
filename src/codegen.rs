@@ -6,7 +6,7 @@ use crate::{
     config::Config,
     execution::{DynamicObject, FnObject, GCRef, GCRefData, Heap, Object, StringObject},
     lex::{Position, Token, Type},
-    r#type::{DataType, DataTypeVariant},
+    r#type::DataType,
 };
 
 #[derive(Debug, Clone, DeepSizeOf)]
@@ -780,8 +780,11 @@ impl BytecodeGenerator<'_> {
     }
 
     fn atom_from_type(&self, data_type: DataType) -> Object {
-        match data_type.variant {
-            DataTypeVariant::U32 => Object::ATOM(Rc::new("u32".to_string())),
+        match data_type {
+            // todo use object "types" rather than atoms
+            DataType::U32 => Object::ATOM(Rc::new("u32".to_string())),
+            DataType::SLICE(t) => Object::ATOM(Rc::new("slice".to_string())),
+            _ => panic!(),
         }
     }
 

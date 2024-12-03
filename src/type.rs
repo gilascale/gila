@@ -1,15 +1,17 @@
+// #[derive(Debug, Clone)]
+// pub enum DataTypeVariant {
+//     U32,
+//     SLICE(Box<DataTypeVariant>),
+// }
+
 #[derive(Debug, Clone)]
-pub enum DataTypeVariant {
+pub enum DataType {
     U32,
+    SLICE(Box<DataType>),
 }
 
-#[derive(Debug, Clone)]
-pub struct DataType {
-    pub variant: DataTypeVariant,
-}
-
-impl DataType {
-    pub fn new(variant: DataTypeVariant) -> Self {
-        return DataType { variant };
-    }
-}
+// impl DataType {
+//     pub fn new(variant: DataTypeVariant) -> Self {
+//         return DataType { variant };
+//     }
+// }
