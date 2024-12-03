@@ -1,5 +1,5 @@
 use deepsize::DeepSizeOf;
-use std::{collections::HashMap, rc::Rc, vec};
+use std::{collections::HashMap, hash::Hash, rc::Rc, vec};
 
 use crate::{
     ast::{ASTNode, Op, Statement},
@@ -722,40 +722,13 @@ impl BytecodeGenerator<'_> {
         params: &Vec<ASTNode>,
         statement: &ASTNode,
     ) -> u8 {
-        // FIXME
-        // this obviously has+ to be a constant
-
-        self.push_chunk();
-
-        // setup locals
-        let mut param_slots: Vec<u8> = vec![];
-        for param in params {
-            if let Statement::VARIABLE(v) = &param.statement {
-                let loc = self.get_available_register();
-                // todo what happened here
-                self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-                    .variable_map
-                    .insert(v.typ.clone(), loc);
-                param_slots.push(loc);
-            } else {
-                panic!();
-            }
-        }
-
-        // todo enter new block?
-        self.generate(statement);
-
-        let c = self.pop_chunk();
-
         let mut name = "anon".to_string();
         if let Type::IDENTIFIER(i) = &token.typ {
             name = i.to_string();
         }
 
-        let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::FN(FnObject {
-            chunk: c,
-            name: name.to_string(),
-            param_slots,
+        let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::STRING(StringObject {
+            s: Rc::new("tmp".to_string()),
         }));
 
         let constant = self.push_constant(Object::GC_REF(GCRef {
@@ -781,6 +754,38 @@ impl BytecodeGenerator<'_> {
             },
             token.pos.line.try_into().unwrap(),
         );
+
+        // FIXME
+        // this obviously has+ to be a constant
+
+        self.push_chunk();
+
+        // setup locals
+        let mut param_slots: Vec<u8> = vec![];
+        for param in params {
+            if let Statement::VARIABLE(v) = &param.statement {
+                let loc = self.get_available_register();
+                // todo what happened here
+                self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+                    .variable_map
+                    .insert(v.typ.clone(), loc);
+                param_slots.push(loc);
+            } else {
+                panic!();
+            }
+        }
+
+        // todo enter new block?
+        self.generate(statement);
+
+        let c = self.pop_chunk();
+
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].gc_ref_data
+            [gc_ref_data_idx as usize] = GCRefData::FN(FnObject {
+            chunk: c,
+            name: name,
+            param_slots: param_slots,
+        });
         0
     }
 

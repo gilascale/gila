@@ -23,6 +23,7 @@ print(vecs)
 - bytecode caching
 
 ### Language Features
+- recursion
 - match
 - nice slicing operations i.e. equality checks
 - strict typing

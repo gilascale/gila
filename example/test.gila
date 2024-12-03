@@ -3,13 +3,8 @@
 std = import std
 p = std.io.print
 
-v = std.maths.Vec(1,2)
+weeee fn
+    p("do stuff")
+end
 
-
-
-
-p(v.x)
-p("hi!")
-
-
-std.maths.fib(7)
+weeee()
