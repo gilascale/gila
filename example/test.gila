@@ -1,6 +1,6 @@
 
 
 
-import std
+x = import std
 
-print("hi")
+print(x.io)

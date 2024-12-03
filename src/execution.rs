@@ -1,5 +1,7 @@
 use crate::compiler::Compiler;
+use crate::lex::Type;
 use deepsize::DeepSizeOf;
+use std::hash::Hash;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
 use std::{fs, vec};
 
@@ -1079,8 +1081,13 @@ impl<'a> ExecutionEngine<'a> {
                             {
                                 // todo compile!
 
+                                let mut module_objects: HashMap<String, Object> = HashMap::new();
+
                                 for file in fs::read_dir(full_path).unwrap() {
                                     let f = file.unwrap();
+
+                                    let module_name =
+                                        f.file_name().to_string_lossy().replace(".gila", "");
 
                                     let normalized_path =
                                         f.path().to_string_lossy().replace("\\", "/");
@@ -1099,23 +1106,39 @@ impl<'a> ExecutionEngine<'a> {
                                     // todo go through all exported variables
 
                                     if let Some(ctx) = compilation_context {
+                                        let mut exported: HashMap<String, Object> = HashMap::new();
                                         for (key, val) in
                                             ctx.codegen_context.chunks[0].variable_map.clone()
                                         {
-                                            // lets put the variables in this module
-                                            let val = ctx.process_context.stack_frames[0].stack
-                                                [val as usize]
-                                                .clone();
-                                            println!("exported val {:?}={:?}", key, val);
+                                            println!("key = {:?}", key);
+                                            if let Type::IDENTIFIER(i) = key {
+                                                // lets put the variables in this module
+                                                let val = ctx.process_context.stack_frames[0].stack
+                                                    [val as usize]
+                                                    .clone();
+                                                // println!("exported val {:?}={:?}", key, val);
+                                                exported.insert(i.to_string(), val);
+                                                continue;
+                                            }
+                                            panic!();
                                         }
+                                        let module_dynamic_object =
+                                            DynamicObject { fields: exported };
+                                        let module = self.shared_execution_context.heap.alloc(
+                                            GCRefData::DYNAMIC_OBJECT(module_dynamic_object),
+                                            &self.config,
+                                        );
+                                        if module.is_err() {
+                                            return Err(module.err().unwrap());
+                                        }
+                                        module_objects
+                                            .insert(module_name, Object::GC_REF(module.unwrap()));
                                     }
                                 }
 
-                                let mut fields: HashMap<String, Object> = HashMap::new();
-
-                                // todo should the public fields be a list or a dict
-                                fields.insert("public".to_string(), Object::I64(0));
-                                let module_dynamic_object = DynamicObject { fields };
+                                let module_dynamic_object = DynamicObject {
+                                    fields: module_objects,
+                                };
                                 let module = self.shared_execution_context.heap.alloc(
                                     GCRefData::DYNAMIC_OBJECT(module_dynamic_object),
                                     &self.config,
