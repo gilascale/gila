@@ -2,7 +2,8 @@ use deepsize::DeepSizeOf;
 use std::vec;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
 
-use std::os::windows::io::AsRawHandle;
+// todo deal with multi-platform
+// use std::os::windows::io::AsRawHandle;
 
 use crate::{
     codegen::{Chunk, Instruction, OpInstruction},
