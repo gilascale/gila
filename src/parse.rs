@@ -122,20 +122,34 @@ impl<'a> Parser<'a> {
         higher_precedence
     }
 
+    // fixme we are not parsing this correctly
     fn struct_access(&mut self) -> ASTNode {
-        let higher_precedence = self.single();
-        if !self.end() && self.tokens[self.counter].typ == Type::DOT {
-            let lhs_pos = higher_precedence.position.clone();
-            self.counter += 1;
-            let field = self.tokens[self.counter].clone();
-            let rhs_pos = field.pos.clone();
-            self.counter += 1;
-            return ASTNode {
-                statement: Statement::STRUCT_ACCESS(Box::new(higher_precedence), field),
+        // Parse the leftmost expression first (e.g., x in x.y.z)
+        let mut lhs = self.single();
+
+        // Keep parsing as long as there's a DOT token followed by an identifier
+        while !self.end() && self.tokens[self.counter].typ == Type::DOT {
+            let lhs_pos = lhs.position.clone(); // Position of the left-hand side
+            self.counter += 1; // Consume the DOT token
+
+            // Ensure there is an identifier after the DOT
+            // if self.end() || self.tokens[self.counter].typ != Type::IDENTIFIER(_) {
+            //     panic!("Expected identifier after '.'");
+            // }
+
+            let field = self.tokens[self.counter].clone(); // Field being accessed
+            let rhs_pos = field.pos.clone(); // Position of the field
+            self.counter += 1; // Consume the identifier token
+
+            // Create a new STRUCT_ACCESS node for this level
+            lhs = ASTNode {
+                statement: Statement::STRUCT_ACCESS(Box::new(lhs), field),
                 position: lhs_pos.join(rhs_pos),
             };
         }
-        higher_precedence
+
+        // Return the fully parsed access chain
+        lhs
     }
 
     fn single(&mut self) -> ASTNode {

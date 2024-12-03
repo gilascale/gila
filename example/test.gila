@@ -1,6 +1,6 @@
 
 
 
-x = import std
+std = import std
 
-print(x.io)
+print(std.io.FUN)

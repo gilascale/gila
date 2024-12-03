@@ -1110,7 +1110,6 @@ impl<'a> ExecutionEngine<'a> {
                                         for (key, val) in
                                             ctx.codegen_context.chunks[0].variable_map.clone()
                                         {
-                                            println!("key = {:?}", key);
                                             if let Type::IDENTIFIER(i) = key {
                                                 // lets put the variables in this module
                                                 let val = ctx.process_context.stack_frames[0].stack
