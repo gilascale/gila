@@ -6,10 +6,25 @@
 
 
 
-Test type
-    list: u32[]
+Vec type
+    x: u32
+    y: u32
 end
 
 
-t = Test([1,2,3])
-print(t.list)
+dot fn(self: Vec)
+    return 1
+end
+
+
+
+
+
+
+
+
+
+
+
+
+

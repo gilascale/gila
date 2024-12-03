@@ -585,8 +585,9 @@ impl<'a> Parser<'a> {
         let current = &self.tokens[self.counter];
         self.counter += 1;
         let mut t: DataType;
-        match current.typ {
+        match &current.typ {
             Type::U32 => t = DataType::U32,
+            Type::IDENTIFIER(i) => t = DataType::DYNAMIC_OBJECT(i.clone()),
             _ => panic!(),
         }
         if self.tokens[self.counter].typ == Type::LSQUARE {
