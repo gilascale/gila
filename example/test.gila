@@ -7,9 +7,8 @@
 
 
 Test type
-    list: u32[]
+    list: u32
 end
 
 
-t = Test()
-print(t.list)
+t = Test(1)

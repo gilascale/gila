@@ -1,5 +1,3 @@
-use clap::builder::Str;
-use core::slice;
 use deepsize::DeepSizeOf;
 use std::vec;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
@@ -771,9 +769,15 @@ impl<'a> ExecutionEngine<'a> {
 
                 let mut fields: HashMap<String, Object> = HashMap::new();
 
+                let mut arg_values: Vec<Object> = vec![];
+                for i in call.arg_1..call.arg_1 + call.arg_2 {
+                    arg_values.push(stack_access!(self, i).clone());
+                }
+                let mut counter = 0;
                 for key in d.fields.keys() {
                     let typ = d.fields.get(key).unwrap();
-                    fields.insert(key.to_string(), Object::I64(0));
+                    fields.insert(key.to_string(), arg_values[counter].clone());
+                    counter += 1;
                 }
 
                 let gc_ref = self.environment.heap.alloc(
@@ -785,7 +789,6 @@ impl<'a> ExecutionEngine<'a> {
                     return Err(gc_ref.err().unwrap());
                 }
 
-                println!("putting object at {:?}", destination);
                 stack_set!(self, destination, Object::GC_REF(gc_ref.unwrap()));
                 increment_ip!(self);
                 //
@@ -972,11 +975,9 @@ impl<'a> ExecutionEngine<'a> {
 
     fn exec_struct_access(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
         let obj = stack_access!(self, instr.arg_0);
-        println!("umm {:?}", obj);
         // fixme this is horrible nesting
         match obj {
             Object::GC_REF(gc_ref) => {
-                println!("got obj...");
                 let result = self.environment.heap.deref(gc_ref);
                 if result.is_err() {
                     return Err(result.err().unwrap());

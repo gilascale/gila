@@ -946,7 +946,6 @@ impl BytecodeGenerator<'_> {
         // todo think how we do this... we should use indexes really
 
         if let Type::IDENTIFIER(i) = &field.typ {
-            println!("lhs = {:?}", expr);
             let lhs = self.visit(annotation_context.clone(), &expr);
             let field = self.create_constant_string(i.to_string());
             let register = self.get_available_register();

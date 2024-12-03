@@ -12,6 +12,11 @@
 - bytecode caching
 
 ### Language Features
+- strict typing
+- shadowing variables
+- closure capture setting
+- varying integer sizes
+- floating point support
 - generics
 - std lib
 - prelude
