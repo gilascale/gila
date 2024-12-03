@@ -10,7 +10,8 @@ Vec type
     x: u32
 end
 
-print(Vec())
+
+v = Vec(22)
 
 
-print("hi")
+print(v.x)
