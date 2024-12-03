@@ -36,9 +36,9 @@ fn compile_and_execute(code: String) -> Result<Object, RuntimeError> {
     let mut lexer = lex::Lexer::new();
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 
-    let mut exec_engine = ExecutionEngine::new(&config, &mut execution_context);
-    let source = fs::read_to_string("./prelude/prelude.gila").expect("Unable to read file");
-    let tokens = lexer.lex(source);
+    let mut exec_engine: ExecutionEngine<'_> =
+        ExecutionEngine::new(&config, &mut execution_context);
+    let tokens = lexer.lex(code);
     let mut parser = parse::Parser {
         tokens: &tokens,
         counter: 0,
