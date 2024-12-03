@@ -1,11 +1,2 @@
 
-
-print fn(x)
-    @native_call native_print(x)
-    return 0
-end
-
-PLATFORM = "windows"
-
-
-
+x = 3

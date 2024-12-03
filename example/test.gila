@@ -3,4 +3,8 @@
 
 std = import std
 
-print(std.io.FUN)
+
+
+
+std.io.print("hi")
+std.io.print(std.os.PLATFORM)
