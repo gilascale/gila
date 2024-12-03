@@ -1,5 +1,3 @@
-use clap::builder::Str;
-use core::slice;
 use deepsize::DeepSizeOf;
 use std::vec;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
@@ -785,7 +783,6 @@ impl<'a> ExecutionEngine<'a> {
                     return Err(gc_ref.err().unwrap());
                 }
 
-                println!("putting object at {:?}", destination);
                 stack_set!(self, destination, Object::GC_REF(gc_ref.unwrap()));
                 increment_ip!(self);
                 //

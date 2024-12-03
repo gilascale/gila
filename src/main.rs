@@ -1,6 +1,7 @@
 mod analyse;
 mod ast;
 mod codegen;
+mod compiler;
 mod config;
 mod execution;
 mod lex;
