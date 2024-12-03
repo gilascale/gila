@@ -48,10 +48,18 @@ fn compile_and_execute(code: String) -> Result<Object, RuntimeError> {
     exec_engine.exec(bytecode, false)
 }
 
-#[test]
-pub fn test_files() {
-    let source = fs::read_to_string("./tests/gila/constructor.gila").expect("Unable to read file");
-
-    let result = compile_and_execute(source);
-    assert_eq!(result.is_ok(), true);
+macro_rules! dynamic_test {
+    ($test_name:ident, $file_path:expr) => {
+        #[test]
+        fn $test_name() {
+            use std::fs;
+            let source = fs::read_to_string($file_path).expect("Unable to read file");
+            let result = compile_and_execute(source);
+            assert_eq!(result.is_ok(), true);
+        }
+    };
 }
+
+dynamic_test!(test_constructor, "./tests/gila/constructor.gila");
+dynamic_test!(addition, "./tests/gila/addition.gila");
+dynamic_test!(logical_operators, "./tests/gila/logical_operators.gila");
