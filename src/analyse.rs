@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{ASTNode, Statement},
-    lex::Token,
+    lex::{Position, Token},
     r#type::DataType,
 };
 
 #[derive(Debug)]
 pub enum TypeCheckError {
-    TYPE_NOT_ASSIGNABLE,
+    TYPE_NOT_ASSIGNABLE(Position, Position, DataType, DataType),
 }
 
 struct Scope {
@@ -30,12 +30,12 @@ impl Analyser {
         };
     }
 
-    pub fn analyse(&mut self, ast: &ASTNode) {
-        let result = self.visit(ast);
-        match result {
-            Ok(_) => {}
-            Err(e) => println!("Typechecking failed {:?}", e),
+    pub fn analyse(&mut self, ast: &ASTNode) -> Result<(), TypeCheckError> {
+        let res = self.visit(ast);
+        if res.is_err() {
+            return Err(res.err().unwrap());
         }
+        Ok(())
     }
 
     fn visit(&mut self, statement: &ASTNode) -> Result<DataType, TypeCheckError> {
@@ -80,12 +80,19 @@ impl Analyser {
                         return Err(value_type.err().unwrap());
                     }
 
-                    if t.clone().assignable_from(value_type.unwrap()) {
+                    if t.clone()
+                        .assignable_from(value_type.as_ref().unwrap().clone())
+                    {
                         self.scopes[self.scope_index]
                             .vars
                             .insert(token.clone(), t.clone());
                     } else {
-                        return Err(TypeCheckError::TYPE_NOT_ASSIGNABLE);
+                        return Err(TypeCheckError::TYPE_NOT_ASSIGNABLE(
+                            token.pos.clone(),
+                            v.position.clone(),
+                            t.clone(),
+                            value_type.unwrap(),
+                        ));
                     }
                 }
             }

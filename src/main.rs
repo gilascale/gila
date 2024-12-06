@@ -10,11 +10,13 @@ mod r#type;
 
 use std::collections::HashMap;
 use std::time::Instant;
+use std::vec;
 use std::{
     fs,
     io::{self, Write},
 };
 
+use analyse::TypeCheckError;
 use codegen::{BytecodeGenerator, Chunk, CodegenContext};
 use config::Config;
 use deepsize::DeepSizeOf;
@@ -99,6 +101,28 @@ fn repl() {
     // }
 }
 
+fn print_typecheck_error(source: String, typecheck_err: TypeCheckError) {
+    println!("Typecheck Error:\n");
+    let split_source = source.lines().collect::<Vec<&str>>();
+
+    match typecheck_err {
+        TypeCheckError::TYPE_NOT_ASSIGNABLE(lhs, rhs, lhs_type, rhs_type) => {
+            println!("{}", split_source[lhs.line as usize]);
+            let left_squiggle = "^".repeat((lhs.index_end - lhs.index) as usize);
+            let right_squiggle = "^".repeat((rhs.index_end - rhs.index) as usize);
+            let offset = rhs.index - lhs.index + 1;
+            println!(
+                "{}{}{}{}",
+                " ".repeat(lhs.index as usize),
+                left_squiggle,
+                " ".repeat(offset as usize),
+                right_squiggle
+            );
+            println!("{:?} not assignable to {:?}\n", rhs_type, lhs_type)
+        }
+    }
+}
+
 fn exec() {
     let start = Instant::now();
     let config = Config {
@@ -140,7 +164,7 @@ fn exec() {
 
     let source = fs::read_to_string(file_to_exec.to_string()).expect("Unable to read file");
     let mut lexer = lex::Lexer::new();
-    let tokens = lexer.lex(source);
+    let tokens = lexer.lex(source.clone());
     let mut parser = parse::Parser {
         tokens: &tokens,
         counter: 0,
@@ -149,7 +173,11 @@ fn exec() {
     // println!("ast {:#?}", ast);
 
     let mut analyser = analyse::Analyser::new();
-    analyser.analyse(&ast);
+    let typecheck_res = analyser.analyse(&ast);
+    if typecheck_res.is_err() {
+        print_typecheck_error(source.clone(), typecheck_res.err().unwrap());
+        return;
+    }
 
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 

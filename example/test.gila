@@ -3,5 +3,4 @@
 std = import std
 p = std.io.print
 
-x: u32 = "112"
-x = "hi"
+x: u32 = "112sdgasdg"
