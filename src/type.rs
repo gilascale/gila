@@ -6,15 +6,16 @@
 
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DataType {
     U32,
+    STRING,
     SLICE(Box<DataType>),
     DYNAMIC_OBJECT(Rc<String>),
 }
 
-// impl DataType {
-//     pub fn new(variant: DataTypeVariant) -> Self {
-//         return DataType { variant };
-//     }
-// }
+impl DataType {
+    pub fn assignable_from(self, other: Self) -> bool {
+        return self == other;
+    }
+}

@@ -3,8 +3,5 @@
 std = import std
 p = std.io.print
 
-weeee fn
-    p("do stuff")
-end
-
-weeee()
+x: u32 = "112"
+x = "hi"

@@ -8,9 +8,4 @@ Vec type
 end
 
 
-fib fn(x)
-    
-    
 
-    fib(x)
-end

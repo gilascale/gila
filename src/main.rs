@@ -148,6 +148,9 @@ fn exec() {
     let ast = parser.parse();
     // println!("ast {:#?}", ast);
 
+    let mut analyser = analyse::Analyser::new();
+    analyser.analyse(&ast);
+
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 
     let bytecode = bytecode_generator.generate(&ast);
