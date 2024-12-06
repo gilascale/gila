@@ -722,6 +722,23 @@ impl BytecodeGenerator<'_> {
         params: &Vec<ASTNode>,
         statement: &ASTNode,
     ) -> u8 {
+        // todo check if its a method!
+
+        if params.len() > 0 {
+            if let Statement::DEFINE(t, typ, _) = &params[0].statement {
+                if let Type::IDENTIFIER(i) = &t.typ {
+                    if i.to_string().eq("self") {
+                        let t = typ.clone().unwrap();
+                        if let DataType::DYNAMIC_OBJECT(d) = t {
+                            println!("doing method {:?} for {:?}", token, d);
+
+                            // todo add this function as a method
+                        }
+                    }
+                }
+            }
+        }
+
         let mut name = "anon".to_string();
         if let Type::IDENTIFIER(i) = &token.typ {
             name = i.to_string();
@@ -763,7 +780,7 @@ impl BytecodeGenerator<'_> {
         // setup locals
         let mut param_slots: Vec<u8> = vec![];
         for param in params {
-            if let Statement::VARIABLE(v) = &param.statement {
+            if let Statement::DEFINE(v, _, _) = &param.statement {
                 let loc = self.get_available_register();
                 // todo what happened here
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]

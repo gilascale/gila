@@ -3,20 +3,17 @@
 std = import std
 p = std.io.print
 
+
+
+
+
+
+
 Vec type
-    x: u32
-    y: u32
 end
 
-Entity type
-    pos: Vec
+test fn(self: Vec)
 end
 
 
-e = Entity(Vec(1,2))
-
-
-p(e.pos.x)
-p(e.pos.y)
-
-
+v = Vec()

@@ -558,11 +558,12 @@ impl<'a> Parser<'a> {
                 if self.tokens[self.counter].typ != Type::RPAREN {
                     loop {
                         // fixme do proper decl
-                        params.push(ASTNode {
-                            statement: Statement::VARIABLE(self.tokens[self.counter].clone()),
-                            position: self.tokens[self.counter].pos.clone(),
-                        });
-                        self.counter += 1;
+                        params.push(self.parse_decl());
+                        // params.push(ASTNode {
+                        //     statement: Statement::VARIABLE(self.tokens[self.counter].clone()),
+                        //     position: self.tokens[self.counter].pos.clone(),
+                        // });
+                        // self.counter += 1;
 
                         if self.tokens[self.counter].typ == Type::RPAREN {
                             self.counter += 1;
@@ -641,7 +642,7 @@ impl<'a> Parser<'a> {
         match &current.typ {
             Type::U32 => t = DataType::U32,
             Type::IDENTIFIER(i) => t = DataType::DYNAMIC_OBJECT(i.clone()),
-            _ => panic!(),
+            _ => panic!("umm what is {:?}", current.typ),
         }
         if self.tokens[self.counter].typ == Type::LSQUARE {
             // todo do this properly - consume the []

@@ -2,7 +2,7 @@
 
 
 
-print fn(msg)
+print fn(msg: string)
     @native_call native_print(msg)
     return 0
 end
