@@ -1,4 +1,5 @@
 # Gila
+
 ```
 Vec type
     x: u32
@@ -11,10 +12,11 @@ vecs = [Vec(1,2), Vec(3,4)]
 print(vecs)
 ```
 
-
 ## Todo
 
 ### Non functional features
+
+- field constructors are wrong
 - loading prelude has all sorts of weird behaviour
 - instruction data is all in the enum
 - macros for fetching instructions and counters etc
@@ -23,6 +25,10 @@ print(vecs)
 - bytecode caching
 
 ### Language Features
+
+- methods
+- iterators
+- intrinsics without the special syntax
 - recursion
 - match
 - nice slicing operations i.e. equality checks
@@ -35,17 +41,19 @@ print(vecs)
 - std lib
 - prelude
 - function args
-    - default args
+  - default args
 - multiple return values
-- blocks are their own thing i.e. `do end` because right now theyre built in to if's
+- blocks are their own thing i.e. `do end` because right now theyre built in to
+  if's
 - module system
 - loops
 - lists/slices
 - JIT
 - error handling
-    - stack traces
-    - print error locations
+  - stack traces
+  - print error locations
 - sandboxing
 
 ## Bugs
+
 - Can't seem to have multiple symbols in repl

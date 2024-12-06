@@ -794,7 +794,8 @@ impl BytecodeGenerator<'_> {
             // todo use object "types" rather than atoms
             DataType::U32 => Object::ATOM(Rc::new("u32".to_string())),
             DataType::SLICE(t) => Object::ATOM(Rc::new("slice".to_string())),
-            _ => panic!(),
+            DataType::DYNAMIC_OBJECT(d) => Object::ATOM(Rc::new(d.to_string())),
+            _ => panic!("cant create atom from type {:?}", data_type),
         }
     }
 

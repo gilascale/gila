@@ -3,21 +3,20 @@
 std = import std
 p = std.io.print
 
-x = 112
-
-
-// todo iterators
-
-x = 3
-
-p(x)
-
+Vec type
+    x: u32
+    y: u32
+end
 
 Entity type
+    pos: Vec
 end
 
 
+e = Entity(Vec(1,2))
 
 
-x: u32[] = [1,2,3]
+p(e.pos.x)
+p(e.pos.y)
+
 
