@@ -2,7 +2,7 @@
 
 
 
-print fn(x)
-    @native_call native_print(x)
+print fn(msg)
+    @native_call native_print(msg)
     return 0
 end
