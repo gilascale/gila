@@ -191,9 +191,7 @@ fn exec() {
     let elapsed = start.elapsed();
 
     match result {
-        Ok(o) => {
-            println!("={}", execution_engine.print_object(o));
-        }
+        Ok(o) => {}
         Err(e) => {
             println!("encountered runtime exception {:?}", e);
             execution_engine.print_stacktrace();

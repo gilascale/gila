@@ -3,4 +3,21 @@
 std = import std
 p = std.io.print
 
-x: u32 = "112sdgasdg"
+x = 112
+
+
+// todo iterators
+
+x = 3
+
+p(x)
+
+
+Entity type
+end
+
+
+
+
+x: u32[] = [1,2,3]
+

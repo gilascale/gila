@@ -248,15 +248,23 @@ impl Lexer {
                     });
                 }
                 '/' => {
-                    v.push(Token {
-                        typ: Type::DIV,
-                        pos: Position {
-                            index: self.index,
-                            line: self.line,
-                            index_end: self.index + 1,
-                            line_end: self.line,
-                        },
-                    });
+                    // todo cant have comments without a \n at the end
+                    if chars[self.counter as usize + 1] == '/' {
+                        while chars[self.counter as usize + 1] != '\n' {
+                            self.counter += 1;
+                        }
+                        self.counter += 1;
+                    } else {
+                        v.push(Token {
+                            typ: Type::DIV,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
+                            },
+                        });
+                    }
                 }
                 '.' => {
                     if chars[self.counter as usize + 1] == '.'
