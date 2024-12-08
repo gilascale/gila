@@ -39,7 +39,11 @@ pub enum OpInstruction {
     // LOAD_CONST <constant index> <> <destination>
     LOAD_CONST,
 
+    // JUMP IF ITS FALSE
     IF_JMP_FALSE, // IF <value> <jump to instruction> <>
+
+    // JMP <dest>
+    JMP,
 
     // BUILD_SLICE <starting reg> <num args> <destination>
     BUILD_SLICE,
@@ -209,9 +213,13 @@ impl BytecodeGenerator<'_> {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(annotation_context, &p),
             Statement::BLOCK(b) => self.gen_block(annotation_context, &b),
-            Statement::IF(cond, body, else_body) => {
-                self.gen_if(annotation_context, ast.position.clone(), &cond, &body)
-            }
+            Statement::IF(cond, body, else_body) => self.gen_if(
+                annotation_context,
+                ast.position.clone(),
+                &cond,
+                &body,
+                &else_body,
+            ),
             Statement::VARIABLE(v) => {
                 self.gen_variable(annotation_context, ast.position.clone(), v)
             }
@@ -268,12 +276,15 @@ impl BytecodeGenerator<'_> {
         position: Position,
         cond: &ASTNode,
         body: &ASTNode,
+        else_body: &Option<Box<ASTNode>>,
     ) -> u8 {
         // todo
         let value_register = self.visit(annotation_context.clone(), cond);
         let saved_if_ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .instructions
             .len();
+
+        // if the if condition evaluates to false, we jump to the else, otherwise we execute what we got bby
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::IF_JMP_FALSE,
@@ -285,12 +296,38 @@ impl BytecodeGenerator<'_> {
         );
         self.visit(annotation_context.clone(), body);
 
-        let ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+        let jump_ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .instructions
+            .len();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::JMP,
+                arg_0: 0,
+                arg_1: 0,
+                arg_2: 0,
+            },
+            0,
+        );
+
+        let ip_after_body = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .instructions
+            .len();
+
+        if else_body.is_some() {
+            self.visit(annotation_context, &else_body.as_ref().unwrap());
+        }
+
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
+            [saved_if_ip]
+            .arg_1 = ip_after_body.try_into().unwrap();
+
+        // now insert the jump after the body
+        let ip_at_end = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .instructions
             .len();
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
-            [saved_if_ip]
-            .arg_1 = ip.try_into().unwrap();
+            [jump_ip]
+            .arg_0 = ip_at_end.try_into().unwrap();
 
         0
     }

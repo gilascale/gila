@@ -601,6 +601,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::NEW => self.exec_new(instr),
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
             OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
+            OpInstruction::JMP => self.exec_jmp(instr),
             OpInstruction::BUILD_SLICE => self.exec_build_slice(instr),
             OpInstruction::BUILD_FN => self.exec_build_fn(instr),
             OpInstruction::INDEX => self.exec_index(instr),
@@ -1017,6 +1018,13 @@ impl<'a> ExecutionEngine<'a> {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer += 1;
         }
+
+        // fixme
+        Ok(0)
+    }
+    fn exec_jmp(&mut self, jmp: &Instruction) -> Result<u8, RuntimeError> {
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer =
+            jmp.arg_0 as usize;
 
         // fixme
         Ok(0)

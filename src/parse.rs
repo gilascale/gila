@@ -424,7 +424,6 @@ impl<'a> Parser<'a> {
         let mut else_body: Option<Box<ASTNode>> = None;
         if self.tokens[self.counter].typ == Type::ELSE {
             self.counter += 1;
-            println!("parsing else body!");
             else_body = Some(Box::new(self.statement()));
         }
         // consume end
@@ -449,7 +448,6 @@ impl<'a> Parser<'a> {
         let mut else_body: Option<Box<ASTNode>> = None;
         if self.tokens[self.counter].typ == Type::ELSE {
             self.counter += 1;
-            println!("parsing else body!");
             else_body = Some(Box::new(self.statement()));
         }
         // consume end

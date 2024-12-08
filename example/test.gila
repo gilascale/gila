@@ -19,9 +19,10 @@ v = Vec(1)
 
 
 
-required_platform = "windows"
-
+required_platform = "asdg"
 
 if std.os.PLATFORM == required_platform
     std.io.print("were on windows!")
+else
+    std.io.print("else")
 end
