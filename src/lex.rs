@@ -721,7 +721,8 @@ impl Lexer {
         let mut identifier = "".to_string();
         while self.counter < chars.len().try_into().unwrap() {
             if !(chars[self.counter as usize].is_alphabetic()
-                || chars[self.counter as usize] == '_')
+                || chars[self.counter as usize] == '_'
+                || chars[self.counter as usize].is_numeric())
             {
                 break;
             }

@@ -17,6 +17,11 @@ end
 v = Vec(1)
 
 
-if std.os.PLATFORM == "windows"
+
+
+required_platform = "windows"
+
+
+if std.os.PLATFORM == required_platform
     std.io.print("were on windows!")
 end
