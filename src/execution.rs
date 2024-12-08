@@ -843,6 +843,8 @@ impl<'a> ExecutionEngine<'a> {
 
                 let mut fields: HashMap<String, Object> = HashMap::new();
 
+                fields.insert("__prototype__".to_string(), fn_object.clone());
+
                 let mut arg_values: Vec<Object> = vec![];
                 for i in call.arg_1..call.arg_1 + call.arg_2 {
                     arg_values.push(stack_access!(self, i).clone());
@@ -859,8 +861,8 @@ impl<'a> ExecutionEngine<'a> {
                             counter += 1;
                         }
                         _ => {
-                            // add any methods etc
-                            fields.insert(key.to_string(), typ.clone());
+                            // dont add methods
+                            // fields.insert(key.to_string(), typ.clone());
                         }
                     }
                 }
