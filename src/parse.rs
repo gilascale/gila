@@ -599,6 +599,7 @@ impl<'a> Parser<'a> {
             if self.tokens[self.counter].typ != Type::END {
                 loop {
                     // consume types
+
                     decls.push(self.parse_decl());
 
                     if self.tokens[self.counter].typ == Type::END {

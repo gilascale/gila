@@ -60,6 +60,10 @@ impl DynamicObject {
 pub struct FnObject {
     pub chunk: Chunk,
     pub name: String,
+    // if this function needs to be bound at runtime
+    pub requires_method_binding: bool,
+    // the slot for the local variable it needs to bind to
+    pub method_to_object: Option<u8>,
     pub param_slots: Vec<u8>,
 }
 
@@ -456,6 +460,8 @@ impl<'a> ExecutionEngine<'a> {
             self.init_startup_stack(Box::new(FnObject {
                 chunk: bytecode,
                 name: "main".to_string(),
+                requires_method_binding: false,
+                method_to_object: None,
                 param_slots: vec![],
             }));
             self.zero_stack();
@@ -561,6 +567,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
             OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
             OpInstruction::BUILD_SLICE => self.exec_build_slice(instr),
+            OpInstruction::BUILD_FN => self.exec_build_fn(instr),
             OpInstruction::INDEX => self.exec_index(instr),
             OpInstruction::LOAD_CLOSURE => self.exec_load_closure(instr),
             OpInstruction::STRUCT_ACCESS => self.exec_struct_access(instr),
@@ -984,6 +991,38 @@ impl<'a> ExecutionEngine<'a> {
         self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
             1;
         Ok(instr.arg_2)
+    }
+
+    fn exec_build_fn(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        println!("building fn");
+
+        let fn_ref = stack_access!(self, instr.arg_0);
+        if let Object::GC_REF(gc_ref) = fn_ref {
+            let fn_obj = self.shared_execution_context.heap.deref(gc_ref);
+            if fn_obj.is_err() {
+                return Err(fn_obj.err().unwrap());
+            }
+            if let GCRefData::FN(f) = fn_obj.unwrap() {
+                if f.requires_method_binding {
+                    let obj_to_bind_to = stack_access!(self, f.method_to_object.unwrap());
+
+                    if let Object::GC_REF(g) = obj_to_bind_to {
+                        let obj = self.shared_execution_context.heap.deref(g);
+                        if obj.is_err() {
+                            return Err(obj.err().unwrap());
+                        }
+                        if let GCRefData::DYNAMIC_OBJECT(o) = obj.unwrap() {
+                            println!("binding {:?} to {:?}", f, o);
+
+                            // todo we need to actually set the value in the heap!
+                        }
+                    }
+                }
+            }
+        }
+
+        increment_ip!(self);
+        Ok(0)
     }
 
     fn exec_index(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {

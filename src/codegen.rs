@@ -38,9 +38,17 @@ pub enum OpInstruction {
     NEW,
     // LOAD_CONST <constant index> <> <destination>
     LOAD_CONST,
+
     IF_JMP_FALSE, // IF <value> <jump to instruction> <>
+
     // BUILD_SLICE <starting reg> <num args> <destination>
     BUILD_SLICE,
+
+    // BUILD_FN <code obj> <destination>
+    // the purpose of this is so function specifications can be evaluated at runtime, i.e. is it static, is it a method etc.
+    // it also processes default arguments etc
+    BUILD_FN,
+
     // INDEX <item> <index> <destination>
     INDEX,
     STRUCT_ACCESS,
@@ -722,6 +730,8 @@ impl BytecodeGenerator<'_> {
         params: &Vec<ASTNode>,
         statement: &ASTNode,
     ) -> u8 {
+        // how do
+
         // todo check if its a method!
 
         if params.len() > 0 {
@@ -772,6 +782,16 @@ impl BytecodeGenerator<'_> {
             token.pos.line.try_into().unwrap(),
         );
 
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::BUILD_FN,
+                arg_0: location,
+                arg_1: 0,
+                arg_2: 0,
+            },
+            0,
+        );
+
         // FIXME
         // this obviously has+ to be a constant
 
@@ -801,6 +821,8 @@ impl BytecodeGenerator<'_> {
             [gc_ref_data_idx as usize] = GCRefData::FN(FnObject {
             chunk: c,
             name: name,
+            requires_method_binding: false,
+            method_to_object: None,
             param_slots: param_slots,
         });
         0
