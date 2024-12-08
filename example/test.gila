@@ -7,6 +7,10 @@ Vec type
     x: u32
 end
 
+// for some reason adding self breaks it
 test fn(self: Vec)
 end
 
+v = Vec(1)
+
+p(v)

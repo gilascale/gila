@@ -554,7 +554,6 @@ impl<'a> ExecutionEngine<'a> {
     }
 
     fn exec_instr(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
-        println!("executing {:?}", instr.op_instruction);
         match instr.op_instruction {
             OpInstruction::RETURN => self.exec_return(instr),
             OpInstruction::EQUAL => self.exec_equal(instr),
@@ -786,7 +785,6 @@ impl<'a> ExecutionEngine<'a> {
             Object::GC_REF(r) => r,
             _ => panic!("can only call func or constructor"),
         };
-
         let dereferenced_data = self.shared_execution_context.heap.deref(gc_ref_object);
         if dereferenced_data.is_err() {
             self.environment.dump_stack_regs();
@@ -842,9 +840,17 @@ impl<'a> ExecutionEngine<'a> {
                 }
                 let mut counter = 0;
                 for key in d.fields.keys() {
+                    // println!("creating obj key {:?}", key);
                     let typ = d.fields.get(key).unwrap();
-                    fields.insert(key.to_string(), arg_values[counter].clone());
-                    counter += 1;
+
+                    // we want to only pass in args for members, not methods
+                    match typ {
+                        Object::ATOM(a) => {
+                            fields.insert(key.to_string(), arg_values[counter].clone());
+                            counter += 1;
+                        }
+                        _ => {}
+                    }
                 }
 
                 let gc_ref = self.shared_execution_context.heap.alloc(
@@ -858,6 +864,7 @@ impl<'a> ExecutionEngine<'a> {
 
                 stack_set!(self, destination, Object::GC_REF(gc_ref.unwrap()));
                 increment_ip!(self);
+
                 //
                 // self.environment.stack_frames[self.environment.stack_frame_pointer].stack
                 //     [call.arg_2 as usize] = Object::GC_REF(gc_ref.unwrap());
@@ -1000,6 +1007,7 @@ impl<'a> ExecutionEngine<'a> {
     }
 
     fn exec_build_fn(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        // todo this is breaking it :(
         let fn_ref = stack_access!(self, instr.arg_0);
         if let Object::GC_REF(gc_ref) = fn_ref {
             let fn_obj = self.shared_execution_context.heap.deref(gc_ref);
@@ -1017,18 +1025,20 @@ impl<'a> ExecutionEngine<'a> {
                             return Err(obj.err().unwrap());
                         }
                         if let GCRefData::DYNAMIC_OBJECT(o) = obj.unwrap() {
-                            // println!("binding {:?} to {:?}", f, o);
+                            // // println!("binding {:?} to {:?}", f, o);
 
                             // todo we need to actually set the value in the heap!
                             let mut cloned_obj = o.clone();
                             cloned_obj.fields.insert(f.name, fn_ref.clone());
 
-                            let res = self.shared_execution_context.heap.set(g, fn_object_data);
+                            // FIXME setting this below is breaking it.
+                            let res = self
+                                .shared_execution_context
+                                .heap
+                                .set(g, GCRefData::DYNAMIC_OBJECT(cloned_obj.clone()));
                             if res.is_err() {
                                 return Err(res.err().unwrap());
                             }
-
-                            println!("done method binding {:?}", cloned_obj);
                         }
                     }
                 }
