@@ -817,14 +817,9 @@ impl<'a> ExecutionEngine<'a> {
                 let mut start = 0;
                 if f.bounded_object.is_some() {
                     start = 1;
-                    // todo how do we get the callee???
-                    // todo could we just add it to the function object as an optional?
-                    println!("todo");
                     self.environment.stack_frames[self.environment.stack_frame_pointer].stack
                         [f.param_slots[0] as usize] =
                         Object::GC_REF(f.bounded_object.clone().unwrap());
-
-                    // fixme for now just generate a bounded method
                 }
 
                 for i in start..num_args {

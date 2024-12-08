@@ -7,14 +7,12 @@ end
 
 
 
-
-
 foo fn(self: Vec)
     std.io.print(self)
 end
 
 
 
-v=Vec(1)
+v = Vec(1)
 v.foo()
 
