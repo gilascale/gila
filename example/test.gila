@@ -8,6 +8,7 @@ end
 
 
 foo fn(self: Vec)
+    std.io.print("this is me:")
     std.io.print(self)
 end
 
@@ -15,5 +16,7 @@ end
 
 v = Vec(1)
 
-std.io.print(v.__prototype__)
 
+
+
+v.foo()
