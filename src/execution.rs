@@ -849,7 +849,10 @@ impl<'a> ExecutionEngine<'a> {
                             fields.insert(key.to_string(), arg_values[counter].clone());
                             counter += 1;
                         }
-                        _ => {}
+                        _ => {
+                            // add any methods etc
+                            fields.insert(key.to_string(), typ.clone());
+                        }
                     }
                 }
 
