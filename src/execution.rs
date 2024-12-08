@@ -800,6 +800,7 @@ impl<'a> ExecutionEngine<'a> {
                         call.arg_1.into()
                     }
                 };
+
                 // fixme this sucks, we shouldn't clone functions it's so expensive
                 // fixme why is this a Box?
                 self.push_stack_frame(Box::new(f.clone()), destination);
@@ -810,7 +811,14 @@ impl<'a> ExecutionEngine<'a> {
                 let starting_reg = call.arg_1;
                 let num_args = call.arg_2;
 
-                for i in 0..num_args {
+                let mut start = 0;
+                if f.requires_method_binding {
+                    start = 1;
+                    // todo how do we get the callee???
+                    println!("todo");
+                }
+
+                for i in start..num_args {
                     let arg_register = starting_reg as usize + i as usize;
                     let arg = &self.environment.stack_frames
                         [self.environment.stack_frame_pointer - 1]
