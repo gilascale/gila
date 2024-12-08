@@ -734,15 +734,21 @@ impl BytecodeGenerator<'_> {
 
         // todo check if its a method!
 
+        let mut is_method = false;
+        let mut method_obj: u8 = 0;
         if params.len() > 0 {
             if let Statement::DEFINE(t, typ, _) = &params[0].statement {
                 if let Type::IDENTIFIER(i) = &t.typ {
                     if i.to_string().eq("self") {
                         let t = typ.clone().unwrap();
                         if let DataType::DYNAMIC_OBJECT(d) = t {
-                            println!("doing method {:?} for {:?}", token, d);
-
+                            is_method = true;
                             // todo add this function as a method
+                            method_obj = *self.codegen_context.chunks
+                                [self.codegen_context.current_chunk_pointer]
+                                .variable_map
+                                .get(&Type::IDENTIFIER(d))
+                                .unwrap();
                         }
                     }
                 }
@@ -821,8 +827,8 @@ impl BytecodeGenerator<'_> {
             [gc_ref_data_idx as usize] = GCRefData::FN(FnObject {
             chunk: c,
             name: name,
-            requires_method_binding: false,
-            method_to_object: None,
+            requires_method_binding: is_method,
+            method_to_object: Some(method_obj),
             param_slots: param_slots,
         });
         0

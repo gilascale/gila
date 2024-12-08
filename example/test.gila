@@ -3,17 +3,10 @@
 std = import std
 p = std.io.print
 
-
-
-
 Vec type
     x: u32
 end
 
 test fn(self: Vec)
 end
-
-
-v = Vec(1)
-
 

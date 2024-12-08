@@ -322,6 +322,11 @@ impl Heap {
         return Ok(self.live_slots[gc_ref.index].clone());
     }
 
+    pub fn set(&mut self, gc_ref: &GCRef, value: GCRefData) -> Result<(), RuntimeError> {
+        self.live_slots[gc_ref.index] = value;
+        Ok(())
+    }
+
     pub fn dump_heap(&self) {
         println!(
             "HEAP (len={}): {:#?}",
@@ -549,6 +554,7 @@ impl<'a> ExecutionEngine<'a> {
     }
 
     fn exec_instr(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        println!("executing {:?}", instr.op_instruction);
         match instr.op_instruction {
             OpInstruction::RETURN => self.exec_return(instr),
             OpInstruction::EQUAL => self.exec_equal(instr),
@@ -994,15 +1000,14 @@ impl<'a> ExecutionEngine<'a> {
     }
 
     fn exec_build_fn(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
-        println!("building fn");
-
         let fn_ref = stack_access!(self, instr.arg_0);
         if let Object::GC_REF(gc_ref) = fn_ref {
             let fn_obj = self.shared_execution_context.heap.deref(gc_ref);
             if fn_obj.is_err() {
                 return Err(fn_obj.err().unwrap());
             }
-            if let GCRefData::FN(f) = fn_obj.unwrap() {
+            let fn_object_data = fn_obj.unwrap();
+            if let GCRefData::FN(f) = fn_object_data.clone() {
                 if f.requires_method_binding {
                     let obj_to_bind_to = stack_access!(self, f.method_to_object.unwrap());
 
@@ -1012,9 +1017,18 @@ impl<'a> ExecutionEngine<'a> {
                             return Err(obj.err().unwrap());
                         }
                         if let GCRefData::DYNAMIC_OBJECT(o) = obj.unwrap() {
-                            println!("binding {:?} to {:?}", f, o);
+                            // println!("binding {:?} to {:?}", f, o);
 
                             // todo we need to actually set the value in the heap!
+                            let mut cloned_obj = o.clone();
+                            cloned_obj.fields.insert(f.name, fn_ref.clone());
+
+                            let res = self.shared_execution_context.heap.set(g, fn_object_data);
+                            if res.is_err() {
+                                return Err(res.err().unwrap());
+                            }
+
+                            println!("done method binding {:?}", cloned_obj);
                         }
                     }
                 }
