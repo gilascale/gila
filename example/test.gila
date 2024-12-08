@@ -1,28 +1,10 @@
+
+
+
+
 std = import std
 
 
-Vec type
-    x: u32
-end
 
-
-
-foo fn(self: Vec)
-    std.io.print("this is me:")
-    std.io.print(self)
-end
-
-
-
-v = Vec(1)
-
-
-
-
-required_platform = "asdg"
-
-if std.os.PLATFORM == required_platform
-    std.io.print("were on windows!")
-else
-    std.io.print("else")
-end
+std.io.print("result type:")
+std.io.print(Result)

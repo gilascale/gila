@@ -23,7 +23,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.gila",
-				"match": "\\b(if|while|for|import|type|fn|return|end)\\b"
+				"match": "\\b(test|assert|if|while|for|import|type|fn|return|end)\\b"
 			}]
 		},
 		"types": {

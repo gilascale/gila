@@ -1,2 +1,4 @@
 
-x = 3
+Result type
+    has_result: bool
+end

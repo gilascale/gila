@@ -26,7 +26,13 @@ print(vecs)
 
 ### Language Features
 
-- methods
+- booleans
+- generics
+- builtin result type
+- lhs struct field assignment
+- testing
+- asserts
+- matches
 - iterators
 - intrinsics without the special syntax
 - recursion
