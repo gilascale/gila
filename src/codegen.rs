@@ -830,6 +830,7 @@ impl BytecodeGenerator<'_> {
             requires_method_binding: is_method,
             method_to_object: Some(method_obj),
             param_slots: param_slots,
+            bounded_object: None,
         });
         0
     }

@@ -65,6 +65,8 @@ pub struct FnObject {
     // the slot for the local variable it needs to bind to
     pub method_to_object: Option<u8>,
     pub param_slots: Vec<u8>,
+    // todo maybe make a BoundedFn object?
+    pub bounded_object: Option<GCRef>,
 }
 
 // todo should this be Rc'd?
@@ -468,6 +470,7 @@ impl<'a> ExecutionEngine<'a> {
                 requires_method_binding: false,
                 method_to_object: None,
                 param_slots: vec![],
+                bounded_object: None,
             }));
             self.zero_stack();
             self.init_constants();
@@ -812,11 +815,16 @@ impl<'a> ExecutionEngine<'a> {
                 let num_args = call.arg_2;
 
                 let mut start = 0;
-                if f.requires_method_binding {
+                if f.bounded_object.is_some() {
                     start = 1;
                     // todo how do we get the callee???
                     // todo could we just add it to the function object as an optional?
                     println!("todo");
+                    self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                        [f.param_slots[0] as usize] =
+                        Object::GC_REF(f.bounded_object.clone().unwrap());
+
+                    // fixme for now just generate a bounded method
                 }
 
                 for i in start..num_args {
@@ -1039,9 +1047,15 @@ impl<'a> ExecutionEngine<'a> {
                             return Err(obj.err().unwrap());
                         }
                         if let GCRefData::DYNAMIC_OBJECT(o) = obj.unwrap() {
-                            // // println!("binding {:?} to {:?}", f, o);
+                            // bind the function to the object here
+                            let mut bounded_fn = f.clone();
+                            bounded_fn.bounded_object = Some(g.clone());
+                            // set the function bounded ref
+                            self.shared_execution_context
+                                .heap
+                                .set(gc_ref, GCRefData::FN(bounded_fn));
 
-                            // todo we need to actually set the value in the heap!
+                            // update the object in the heap
                             let mut cloned_obj = o.clone();
                             cloned_obj.fields.insert(f.name, fn_ref.clone());
 
@@ -1126,8 +1140,43 @@ impl<'a> ExecutionEngine<'a> {
                                 }
                                 match result.unwrap() {
                                     GCRefData::STRING(s) => {
-                                        let result = o.fields.get(&s.s.to_string());
-                                        if result.is_none() {
+                                        let mut next_prototype_in_chain = o.clone();
+                                        let mut result: &Object;
+                                        let mut found = false;
+                                        loop {
+                                            let res = next_prototype_in_chain
+                                                .fields
+                                                .get(&s.s.to_string());
+                                            if res.is_some() {
+                                                found = true;
+                                                result = res.unwrap();
+                                                break;
+                                            }
+                                            let prototype =
+                                                next_prototype_in_chain.fields.get("__prototype__");
+                                            if prototype.is_none() {
+                                                return Err(RuntimeError::INVALID_ACCESS);
+                                            }
+                                            match prototype.unwrap() {
+                                                Object::GC_REF(g) => {
+                                                    let deref =
+                                                        self.shared_execution_context.heap.deref(g);
+                                                    if deref.is_err() {
+                                                        return Err(deref.err().unwrap());
+                                                    }
+                                                    match deref.unwrap() {
+                                                        GCRefData::DYNAMIC_OBJECT(d) => {
+                                                            next_prototype_in_chain = d
+                                                        }
+                                                        _ => panic!(),
+                                                    }
+                                                }
+                                                _ => panic!(),
+                                            }
+                                        }
+                                        // go up the chain!
+
+                                        if !found {
                                             return Err(RuntimeError::INVALID_ACCESS);
                                         }
 
@@ -1169,7 +1218,7 @@ impl<'a> ExecutionEngine<'a> {
                                         //         result.unwrap().clone()
                                         //     ),
                                         // }
-                                        stack_set!(self, instr.arg_2, result.unwrap().clone());
+                                        stack_set!(self, instr.arg_2, result.clone());
                                         increment_ip!(self);
                                     }
                                     _ => return Err(RuntimeError::INVALID_ACCESS),

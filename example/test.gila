@@ -1,13 +1,14 @@
 std = import std
-print = std.io.print
+
 
 Vec type
     x: u32
 end
 
-
 foo fn(self: Vec)
+    std.io.print(self)
 end
 
 v = Vec(1)
-print(v)
+
+v.foo(v)
