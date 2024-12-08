@@ -1,26 +1,25 @@
 
 
 std = import std
+
+
+
+
+std.io.print("hi")
+std.io.print("im gila!")
+
 p = std.io.print
+
+p("shorthand!")
+
 
 Vec type
     x: u32
 end
 
 
-test fn(self: Vec)
-    p("im a method!")
-    p(self)
+to_string fn(self:Vec)
 end
-
-
-to_string fn(self: Vec)
-    p("lol")
-end
-
-
-
 
 v = Vec(1)
-
-v.to_string()
+p(v.to_string)

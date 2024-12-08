@@ -815,6 +815,7 @@ impl<'a> ExecutionEngine<'a> {
                 if f.requires_method_binding {
                     start = 1;
                     // todo how do we get the callee???
+                    // todo could we just add it to the function object as an optional?
                     println!("todo");
                 }
 
@@ -1042,7 +1043,6 @@ impl<'a> ExecutionEngine<'a> {
                             let mut cloned_obj = o.clone();
                             cloned_obj.fields.insert(f.name, fn_ref.clone());
 
-                            // FIXME setting this below is breaking it.
                             let res = self
                                 .shared_execution_context
                                 .heap
@@ -1125,10 +1125,45 @@ impl<'a> ExecutionEngine<'a> {
                                 match result.unwrap() {
                                     GCRefData::STRING(s) => {
                                         let result = o.fields.get(&s.s.to_string());
-
                                         if result.is_none() {
                                             return Err(RuntimeError::INVALID_ACCESS);
                                         }
+
+                                        // todo what we can do is, on an access here, allocate a new BoundedMethod heap object and call it?
+
+                                        // // if result is a function and its bound, we should bind it!
+                                        // match result.unwrap() {
+                                        //     Object::GC_REF(gc_ref) => {
+                                        //         let res = self
+                                        //             .shared_execution_context
+                                        //             .heap
+                                        //             .deref(gc_ref);
+                                        //         if res.is_err() {
+                                        //             return Err(res.err().unwrap());
+                                        //         }
+                                        //         match res.unwrap() {
+                                        //             GCRefData::FN(f) => {
+                                        //                 let mut fnn = f.clone();
+                                        //                 fnn.bounded_object = Some(gc_ref.clone());
+                                        //                 stack_set!(
+                                        //                     self,
+                                        //                     instr.arg_2,
+
+                                        //                 ),
+                                        //             }
+                                        //             _ => stack_set!(
+                                        //                 self,
+                                        //                 instr.arg_2,
+                                        //                 result.unwrap().clone()
+                                        //             ),
+                                        //         }
+                                        //     }
+                                        //     _ => stack_set!(
+                                        //         self,
+                                        //         instr.arg_2,
+                                        //         result.unwrap().clone()
+                                        //     ),
+                                        // }
                                         stack_set!(self, instr.arg_2, result.unwrap().clone());
                                         increment_ip!(self);
                                     }
