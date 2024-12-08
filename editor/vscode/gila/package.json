@@ -1,0 +1,25 @@
+{
+  "name": "gila",
+  "displayName": "gila",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "gila",
+      "aliases": ["Gila", "gila"],
+      "extensions": [".gila"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "gila",
+      "scopeName": "source.gila",
+      "path": "./syntaxes/gila.tmLanguage.json"
+    }]
+  }
+}

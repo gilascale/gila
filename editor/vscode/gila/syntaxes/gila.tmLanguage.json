@@ -1,0 +1,74 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Gila",
+	"fileTypes": ["gila"],
+	"patterns": [
+		{
+		  "include": "#keywords"
+		},
+		{
+		  "include": "#types"
+		},
+		{
+		  "include": "#functions"
+		},
+		{
+		  "include": "#strings"
+		},
+		{
+		  "include": "#variables"
+		}
+	  ],
+	"repository": {		  
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.gila",
+				"match": "\\b(if|while|for|import|type|fn|return|end)\\b"
+			}]
+		},
+		"types": {
+			"patterns": [
+			  {
+				"match": "\\b(u32|f32|bool|string)\\b",
+				"name": "storage.type.gila"
+			  }
+			]
+		  },
+		"functions": {
+			"patterns": [
+			  {
+				"match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\s*(?=\\()",
+				"name": "entity.name.function.gila"
+			  }
+			]
+		  },
+		"strings": {
+			"name": "string.quoted.double.gila",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.gila",
+					"match": "\\\\."
+				}
+			]
+		},
+		"variables": {
+			"patterns": [
+				{
+				  "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b(?=\\s*=)", 
+				  "name": "variable.other.assignment.gila"
+				},
+				{
+				  "match": "(?<=\\bfn\\s+\\w+\\s*\\(.*)\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+				  "name": "variable.parameter.gila"
+				},
+				{
+				  "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b",
+				  "name": "variable.other.gila"
+				}
+			]
+		}
+	},
+	"scopeName": "source.gila"
+}
