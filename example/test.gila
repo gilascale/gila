@@ -17,6 +17,6 @@ end
 v = Vec(1)
 
 
-
-
-v.foo()
+if std.os.PLATFORM == "windows"
+    std.io.print("were on windows!")
+end

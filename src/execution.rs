@@ -172,7 +172,11 @@ impl Object {
         }
     }
 
-    pub fn equals(&self, other: Object) -> Result<bool, RuntimeError> {
+    pub fn equals(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        other: Object,
+    ) -> Result<bool, RuntimeError> {
         match self {
             Self::I64(i1) => {
                 // integer addition
@@ -181,8 +185,31 @@ impl Object {
                     _ => return Err(RuntimeError::INVALID_OPERATION),
                 }
             }
+            Self::GC_REF(gc_ref) => {
+                let res = shared_execution_context.heap.deref(gc_ref);
+                if res.is_err() {
+                    return Err(res.err().unwrap());
+                }
+                match res.unwrap() {
+                    GCRefData::STRING(s) => match other {
+                        Object::GC_REF(other_gc_ref) => {
+                            let other_res = shared_execution_context.heap.deref(&other_gc_ref);
+                            if other_res.is_err() {
+                                return Err(other_res.err().unwrap());
+                            }
+                            match other_res.unwrap() {
+                                GCRefData::STRING(other_s) => return Ok(s.s == other_s.s),
+                                _ => return Ok(false),
+                            }
+                        }
+                        _ => return Ok(false),
+                    },
+                    _ => todo!(),
+                }
+                Ok(true)
+            }
             // Self::HEAP_OBJECT(h1) => h1.data.add(other),
-            _ => return Err(RuntimeError::INVALID_OPERATION),
+            _ => todo!(),
         }
     }
 
@@ -653,7 +680,7 @@ impl<'a> ExecutionEngine<'a> {
         let lhs = stack_access!(self, equal.arg_0);
         let rhs = stack_access!(self, equal.arg_1);
 
-        let result = lhs.equals(rhs.clone());
+        let result = lhs.equals(&mut self.shared_execution_context, rhs.clone());
         if result.is_err() {
             return Err(result.err().unwrap());
         }
