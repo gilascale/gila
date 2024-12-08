@@ -676,7 +676,7 @@ impl Lexer {
                     }
                 }
                 _ => {
-                    if current.is_alphabetic() {
+                    if current.is_alphabetic() || current == '_' {
                         self.identifier(&chars, &mut v);
                         continue;
                     }

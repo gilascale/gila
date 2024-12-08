@@ -14,5 +14,6 @@ end
 
 
 v = Vec(1)
-v.foo()
+
+std.io.print(v.__prototype__)
 
