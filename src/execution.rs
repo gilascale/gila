@@ -1130,6 +1130,9 @@ impl<'a> ExecutionEngine<'a> {
                                         }
 
                                         // todo what we can do is, on an access here, allocate a new BoundedMethod heap object and call it?
+                                        // we should store a binded method cache for this like cpython
+                                        // alternatively, we can bind the obj onto the FunctionObject itself and not create a new data structure,
+                                        // may be easier for now
 
                                         // // if result is a function and its bound, we should bind it!
                                         // match result.unwrap() {
