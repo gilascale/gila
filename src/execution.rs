@@ -1047,13 +1047,13 @@ impl<'a> ExecutionEngine<'a> {
                             return Err(obj.err().unwrap());
                         }
                         if let GCRefData::DYNAMIC_OBJECT(o) = obj.unwrap() {
-                            // bind the function to the object here
-                            let mut bounded_fn = f.clone();
-                            bounded_fn.bounded_object = Some(g.clone());
-                            // set the function bounded ref
-                            self.shared_execution_context
-                                .heap
-                                .set(gc_ref, GCRefData::FN(bounded_fn));
+                            // // bind the function to the object here
+                            // let mut bounded_fn = f.clone();
+                            // bounded_fn.bounded_object = Some(g.clone());
+                            // // set the function bounded ref
+                            // self.shared_execution_context
+                            //     .heap
+                            //     .set(gc_ref, GCRefData::FN(bounded_fn));
 
                             // update the object in the heap
                             let mut cloned_obj = o.clone();
@@ -1121,8 +1121,8 @@ impl<'a> ExecutionEngine<'a> {
         let obj = stack_access!(self, instr.arg_0);
         // fixme this is horrible nesting
         match obj {
-            Object::GC_REF(gc_ref) => {
-                let result = self.shared_execution_context.heap.deref(gc_ref);
+            Object::GC_REF(obj_gc_ref) => {
+                let result = self.shared_execution_context.heap.deref(obj_gc_ref);
                 if result.is_err() {
                     return Err(result.err().unwrap());
                 }
@@ -1180,44 +1180,42 @@ impl<'a> ExecutionEngine<'a> {
                                             return Err(RuntimeError::INVALID_ACCESS);
                                         }
 
-                                        // todo what we can do is, on an access here, allocate a new BoundedMethod heap object and call it?
-                                        // we should store a binded method cache for this like cpython
-                                        // alternatively, we can bind the obj onto the FunctionObject itself and not create a new data structure,
-                                        // may be easier for now
+                                        // BINDING HAPPENS HERE
+                                        match result {
+                                            Object::GC_REF(method_to_bind_gc_ref) => {
+                                                let deref = self
+                                                    .shared_execution_context
+                                                    .heap
+                                                    .deref(method_to_bind_gc_ref);
+                                                if deref.is_err() {
+                                                    return Err(deref.err().unwrap());
+                                                }
+                                                match deref.unwrap() {
+                                                    GCRefData::FN(mut f) => {
+                                                        if f.requires_method_binding {
+                                                            f.bounded_object =
+                                                                Some(obj_gc_ref.clone());
 
-                                        // // if result is a function and its bound, we should bind it!
-                                        // match result.unwrap() {
-                                        //     Object::GC_REF(gc_ref) => {
-                                        //         let res = self
-                                        //             .shared_execution_context
-                                        //             .heap
-                                        //             .deref(gc_ref);
-                                        //         if res.is_err() {
-                                        //             return Err(res.err().unwrap());
-                                        //         }
-                                        //         match res.unwrap() {
-                                        //             GCRefData::FN(f) => {
-                                        //                 let mut fnn = f.clone();
-                                        //                 fnn.bounded_object = Some(gc_ref.clone());
-                                        //                 stack_set!(
-                                        //                     self,
-                                        //                     instr.arg_2,
+                                                            // todo we should probably not set the actual object? and instead return another?
+                                                            // because now its forever bound?
+                                                            let res = self
+                                                                .shared_execution_context
+                                                                .heap
+                                                                .set(
+                                                                    method_to_bind_gc_ref,
+                                                                    GCRefData::FN(f.clone()),
+                                                                );
+                                                            if res.is_err() {
+                                                                return Err(res.err().unwrap());
+                                                            }
+                                                        }
+                                                    }
+                                                    _ => {}
+                                                }
+                                            }
+                                            _ => {}
+                                        }
 
-                                        //                 ),
-                                        //             }
-                                        //             _ => stack_set!(
-                                        //                 self,
-                                        //                 instr.arg_2,
-                                        //                 result.unwrap().clone()
-                                        //             ),
-                                        //         }
-                                        //     }
-                                        //     _ => stack_set!(
-                                        //         self,
-                                        //         instr.arg_2,
-                                        //         result.unwrap().clone()
-                                        //     ),
-                                        // }
                                         stack_set!(self, instr.arg_2, result.clone());
                                         increment_ip!(self);
                                     }
