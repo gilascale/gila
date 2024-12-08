@@ -26,6 +26,12 @@ print(vecs)
 
 ### Language Features
 
+- type-hint modules
+- multiple params doesn't work
+- lex/parse/compile atoms
+- function return types
+- import supports . in it
+- import supports non-required assignment
 - booleans
 - generics
 - builtin result type
