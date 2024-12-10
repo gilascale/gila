@@ -36,6 +36,7 @@ impl<'a> Parser<'a> {
         let current: &Token = &self.tokens[self.counter];
 
         match current.typ {
+            Type::TEST => self.test(),
             Type::IF => self.iff(),
             Type::FOR => self.forr(),
             Type::RETURN => self.ret(),
@@ -436,6 +437,26 @@ impl<'a> Parser<'a> {
             // todo this will error if block is empty
             position: start_pos.join(end_pos),
         };
+    }
+
+    fn test(&mut self) -> ASTNode {
+        let test_pos = self.tokens[self.counter].pos.clone();
+        self.counter += 1;
+
+        let test_name = self.string();
+        let body = self.statement();
+        let body_pos = body.position.clone();
+
+        // consume end
+        // fixme this needs to be done properly
+        // because right now we can't do else if
+        let end_pos = self.tokens[self.counter].pos.clone();
+        self.counter += 1;
+
+        ASTNode {
+            statement: Statement::TEST(Box::new(test_name), Box::new(body)),
+            position: test_pos.join(end_pos),
+        }
     }
 
     fn iff(&mut self) -> ASTNode {

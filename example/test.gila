@@ -5,8 +5,8 @@
 std = import std
 
 
-x = true
-f = false
 
 
-std.io.print(x==f)
+test "x is true"
+    x = true
+end

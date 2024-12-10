@@ -213,6 +213,9 @@ impl BytecodeGenerator<'_> {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(annotation_context, &p),
             Statement::BLOCK(b) => self.gen_block(annotation_context, &b),
+            Statement::TEST(name, body) => {
+                self.gen_test(annotation_context, ast.position.clone(), &name, &body)
+            }
             Statement::IF(cond, body, else_body) => self.gen_if(
                 annotation_context,
                 ast.position.clone(),
@@ -271,6 +274,16 @@ impl BytecodeGenerator<'_> {
         for instruction in b {
             self.visit(annotation_context.clone(), instruction);
         }
+        0
+    }
+
+    fn gen_test(
+        &mut self,
+        annotation_context: AnnotationContext,
+        position: Position,
+        name: &ASTNode,
+        body: &ASTNode,
+    ) -> u8 {
         0
     }
 

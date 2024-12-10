@@ -42,6 +42,7 @@ impl Analyser {
         match &statement.statement {
             Statement::PROGRAM(p) => self.visit_program(p),
             Statement::NAMED_FUNCTION(t, params, body) => Ok(DataType::U32),
+            Statement::TEST(name, body) => Ok(DataType::U32),
             Statement::IF(cond, body, else_body) => self.visit_if(cond, body, else_body),
             Statement::DEFINE(t, typ, val) => self.visit_define(t, typ, val),
             Statement::CALL(calee, args) => self.visit_call(calee, args),

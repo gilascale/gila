@@ -24,6 +24,7 @@ impl Position {
 
 #[derive(Eq, PartialEq, Debug, Clone, Hash, DeepSizeOf)]
 pub enum Type {
+    TEST,
     AMPERSAND,
     DOT,
     RETURN,
@@ -477,6 +478,21 @@ impl Lexer {
                     {
                         v.push(Token {
                             typ: Type::THEN,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 4,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 3;
+                        self.index += 3;
+                    } else if chars[self.counter as usize + 1] == 'e'
+                        && chars[self.counter as usize + 2] == 's'
+                        && chars[self.counter as usize + 3] == 't'
+                    {
+                        v.push(Token {
+                            typ: Type::TEST,
                             pos: Position {
                                 index: self.index,
                                 line: self.line,
