@@ -46,9 +46,21 @@ impl<'a> Parser<'a> {
     }
 
     fn expression(&mut self) -> ASTNode {
-        // let higher_prece
+        let higher_precedence = self.import();
+        let lhs_pos = higher_precedence.position.clone();
 
-        return self.import();
+        if !self.end() && self.tokens[self.counter].typ == Type::ASSIGN {
+            // todo
+            self.counter += 1;
+            let rhs = self.expression();
+            let rhs_pos = rhs.position.clone();
+            return ASTNode {
+                statement: Statement::ASSIGN(Box::new(higher_precedence), Box::new(rhs)),
+                position: lhs_pos.join(rhs_pos),
+            };
+        }
+
+        higher_precedence
     }
 
     fn import(&mut self) -> ASTNode {

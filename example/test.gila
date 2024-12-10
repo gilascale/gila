@@ -8,15 +8,14 @@ p = std.io.print
 
 
 
-my_fn fn -> Result
-    return Result(true)
+
+Foo type
+    x: u32
 end
 
+f = Foo(1)
+
+f.x = 2
 
 
-
-smth_that_fails fn -> Result
-    r = !my_fn()
-end
-
-r = smth_that_fails()
+p(f.x)

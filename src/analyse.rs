@@ -45,6 +45,7 @@ impl Analyser {
             Statement::TEST(name, body) => Ok(DataType::U32),
             Statement::IF(cond, body, else_body) => self.visit_if(cond, body, else_body),
             Statement::DEFINE(t, typ, val) => self.visit_define(t, typ, val),
+            Statement::ASSIGN(lhs, rhs) => Ok(DataType::U32),
             Statement::CALL(calee, args) => self.visit_call(calee, args),
             Statement::LITERAL_NUM(n) => self.visit_literal_num(n),
             Statement::STRING(s) => self.visit_string(s),

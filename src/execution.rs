@@ -615,6 +615,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::INDEX => self.exec_index(instr),
             OpInstruction::LOAD_CLOSURE => self.exec_load_closure(instr),
             OpInstruction::STRUCT_ACCESS => self.exec_struct_access(instr),
+            OpInstruction::STRUCT_SET => self.exec_struct_set(instr),
             OpInstruction::IMPORT => self.exec_import(instr),
             _ => panic!("unknown instruction {:?}", instr.op_instruction),
         }
@@ -1270,6 +1271,55 @@ impl<'a> ExecutionEngine<'a> {
         }
 
         Ok(0)
+    }
+
+    fn exec_struct_set(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let obj = stack_access!(self, instr.arg_0);
+        let member = stack_access!(self, instr.arg_1);
+        let value_to_set = stack_access!(self, instr.arg_2);
+
+        match obj {
+            Object::GC_REF(gc_ref) => {
+                let val = self.shared_execution_context.heap.deref(gc_ref);
+                if val.is_err() {
+                    return Err(val.err().unwrap());
+                }
+                match val.unwrap() {
+                    GCRefData::DYNAMIC_OBJECT(d) => match member {
+                        Object::GC_REF(member_gc_ref) => {
+                            let member_val =
+                                self.shared_execution_context.heap.deref(member_gc_ref);
+                            if member_val.is_err() {
+                                return Err(member_val.err().unwrap());
+                            }
+                            match member_val.unwrap() {
+                                GCRefData::STRING(s) => {
+                                    let mut cloned_dynamic_obj = d.clone();
+                                    cloned_dynamic_obj
+                                        .fields
+                                        .insert(s.s.to_string(), value_to_set.clone());
+
+                                    let res = self
+                                        .shared_execution_context
+                                        .heap
+                                        .set(gc_ref, GCRefData::DYNAMIC_OBJECT(cloned_dynamic_obj));
+                                    if res.is_err() {
+                                        return Err(res.err().unwrap());
+                                    }
+                                    // todo add a number here?
+                                    increment_ip!(self);
+                                    return Ok(0);
+                                }
+                                _ => todo!(),
+                            }
+                        }
+                        _ => todo!(),
+                    },
+                    _ => todo!(),
+                }
+            }
+            _ => todo!(),
+        }
     }
 
     fn exec_import(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {

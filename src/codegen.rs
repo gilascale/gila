@@ -55,7 +55,13 @@ pub enum OpInstruction {
 
     // INDEX <item> <index> <destination>
     INDEX,
+
     STRUCT_ACCESS,
+
+    // STRUCT_SET <obj> <member> <value>
+    // we store the result in arg_1 which is the member string
+    STRUCT_SET,
+
     // IMPORT <module path> <dest>
     IMPORT,
 }
@@ -228,6 +234,9 @@ impl BytecodeGenerator<'_> {
             }
             Statement::DEFINE(var, typ, value) => {
                 self.gen_define(annotation_context, ast.position.clone(), var, value)
+            }
+            Statement::ASSIGN(lhs, rhs) => {
+                self.gen_assign(annotation_context, ast.position.clone(), lhs, rhs)
             }
             Statement::LITERAL_NUM(n) => {
                 self.gen_literal_num(annotation_context, ast.position.clone(), n)
@@ -556,6 +565,42 @@ impl BytecodeGenerator<'_> {
             }
             None => panic!(),
         }
+    }
+
+    fn gen_assign(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        lhs: &Box<ASTNode>,
+        rhs: &Box<ASTNode>,
+    ) -> u8 {
+        match &lhs.statement {
+            Statement::STRUCT_ACCESS(obj_to_access, token) => {
+                if let Type::IDENTIFIER(i) = &token.typ {
+                    let obj_to_access_reg = self.visit(annotation_context.clone(), &obj_to_access);
+                    let string_reg = self.create_constant_string(i.to_string());
+
+                    let value_reg = self.visit(annotation_context.clone(), rhs);
+
+                    // todo how do we do this?
+                    self.push_instruction(
+                        Instruction {
+                            op_instruction: OpInstruction::STRUCT_SET,
+                            arg_0: obj_to_access_reg,
+                            arg_1: string_reg,
+                            arg_2: value_reg,
+                        },
+                        pos.line.try_into().unwrap(),
+                    );
+
+                    return string_reg;
+                }
+                panic!()
+            }
+            _ => todo!(),
+        }
+
+        0
     }
 
     fn parse_embedding_instruction_number(&self, typ: &Type) -> Option<u8> {
