@@ -16,7 +16,7 @@ print(vecs)
 
 ### Bugs
 
-- struct access is still random
+- struct constructor is still random
 - print function calls just aren't executing
 
 ### Non functional features

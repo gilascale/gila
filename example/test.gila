@@ -5,19 +5,16 @@
 std = import std
 p = std.io.print
 
-Iterator type
-    counter: u32
-    limit: u32
-end
-
-__iter fn(self: Iterator)
-    // self.counter = self.counter + 1
-end
-
 i = Iterator(0,10)
-// i.__iter()
+res = i.__iter()
+res = i.__iter()
+res = i.__iter()
+res = i.__iter()
+res = i.__iter()
+res = i.__iter()
+res = i.__iter()
+res = i.__iter()
+res = i.__iter()
+res = i.__iter()
 
-
-// why is this print not working!!!
-
-std.io.print(i.counter)
+std.io.print(res)

@@ -3,17 +3,25 @@ Error type
     msg: string
 end
 
-
-// Result = type $T | Error end
-
-Result type
-  is_ok: bool
-end
-
-
 // what this gets compiled to is
 // __result = my_fn()
 // if !__result.is_ok
 //   return __result
 // end
 // r = __result.data
+//
+// Eventually we may want an algebraic data type like so
+// Result = type $T | Error end
+Result type
+  is_ok: bool
+end
+
+Iterator type
+    counter: u32
+    limit: u32
+end
+
+__iter fn(self: Iterator) -> bool
+    self.counter = self.counter + 1
+    return self.counter == self.limit
+end
