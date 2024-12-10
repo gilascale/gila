@@ -32,6 +32,7 @@ pub enum Statement {
     ATOM(Token),
     VARIABLE(Token),
     BIN_OP(Box<ASTNode>, Box<ASTNode>, Op),
+    LITERAL_BOOL(bool),
     LITERAL_NUM(Token),
     STRING(Token),
     RETURN(Option<Box<ASTNode>>),

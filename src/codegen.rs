@@ -229,6 +229,9 @@ impl BytecodeGenerator<'_> {
             Statement::LITERAL_NUM(n) => {
                 self.gen_literal_num(annotation_context, ast.position.clone(), n)
             }
+            Statement::LITERAL_BOOL(b) => {
+                self.gen_literal_bool(annotation_context, ast.position.clone(), *b)
+            }
             Statement::ATOM(a) => self.gen_atom(annotation_context, ast.position.clone(), a),
             Statement::STRING(s) => self.gen_string(annotation_context, ast.position.clone(), s),
             Statement::CALL(b, args) => {
@@ -354,6 +357,29 @@ impl BytecodeGenerator<'_> {
             return reg;
         }
         panic!();
+    }
+
+    fn gen_literal_bool(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        b: bool,
+    ) -> u8 {
+        // we need to push the atom as a constant?
+
+        // todo maybe have a constant hashmap?
+        let const_index = self.push_constant(Object::BOOL(b));
+        let reg = self.get_available_register();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::LOAD_CONST,
+                arg_0: const_index,
+                arg_1: 0,
+                arg_2: reg,
+            },
+            pos.line.try_into().unwrap(),
+        );
+        return reg;
     }
 
     fn gen_atom(

@@ -5,10 +5,8 @@
 std = import std
 
 
-x = :foo
-
-should_true = :foo == :foo
-should_false = :foo == :asdg
+x = true
+f = false
 
 
-std.io.print(should_true == should_true)
+std.io.print(x==f)

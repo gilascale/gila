@@ -155,6 +155,20 @@ impl<'a> Parser<'a> {
     fn single(&mut self) -> ASTNode {
         let next: &Token = &self.tokens[self.counter];
         match (next.typ) {
+            Type::TRUE => {
+                self.counter += 1;
+                return ASTNode {
+                    statement: Statement::LITERAL_BOOL(true),
+                    position: next.pos.clone(),
+                };
+            }
+            Type::FALSE => {
+                self.counter += 1;
+                return ASTNode {
+                    statement: Statement::LITERAL_BOOL(false),
+                    position: next.pos.clone(),
+                };
+            }
             Type::STRING(_) => self.string(),
             Type::ATOM(_) => self.atom(),
             Type::IDENTIFIER(_) => {

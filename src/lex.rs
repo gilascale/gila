@@ -42,6 +42,8 @@ pub enum Type {
     EQUALS,
     NOT_EQUALS,
     PASS,
+    TRUE,
+    FALSE,
     FN,
     FOR,
     IF,
@@ -330,6 +332,22 @@ impl Lexer {
                         });
                         self.counter += 1;
                         self.index += 1;
+                    } else if chars[self.counter as usize + 1] == 'a'
+                        && chars[self.counter as usize + 2] == 'l'
+                        && chars[self.counter as usize + 3] == 's'
+                        && chars[self.counter as usize + 4] == 'e'
+                    {
+                        v.push(Token {
+                            typ: Type::FALSE,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 5,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 4;
+                        self.index += 4;
                     } else if chars[self.counter as usize + 1] == 'o'
                         && chars[self.counter as usize + 2] == 'r'
                     {
@@ -459,6 +477,21 @@ impl Lexer {
                     {
                         v.push(Token {
                             typ: Type::THEN,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 4,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 3;
+                        self.index += 3;
+                    } else if chars[self.counter as usize + 1] == 'r'
+                        && chars[self.counter as usize + 2] == 'u'
+                        && chars[self.counter as usize + 3] == 'e'
+                    {
+                        v.push(Token {
+                            typ: Type::TRUE,
                             pos: Position {
                                 index: self.index,
                                 line: self.line,

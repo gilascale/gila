@@ -16,6 +16,8 @@ print(vecs)
 
 ### Non functional features
 
+- constant hashmap so we don't keep on generating new constants (i.e. for bools,
+  nums and strings)
 - field constructors are wrong
 - loading prelude has all sorts of weird behaviour
 - instruction data is all in the enum
