@@ -7,4 +7,8 @@ std = import std
 
 x = :foo
 
-std.io.print(x)
+should_true = :foo == :foo
+should_false = :foo == :asdg
+
+
+std.io.print(should_true == should_true)

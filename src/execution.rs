@@ -178,6 +178,14 @@ impl Object {
         other: Object,
     ) -> Result<bool, RuntimeError> {
         match self {
+            Self::BOOL(b1) => match other {
+                Self::BOOL(b2) => return Ok(*b1 == b2),
+                _ => return Ok(false),
+            },
+            Self::ATOM(a1) => match other {
+                Object::ATOM(a2) => return Ok(a1.eq(&a2)),
+                _ => return Ok(false),
+            },
             Self::I64(i1) => {
                 // integer addition
                 match other {
