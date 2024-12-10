@@ -14,6 +14,11 @@ print(vecs)
 
 ## Todo
 
+### Bugs
+
+- struct access is still random
+- print function calls just aren't executing
+
 ### Non functional features
 
 - constant hashmap so we don't keep on generating new constants (i.e. for bools,

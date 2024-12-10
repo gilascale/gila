@@ -842,6 +842,8 @@ impl BytecodeGenerator<'_> {
                     },
                     0,
                 );
+
+                return register;
             }
         } else {
             let lhs = self.visit(annotation_context.clone(), e1);
@@ -868,7 +870,7 @@ impl BytecodeGenerator<'_> {
             return register;
         }
 
-        panic!();
+        panic!("failing bin op {:?}", op);
     }
 
     fn gen_named_function(

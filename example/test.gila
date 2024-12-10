@@ -5,17 +5,19 @@
 std = import std
 p = std.io.print
 
-
-
-
-
-Foo type
-    x: u32
+Iterator type
+    counter: u32
+    limit: u32
 end
 
-f = Foo(1)
+__iter fn(self: Iterator)
+    // self.counter = self.counter + 1
+end
 
-f.x = 2
+i = Iterator(0,10)
+// i.__iter()
 
 
-p(f.x)
+// why is this print not working!!!
+
+std.io.print(i.counter)
