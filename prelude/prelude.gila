@@ -1,4 +1,19 @@
 
-Result type
-    has_result: bool
+Error type
+    msg: string
 end
+
+
+// Result = type $T | Error end
+
+Result type
+  is_ok: bool
+end
+
+
+// what this gets compiled to is
+// __result = my_fn()
+// if !__result.is_ok
+//   return __result
+// end
+// r = __result.data

@@ -3,10 +3,20 @@
 
 
 std = import std
+p = std.io.print
 
 
 
 
-test "x is true"
-    x = true
+my_fn fn -> Result
+    return Result(true)
 end
+
+
+
+
+smth_that_fails fn -> Result
+    r = !my_fn()
+end
+
+r = smth_that_fails()

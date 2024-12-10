@@ -27,6 +27,7 @@ pub enum Op {
 
 #[derive(Debug)]
 pub enum Statement {
+    TRY(Box<ASTNode>),
     SLICE(Vec<ASTNode>),
     CALL(Box<ASTNode>, Vec<ASTNode>),
     ATOM(Token),
@@ -40,7 +41,7 @@ pub enum Statement {
     BLOCK(Vec<ASTNode>),
     // todo should these tokens be references?
     DEFINE(Token, Option<DataType>, Option<Box<ASTNode>>),
-    NAMED_FUNCTION(Token, Vec<ASTNode>, Box<ASTNode>),
+    NAMED_FUNCTION(Token, Vec<ASTNode>, Option<DataType>, Box<ASTNode>),
     NAMED_TYPE_DECL(Token, Vec<ASTNode>),
     TEST(Box<ASTNode>, Box<ASTNode>),
     IF(Box<ASTNode>, Box<ASTNode>, Option<Box<ASTNode>>),

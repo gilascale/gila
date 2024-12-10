@@ -28,6 +28,13 @@ print(vecs)
 
 ### Language Features
 
+- try
+- interface/prototype system
+- enums
+  - algebraic data types such as `Result = type $T | Error end`
+    - this would require support for 'zero field' objects i.e. the field is
+      implicit?
+- virtual functions?
 - target backend
 - type-hint modules
 - multiple params doesn't work

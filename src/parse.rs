@@ -67,6 +67,22 @@ impl<'a> Parser<'a> {
         return self.logical_operators();
     }
 
+    fn tryy(&mut self) -> ASTNode {
+        if self.tokens[self.counter].typ == Type::EXCLAIM {
+            let lhs_pos = self.tokens[self.counter].pos.clone();
+            self.counter += 1;
+            // fixme should this be self.expression()
+            let rhs = self.call();
+            let rhs_pos = rhs.position.clone();
+            return ASTNode {
+                statement: Statement::TRY(Box::new(rhs)),
+                position: lhs_pos.join(rhs_pos),
+            };
+        }
+
+        self.call()
+    }
+
     fn call(&mut self) -> ASTNode {
         let higher_precedence = self.index();
 
@@ -388,7 +404,7 @@ impl<'a> Parser<'a> {
     }
 
     fn mul_div(&mut self) -> ASTNode {
-        let higher_precedence = self.call();
+        let higher_precedence = self.tryy();
         if !self.end() && self.tokens[self.counter].typ == Type::MUL {
             self.counter += 1;
             let rhs = self.expression();
@@ -431,6 +447,7 @@ impl<'a> Parser<'a> {
             start_pos = self.tokens[self.counter - 1].pos.clone();
             end_pos = self.tokens[self.counter - 1].pos.clone();
         }
+        // consume the END
         self.counter += 1;
         return ASTNode {
             statement: Statement::BLOCK(stms),
@@ -621,10 +638,25 @@ impl<'a> Parser<'a> {
                 }
             }
 
+            let mut return_type: Option<DataType> = None;
+            if self.tokens[self.counter].typ == Type::SUB {
+                self.counter += 1;
+                if self.tokens[self.counter].typ == Type::GREATER_THAN {
+                    self.counter += 1;
+                    //consume type
+                    return_type = Some(self.parse_type());
+                }
+            }
+
             let rhs = self.block();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
-                statement: Statement::NAMED_FUNCTION(identifier.clone(), params, Box::new(rhs)),
+                statement: Statement::NAMED_FUNCTION(
+                    identifier.clone(),
+                    params,
+                    return_type,
+                    Box::new(rhs),
+                ),
                 position: lhs_pos.join(rhs_pos),
             };
         }

@@ -243,8 +243,8 @@ impl BytecodeGenerator<'_> {
             Statement::BIN_OP(e1, e2, op) => {
                 self.gen_bin_op(annotation_context, ast.position.clone(), &e1, &e2, &op)
             }
-            Statement::NAMED_FUNCTION(t, params, statement) => {
-                self.gen_named_function(annotation_context, &t, &params, &statement)
+            Statement::NAMED_FUNCTION(t, params, return_type, statement) => {
+                self.gen_named_function(annotation_context, &t, &params, &return_type, &statement)
             }
             Statement::NAMED_TYPE_DECL(t, decls) => {
                 self.gen_named_type(annotation_context, &t, &decls)
@@ -259,6 +259,7 @@ impl BytecodeGenerator<'_> {
                 self.gen_struct_access(annotation_context, &expr, &field)
             }
             Statement::IMPORT(path) => self.gen_import(annotation_context, path),
+            Statement::TRY(rhs) => self.gen_try(annotation_context, rhs),
             _ => panic!(),
         }
     }
@@ -830,6 +831,7 @@ impl BytecodeGenerator<'_> {
         annotation_context: AnnotationContext,
         token: &Token,
         params: &Vec<ASTNode>,
+        return_type: &Option<DataType>,
         statement: &ASTNode,
     ) -> u8 {
         // how do
@@ -1138,5 +1140,14 @@ impl BytecodeGenerator<'_> {
             return destination;
         }
         panic!()
+    }
+
+    fn gen_try(&mut self, mut annotation_context: AnnotationContext, rhs: &ASTNode) -> u8 {
+        // first generate the rhs
+        let rhs_reg = self.visit(annotation_context, rhs);
+
+        // todo we need to now insert some code that checks the result
+
+        rhs_reg
     }
 }

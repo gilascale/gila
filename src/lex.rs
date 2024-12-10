@@ -24,6 +24,7 @@ impl Position {
 
 #[derive(Eq, PartialEq, Debug, Clone, Hash, DeepSizeOf)]
 pub enum Type {
+    EXCLAIM,
     TEST,
     AMPERSAND,
     DOT,
@@ -666,6 +667,16 @@ impl Lexer {
                         });
                         self.index += 1;
                         self.counter += 1;
+                    } else {
+                        v.push(Token {
+                            typ: Type::EXCLAIM,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
+                            },
+                        });
                     }
                 }
                 '"' => {
