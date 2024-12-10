@@ -5,6 +5,6 @@
 std = import std
 
 
+x = :foo
 
-std.io.print("result type:")
-std.io.print(Result)
+std.io.print(x)

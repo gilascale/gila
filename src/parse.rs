@@ -192,6 +192,17 @@ impl<'a> Parser<'a> {
                     position: lhs_pos.join(rhs_pos),
                 };
             }
+            Type::COLON => {
+                let lhs_pos = self.tokens[self.counter].pos.clone();
+                self.counter += 1;
+                let atom = self.tokens[self.counter].clone();
+                let rhs_pos = atom.pos.clone();
+                self.counter += 1;
+                return ASTNode {
+                    statement: Statement::ATOM(atom),
+                    position: lhs_pos.join(rhs_pos),
+                };
+            }
             Type::AMPERSAND => {
                 // doing annotation
                 let lhs_pos = self.tokens[self.counter].pos.clone();

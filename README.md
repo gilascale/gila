@@ -26,6 +26,7 @@ print(vecs)
 
 ### Language Features
 
+- target backend
 - type-hint modules
 - multiple params doesn't work
 - lex/parse/compile atoms

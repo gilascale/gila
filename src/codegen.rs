@@ -229,6 +229,7 @@ impl BytecodeGenerator<'_> {
             Statement::LITERAL_NUM(n) => {
                 self.gen_literal_num(annotation_context, ast.position.clone(), n)
             }
+            Statement::ATOM(a) => self.gen_atom(annotation_context, ast.position.clone(), a),
             Statement::STRING(s) => self.gen_string(annotation_context, ast.position.clone(), s),
             Statement::CALL(b, args) => {
                 self.gen_call(annotation_context, ast.position.clone(), b, args)
@@ -349,6 +350,31 @@ impl BytecodeGenerator<'_> {
                     arg_2: reg,
                 },
                 t.pos.line.try_into().unwrap(),
+            );
+            return reg;
+        }
+        panic!();
+    }
+
+    fn gen_atom(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        atom: &Token,
+    ) -> u8 {
+        // we need to push the atom as a constant?
+
+        if let Type::IDENTIFIER(i) = &atom.typ {
+            let const_index = self.push_constant(Object::ATOM(i.clone()));
+            let reg = self.get_available_register();
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::LOAD_CONST,
+                    arg_0: const_index,
+                    arg_1: 0,
+                    arg_2: reg,
+                },
+                pos.line.try_into().unwrap(),
             );
             return reg;
         }
