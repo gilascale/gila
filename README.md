@@ -21,6 +21,12 @@ print(vecs)
 
 ### Non functional features
 
+- fix nested GCRefs in constant data
+  - the issue is we do `init_constants()` which assigns a heap allocation to
+    each GCRef in the constant pool. the problem is it doesn't then allocate
+    stuff inside those constants.
+  - maybe this isn't actually an issue... and we can just keep the ref to the
+    constants? nah that wont work.
 - constant hashmap so we don't keep on generating new constants (i.e. for bools,
   nums and strings)
 - field constructors are wrong
@@ -33,6 +39,13 @@ print(vecs)
 
 ### Language Features
 
+- class methods
+- including other std stuff in std (circular import caching)
+- std type hints
+  - printable interface for print
+- named args
+- tuples
+- dictionaries
 - try
 - interface/prototype system
 - enums

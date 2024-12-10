@@ -32,6 +32,10 @@ pub enum OpInstruction {
     SUBI,
     // CALL <location of fn> <args starting register> <num args>
     CALL,
+
+    // CALL_KW <location of fn> <location of tuple containing arg names> <args starting register>
+    CALL_KW,
+
     // NATIVE_CALL <name of fn string> <args starting register> <num args> <destination is implicitly the register after>
     NATIVE_CALL,
     // NEW <location of type> <args starting register> <number of args>
@@ -697,9 +701,29 @@ impl BytecodeGenerator<'_> {
 
             // todo we need to find some contiguous registers, for now just alloc
 
+            let mut is_kw_call = false;
+            let mut kw_args_vec: Vec<Object> = vec![];
+
             let mut arg_registers: Vec<u8> = vec![];
             for arg in args {
-                arg_registers.push(self.visit(annotation_context.clone(), arg));
+                match &arg.statement {
+                    Statement::ASSIGN(lhs, rhs) => {
+                        is_kw_call = true;
+                        match &lhs.statement {
+                            Statement::VARIABLE(v) => match &v.typ {
+                                Type::IDENTIFIER(i) => {
+                                    // todo push this identifier into the vec
+                                }
+                                _ => panic!(),
+                            },
+                            _ => panic!(),
+                        }
+
+                        // todo CALL_KW
+                        // todo hmm as its a const, how do we assign values...?
+                    }
+                    _ => arg_registers.push(self.visit(annotation_context.clone(), arg)),
+                }
             }
 
             let destination = self.get_available_register();
@@ -726,15 +750,19 @@ impl BytecodeGenerator<'_> {
                 }
             };
 
-            self.push_instruction(
-                Instruction {
-                    op_instruction: OpInstruction::CALL,
-                    arg_0: callee_register,
-                    arg_1: first_arg_register,
-                    arg_2: arg_registers.len() as u8,
-                },
-                pos.line.try_into().unwrap(),
-            );
+            if is_kw_call {
+                // todo
+            } else {
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::CALL,
+                        arg_0: callee_register,
+                        arg_1: first_arg_register,
+                        arg_2: arg_registers.len() as u8,
+                    },
+                    pos.line.try_into().unwrap(),
+                );
+            }
 
             return destination.try_into().unwrap();
         }

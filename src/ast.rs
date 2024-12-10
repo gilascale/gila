@@ -27,6 +27,7 @@ pub enum Op {
 
 #[derive(Debug)]
 pub enum Statement {
+    NAMED_ARG(Token, Box<ASTNode>),
     TRY(Box<ASTNode>),
     SLICE(Vec<ASTNode>),
     CALL(Box<ASTNode>, Vec<ASTNode>),

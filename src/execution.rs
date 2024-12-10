@@ -82,6 +82,7 @@ pub struct SliceObject {
 
 #[derive(DeepSizeOf, Debug, Clone)]
 pub enum GCRefData {
+    TUPLE(Vec<Object>),
     FN(FnObject),
     STRING(StringObject),
     SLICE(SliceObject),
@@ -339,6 +340,7 @@ pub struct GCRef {
 impl Heap {
     pub fn alloc(&mut self, gc_ref_dat: GCRefData, config: &Config) -> Result<GCRef, RuntimeError> {
         if self.free_space_available_bytes() >= config.max_memory {
+            println!("fuck. {:?}", self.free_space_available_bytes());
             return Err(RuntimeError::OUT_OF_MEMORY);
         }
 
@@ -891,9 +893,7 @@ impl<'a> ExecutionEngine<'a> {
                 }
                 let mut counter = 0;
                 for key in d.fields.keys() {
-                    // println!("creating obj key {:?}", key);
                     let typ = d.fields.get(key).unwrap();
-
                     // we want to only pass in args for members, not methods
                     match typ {
                         Object::ATOM(a) => {

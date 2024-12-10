@@ -1,4 +1,3 @@
-
 Error type
     msg: string
 end
@@ -15,6 +14,13 @@ end
 Result type
   is_ok: bool
 end
+
+
+Printable type
+end
+
+
+
 
 Iterator type
     counter: u32

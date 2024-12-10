@@ -3,18 +3,10 @@
 
 
 std = import std
-p = std.io.print
 
-i = Iterator(0,10)
-res = i.__iter()
-res = i.__iter()
-res = i.__iter()
-res = i.__iter()
-res = i.__iter()
-res = i.__iter()
-res = i.__iter()
-res = i.__iter()
-res = i.__iter()
-res = i.__iter()
 
-std.io.print(res)
+
+
+s = std.web.HTTPServer(std.net.Socket(80))
+
+std.io.print(s)
