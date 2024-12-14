@@ -704,6 +704,8 @@ impl BytecodeGenerator<'_> {
             let mut is_kw_call = false;
             let mut kw_args_vec: Vec<Object> = vec![];
 
+            let mut kwarg_strings: Vec<Object> = vec![];
+
             let mut arg_registers: Vec<u8> = vec![];
             for arg in args {
                 match &arg.statement {
@@ -712,7 +714,16 @@ impl BytecodeGenerator<'_> {
                         match &lhs.statement {
                             Statement::VARIABLE(v) => match &v.typ {
                                 Type::IDENTIFIER(i) => {
-                                    // todo push this identifier into the vec
+                                    let gc_ref_data_idx =
+                                        self.push_gc_ref_data(GCRefData::STRING(StringObject {
+                                            s: i.clone(),
+                                        }));
+                                    kwarg_strings.push(Object::GC_REF(GCRef {
+                                        index: gc_ref_data_idx as usize,
+                                        marked: false,
+                                    }));
+
+                                    arg_registers.push(self.visit(annotation_context.clone(), rhs))
                                 }
                                 _ => panic!(),
                             },
@@ -720,14 +731,12 @@ impl BytecodeGenerator<'_> {
                         }
 
                         // todo CALL_KW
-                        // todo hmm as its a const, how do we assign values...?
                     }
                     _ => arg_registers.push(self.visit(annotation_context.clone(), arg)),
                 }
             }
 
             let destination = self.get_available_register();
-
             let first_arg_register = {
                 if arg_registers.len() > 0 {
                     arg_registers[0]
@@ -740,18 +749,37 @@ impl BytecodeGenerator<'_> {
             // increment one as we allocate end for the return
             self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                 .current_register += 1;
-            // figure out where to put the result
-            let destination: u8 = {
-                if arg_registers.len() > 0 {
-                    arg_registers[0] + arg_registers.len() as u8
-                } else {
-                    // if we have no args, then just encode the destination!
-                    destination
-                }
-            };
 
             if is_kw_call {
-                // todo
+                // build the tuple
+                // todo the issue is the gc ref strings wont get set when we init constants in the execution engine
+                // so we need to init nested gc refs
+                let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::TUPLE(kwarg_strings));
+                let constant_idx = self.push_constant(Object::GC_REF(GCRef {
+                    index: gc_ref_data_idx as usize,
+                    marked: false,
+                }));
+
+                let const_reg = self.get_available_register();
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::LOAD_CONST,
+                        arg_0: constant_idx,
+                        arg_1: 0,
+                        arg_2: const_reg,
+                    },
+                    0,
+                );
+
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::CALL_KW,
+                        arg_0: callee_register,
+                        arg_1: const_reg,
+                        arg_2: arg_registers.len() as u8,
+                    },
+                    pos.line.try_into().unwrap(),
+                );
             } else {
                 self.push_instruction(
                     Instruction {

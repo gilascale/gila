@@ -3,10 +3,9 @@
 
 
 std = import std
+print = std.io.print
 
 
+i = Iterator(counter=0,limit=10)
 
-
-s = std.web.HTTPServer(std.net.Socket(80))
-
-std.io.print(s)
+print(i)

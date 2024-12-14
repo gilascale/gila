@@ -340,7 +340,6 @@ pub struct GCRef {
 impl Heap {
     pub fn alloc(&mut self, gc_ref_dat: GCRefData, config: &Config) -> Result<GCRef, RuntimeError> {
         if self.free_space_available_bytes() >= config.max_memory {
-            println!("fuck. {:?}", self.free_space_available_bytes());
             return Err(RuntimeError::OUT_OF_MEMORY);
         }
 
@@ -564,6 +563,36 @@ impl<'a> ExecutionEngine<'a> {
         );
     }
 
+    fn init_obj(
+        &self,
+        object: &mut Object,
+        gc_ref_data: &Vec<GCRefData>,
+        heap: &mut Heap,
+    ) -> Result<(), RuntimeError> {
+        if let Object::GC_REF(gc_ref) = object {
+            let gc_ref_data = &gc_ref_data[gc_ref.index];
+
+            match gc_ref_data {
+                GCRefData::TUPLE(t) => {
+                    for item in t {
+                        // todo process the item
+                        println!("found nested obj in tuple to init {:?}", item);
+                    }
+                }
+                _ => {}
+            }
+
+            // now lets heap allocate!
+            let alloc = heap.alloc(gc_ref_data.clone(), &self.config);
+            match alloc {
+                Ok(_) => gc_ref.index = alloc.unwrap().index,
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(())
+    }
+
+    // todo nested gc refs!
     fn init_constants(&mut self) -> Result<(), RuntimeError> {
         // todo
         // for each gc ref data constant on the current chunk, put it in the heap and update the reference
@@ -572,20 +601,60 @@ impl<'a> ExecutionEngine<'a> {
 
         let constant_pool = &mut stack_frame.fn_object.chunk.constant_pool;
         // todo this is HORRIBLE
-        let gc_ref_data = &stack_frame.fn_object.chunk.gc_ref_data.clone();
+        let stack_gc_ref_data = &mut stack_frame.fn_object.chunk.gc_ref_data.clone();
 
         for i in constant_pool.iter_mut() {
             if let Object::GC_REF(gc_ref) = i {
-                let gc_ref_data = &gc_ref_data[gc_ref.index];
+                let mut gc_ref_data = &stack_gc_ref_data[gc_ref.index];
 
-                // now lets heap allocate!
-                let alloc = self
-                    .shared_execution_context
-                    .heap
-                    .alloc(gc_ref_data.clone(), &self.config);
-                match alloc {
-                    Ok(_) => gc_ref.index = alloc.unwrap().index,
-                    Err(e) => return Err(e),
+                match gc_ref_data {
+                    GCRefData::TUPLE(t) => {
+                        let mut new_vec: Vec<Object> = vec![];
+                        for item in t {
+                            // todo do the exact same thing here, check if its a Object::GC_REF and alloc it
+                            if let Object::GC_REF(nested_gc_ref) = item {
+                                println!("found a nested gc ref! {:?}", nested_gc_ref);
+
+                                let nested_gc_ref_data = &stack_gc_ref_data[nested_gc_ref.index];
+
+                                // now lets heap allocate!
+                                let alloc = self
+                                    .shared_execution_context
+                                    .heap
+                                    .alloc(nested_gc_ref_data.clone(), &self.config);
+                                match alloc {
+                                    Ok(_) => {
+                                        new_vec.push(Object::GC_REF(GCRef {
+                                            index: alloc.unwrap().index,
+                                            marked: false,
+                                        }));
+                                    }
+                                    Err(e) => return Err(e),
+                                }
+                            }
+                        }
+                        let new_tuple = &GCRefData::TUPLE(new_vec);
+                        // now lets heap allocate!
+                        let alloc = self
+                            .shared_execution_context
+                            .heap
+                            .alloc(new_tuple.clone(), &self.config);
+                        match alloc {
+                            Ok(_) => gc_ref.index = alloc.unwrap().index,
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    _ => {
+                        // now lets heap allocate!
+                        let alloc = self
+                            .shared_execution_context
+                            .heap
+                            .alloc(gc_ref_data.clone(), &self.config);
+                        match alloc {
+                            Ok(_) => gc_ref.index = alloc.unwrap().index,
+                            Err(e) => return Err(e),
+                        }
+                    }
                 }
             }
         }
@@ -607,6 +676,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::SUBI => self.exec_subi(instr),
             OpInstruction::ADD => self.exec_add(instr),
             OpInstruction::CALL => self.exec_call(instr),
+            OpInstruction::CALL_KW => self.exec_call_kw(instr),
             OpInstruction::NATIVE_CALL => self.exec_native_call(instr),
             OpInstruction::NEW => self.exec_new(instr),
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
@@ -818,6 +888,74 @@ impl<'a> ExecutionEngine<'a> {
         } else {
             return Err(addition.err().unwrap());
         }
+    }
+
+    fn exec_call_kw(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
+        let fn_object = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [call.arg_0 as usize];
+        let gc_ref_object: &GCRef = match &fn_object {
+            Object::GC_REF(r) => r,
+            _ => panic!("can only call func or constructor"),
+        };
+        let dereferenced_data = self.shared_execution_context.heap.deref(gc_ref_object);
+        if dereferenced_data.is_err() {
+            self.environment.dump_stack_regs();
+            return Err(dereferenced_data.err().unwrap());
+        }
+
+        let mut arg_values: HashMap<String, Object> = HashMap::new();
+        match &dereferenced_data.unwrap() {
+            GCRefData::DYNAMIC_OBJECT(d) => {
+                let kwargs_tuple = stack_access!(self, call.arg_1);
+                println!("kwargs tuple! {:?}", kwargs_tuple);
+
+                match kwargs_tuple {
+                    Object::GC_REF(kwargs_gc_ref) => {
+                        let res = self.shared_execution_context.heap.deref(kwargs_gc_ref);
+                        if res.is_err() {
+                            return Err(res.err().unwrap());
+                        }
+                        match res.unwrap() {
+                            GCRefData::TUPLE(t) => {
+                                for item in t {
+                                    match item {
+                                        Object::GC_REF(item_gc_ref) => {
+                                            let res = self
+                                                .shared_execution_context
+                                                .heap
+                                                .deref(&item_gc_ref);
+                                            if res.is_err() {
+                                                return Err(res.err().unwrap());
+                                            }
+                                            match res.unwrap() {
+                                                GCRefData::STRING(s) => {
+                                                    println!("whoo {}", s.s);
+                                                }
+                                                _ => panic!(),
+                                            }
+                                        }
+                                        _ => panic!(),
+                                    }
+                                }
+                            }
+                            _ => panic!(),
+                        }
+                    }
+                    _ => panic!(),
+                }
+
+                // todo we need to set the fields
+                increment_ip!(self);
+            }
+            _ => {
+                panic!()
+                // self.environment.stack_frames[self.environment.stack_frame_pointer]
+                //     .instruction_pointer += 1;
+            }
+        }
+
+        increment_ip!(self);
+        Ok(0)
     }
 
     fn exec_call(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
