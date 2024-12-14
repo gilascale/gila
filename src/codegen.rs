@@ -705,6 +705,7 @@ impl BytecodeGenerator<'_> {
             let mut kw_args_vec: Vec<Object> = vec![];
 
             let mut kwarg_strings: Vec<Object> = vec![];
+            let mut num_kwargs = 0;
 
             let mut arg_registers: Vec<u8> = vec![];
             for arg in args {
@@ -735,6 +736,7 @@ impl BytecodeGenerator<'_> {
                     _ => arg_registers.push(self.visit(annotation_context.clone(), arg)),
                 }
             }
+            num_kwargs = kwarg_strings.len();
 
             let destination = self.get_available_register();
             let first_arg_register = {
@@ -776,10 +778,12 @@ impl BytecodeGenerator<'_> {
                         op_instruction: OpInstruction::CALL_KW,
                         arg_0: callee_register,
                         arg_1: const_reg,
-                        arg_2: arg_registers.len() as u8,
+                        arg_2: first_arg_register,
                     },
                     pos.line.try_into().unwrap(),
                 );
+
+                return first_arg_register + num_kwargs as u8;
             } else {
                 self.push_instruction(
                     Instruction {

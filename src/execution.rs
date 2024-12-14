@@ -563,35 +563,6 @@ impl<'a> ExecutionEngine<'a> {
         );
     }
 
-    fn init_obj(
-        &self,
-        object: &mut Object,
-        gc_ref_data: &Vec<GCRefData>,
-        heap: &mut Heap,
-    ) -> Result<(), RuntimeError> {
-        if let Object::GC_REF(gc_ref) = object {
-            let gc_ref_data = &gc_ref_data[gc_ref.index];
-
-            match gc_ref_data {
-                GCRefData::TUPLE(t) => {
-                    for item in t {
-                        // todo process the item
-                        println!("found nested obj in tuple to init {:?}", item);
-                    }
-                }
-                _ => {}
-            }
-
-            // now lets heap allocate!
-            let alloc = heap.alloc(gc_ref_data.clone(), &self.config);
-            match alloc {
-                Ok(_) => gc_ref.index = alloc.unwrap().index,
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(())
-    }
-
     // todo nested gc refs!
     fn init_constants(&mut self) -> Result<(), RuntimeError> {
         // todo
@@ -613,8 +584,6 @@ impl<'a> ExecutionEngine<'a> {
                         for item in t {
                             // todo do the exact same thing here, check if its a Object::GC_REF and alloc it
                             if let Object::GC_REF(nested_gc_ref) = item {
-                                println!("found a nested gc ref! {:?}", nested_gc_ref);
-
                                 let nested_gc_ref_data = &stack_gc_ref_data[nested_gc_ref.index];
 
                                 // now lets heap allocate!
@@ -903,11 +872,10 @@ impl<'a> ExecutionEngine<'a> {
             return Err(dereferenced_data.err().unwrap());
         }
 
-        let mut arg_values: HashMap<String, Object> = HashMap::new();
+        let mut kwarg_strings: Vec<String> = vec![];
         match &dereferenced_data.unwrap() {
             GCRefData::DYNAMIC_OBJECT(d) => {
                 let kwargs_tuple = stack_access!(self, call.arg_1);
-                println!("kwargs tuple! {:?}", kwargs_tuple);
 
                 match kwargs_tuple {
                     Object::GC_REF(kwargs_gc_ref) => {
@@ -929,7 +897,7 @@ impl<'a> ExecutionEngine<'a> {
                                             }
                                             match res.unwrap() {
                                                 GCRefData::STRING(s) => {
-                                                    println!("whoo {}", s.s);
+                                                    kwarg_strings.push(s.s.to_string());
                                                 }
                                                 _ => panic!(),
                                             }
@@ -944,7 +912,40 @@ impl<'a> ExecutionEngine<'a> {
                     _ => panic!(),
                 }
 
-                // todo we need to set the fields
+                // println!("{:?}", kwarg_strings);
+
+                let mut arg_values: Vec<Object> = vec![];
+                for i in call.arg_2..call.arg_2 + kwarg_strings.len() as u8 {
+                    arg_values.push(stack_access!(self, i).clone());
+                }
+
+                // println!("{:?}", arg_values);
+
+                let destination = call.arg_2 + kwarg_strings.len() as u8;
+
+                let mut fields: HashMap<String, Object> = HashMap::new();
+
+                fields.insert("__prototype__".to_string(), fn_object.clone());
+
+                // todo actually typecheck
+                let mut i = 0;
+                for kwarg in kwarg_strings {
+                    fields.insert(kwarg, arg_values[i].clone());
+                    i += 1;
+                }
+
+                let gc_ref = self.shared_execution_context.heap.alloc(
+                    GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }),
+                    &self.config,
+                );
+
+                if gc_ref.is_err() {
+                    return Err(gc_ref.err().unwrap());
+                }
+
+                let gc_ref_res = gc_ref.unwrap();
+
+                stack_set!(self, destination, Object::GC_REF(gc_ref_res.clone()));
                 increment_ip!(self);
             }
             _ => {
@@ -954,7 +955,6 @@ impl<'a> ExecutionEngine<'a> {
             }
         }
 
-        increment_ip!(self);
         Ok(0)
     }
 
@@ -1013,49 +1013,49 @@ impl<'a> ExecutionEngine<'a> {
             GCRefData::DYNAMIC_OBJECT(d) => {
                 // todo we need to set the fields
 
-                let destination = {
-                    if call.arg_2 > 0 {
-                        call.arg_1 + call.arg_2
-                    } else {
-                        call.arg_1.into()
-                    }
-                };
+                // let destination = {
+                //     if call.arg_2 > 0 {
+                //         call.arg_1 + call.arg_2
+                //     } else {
+                //         call.arg_1.into()
+                //     }
+                // };
 
-                let mut fields: HashMap<String, Object> = HashMap::new();
+                // let mut fields: HashMap<String, Object> = HashMap::new();
 
-                fields.insert("__prototype__".to_string(), fn_object.clone());
+                // fields.insert("__prototype__".to_string(), fn_object.clone());
 
-                let mut arg_values: Vec<Object> = vec![];
-                for i in call.arg_1..call.arg_1 + call.arg_2 {
-                    arg_values.push(stack_access!(self, i).clone());
-                }
-                let mut counter = 0;
-                for key in d.fields.keys() {
-                    let typ = d.fields.get(key).unwrap();
-                    // we want to only pass in args for members, not methods
-                    match typ {
-                        Object::ATOM(a) => {
-                            fields.insert(key.to_string(), arg_values[counter].clone());
-                            counter += 1;
-                        }
-                        _ => {
-                            // dont add methods
-                            // fields.insert(key.to_string(), typ.clone());
-                        }
-                    }
-                }
+                // let mut arg_values: Vec<Object> = vec![];
+                // for i in call.arg_1..call.arg_1 + call.arg_2 {
+                //     arg_values.push(stack_access!(self, i).clone());
+                // }
+                // let mut counter = 0;
+                // for key in d.fields.keys() {
+                //     let typ = d.fields.get(key).unwrap();
+                //     // we want to only pass in args for members, not methods
+                //     match typ {
+                //         Object::ATOM(a) => {
+                //             fields.insert(key.to_string(), arg_values[counter].clone());
+                //             counter += 1;
+                //         }
+                //         _ => {
+                //             // dont add methods
+                //             // fields.insert(key.to_string(), typ.clone());
+                //         }
+                //     }
+                // }
 
-                let gc_ref = self.shared_execution_context.heap.alloc(
-                    GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }),
-                    &self.config,
-                );
+                // let gc_ref = self.shared_execution_context.heap.alloc(
+                //     GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }),
+                //     &self.config,
+                // );
 
-                if gc_ref.is_err() {
-                    return Err(gc_ref.err().unwrap());
-                }
+                // if gc_ref.is_err() {
+                //     return Err(gc_ref.err().unwrap());
+                // }
 
-                stack_set!(self, destination, Object::GC_REF(gc_ref.unwrap()));
-                increment_ip!(self);
+                // stack_set!(self, destination, Object::GC_REF(gc_ref.unwrap()));
+                // increment_ip!(self);
 
                 //
                 // self.environment.stack_frames[self.environment.stack_frame_pointer].stack

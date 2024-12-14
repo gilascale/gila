@@ -8,4 +8,5 @@ print = std.io.print
 
 i = Iterator(counter=0,limit=10)
 
+
 print(i)
