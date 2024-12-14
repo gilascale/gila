@@ -90,7 +90,7 @@ pub enum GCRefData {
 }
 
 impl GCRefData {
-    pub fn print(&self) -> String {
+    pub fn print(&self, shared_execution_context: &mut SharedExecutionContext) -> String {
         match self {
             Self::STRING(s) => s.s.to_string(),
             Self::FN(fn_object) => format!("fn {}", fn_object.name),
@@ -100,7 +100,7 @@ impl GCRefData {
                     slice
                         .s
                         .iter()
-                        .map(|item| item.print())
+                        .map(|item| item.print(shared_execution_context))
                         .collect::<Vec<String>>()
                         .join(", ")
                 )
@@ -110,7 +110,11 @@ impl GCRefData {
                     "{{{}}}",
                     d.fields
                         .iter()
-                        .map(|(key, value)| format!("{}={}", key, value.print()))
+                        .map(|(key, value)| format!(
+                            "{}={}",
+                            key,
+                            value.print(shared_execution_context)
+                        ))
                         .collect::<Vec<String>>()
                         .join(" ")
                 )
@@ -148,19 +152,56 @@ impl Object {
         }
     }
 
-    pub fn print(&self) -> std::string::String {
+    pub fn print(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+    ) -> std::string::String {
         match self {
             Self::BOOL(b) => b.to_string(),
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
             Self::ATOM(a) => format!(":{:?}", a.to_string()),
-            Self::GC_REF(r) => format!("GCRef {:?}", r.index),
-            // Self::HEAP_OBJECT(h) => h.print(),
+            Self::GC_REF(gc_ref) => {
+                let res = shared_execution_context.heap.deref(&gc_ref);
+                let obj: String;
+                if res.is_ok() {
+                    obj = res.unwrap().print(shared_execution_context);
+                } else {
+                    shared_execution_context.heap.dump_heap();
+                    panic!("tried to deref {}", gc_ref.index);
+                }
+                obj
+            } // Self::HEAP_OBJECT(h) => h.print(),
         }
     }
 
-    pub fn add(&self, other: Object) -> Result<Object, RuntimeError> {
+    pub fn add(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        config: &Config,
+        other: Object,
+    ) -> Result<Object, RuntimeError> {
         match self {
+            Self::GC_REF(gc_ref) => {
+                let res = shared_execution_context.heap.deref(gc_ref);
+                if res.is_err() {
+                    return Err(res.err().unwrap());
+                }
+
+                match res.unwrap() {
+                    GCRefData::STRING(s) => {
+                        let mut dup = s.s.to_string();
+                        dup.push_str(&other.print(shared_execution_context));
+                        let new_str = GCRefData::STRING(StringObject { s: Rc::new(dup) });
+                        let new_obj = shared_execution_context.heap.alloc(new_str, config);
+                        if new_obj.is_err() {
+                            return Err(new_obj.err().unwrap());
+                        }
+                        return Ok(Object::GC_REF(new_obj.unwrap()));
+                    }
+                    _ => todo!(),
+                }
+            }
             Self::I64(i1) => {
                 // integer addition
                 match other {
@@ -409,7 +450,7 @@ fn native_print(
             let res = shared_execution_context.heap.deref(&gc_ref);
             let obj: String;
             if res.is_ok() {
-                obj = res.unwrap().print();
+                obj = res.unwrap().print(shared_execution_context);
             } else {
                 execution_context.dump_stack_regs();
                 shared_execution_context.heap.dump_heap();
@@ -463,22 +504,6 @@ impl<'a> ExecutionEngine<'a> {
             running: true,
             shared_execution_context,
             environment,
-        }
-    }
-
-    pub fn print_object(&mut self, object: Object) -> String {
-        match &object {
-            Object::GC_REF(gc_ref) => {
-                let res = self.shared_execution_context.heap.deref(&gc_ref);
-                if res.is_ok() {
-                    return res.unwrap().print();
-                }
-                panic!();
-            }
-            Object::I64(i) => i.to_string(),
-            Object::F64(f) => f.to_string(),
-            Object::BOOL(b) => b.to_string(),
-            Object::ATOM(a) => a.to_string(),
         }
     }
 
@@ -846,7 +871,11 @@ impl<'a> ExecutionEngine<'a> {
         let rhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [add.arg_1 as usize];
 
-        let addition: Result<Object, RuntimeError> = lhs.add(rhs.clone());
+        let addition: Result<Object, RuntimeError> = lhs.add(
+            &mut self.shared_execution_context,
+            &self.config,
+            rhs.clone(),
+        );
         if let Ok(res) = addition {
             self.environment.stack_frames[self.environment.stack_frame_pointer].stack
                 [add.arg_2 as usize] = res;
