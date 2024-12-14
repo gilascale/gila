@@ -233,6 +233,14 @@ impl BytecodeGenerator<'_> {
                 &body,
                 &else_body,
             ),
+            Statement::FOR(var, range_start, range_end, body) => self.generate_for(
+                annotation_context,
+                ast.position.clone(),
+                &var,
+                &range_start,
+                &range_end,
+                &body,
+            ),
             Statement::VARIABLE(v) => {
                 self.gen_variable(annotation_context, ast.position.clone(), v)
             }
@@ -360,6 +368,96 @@ impl BytecodeGenerator<'_> {
             [jump_ip]
             .arg_0 = ip_at_end.try_into().unwrap();
 
+        0
+    }
+
+    fn lookup_var(&self, var: String) -> Option<&u8> {
+        return self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .variable_map
+            .get(&Type::IDENTIFIER(Rc::new(var)));
+    }
+
+    fn generate_for(
+        &mut self,
+        annotation_context: AnnotationContext,
+        position: Position,
+        var: &Token,
+        range_start: &Token,
+        range_end: &Token,
+        body: &Box<ASTNode>,
+    ) -> u8 {
+        // construct the iterator
+
+        // setup the ("counter", "limit") tuple
+        let mut kwarg_strings: Vec<Object> = vec![];
+        let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::STRING(StringObject {
+            s: Rc::new("counter".to_owned()),
+        }));
+        kwarg_strings.push(Object::GC_REF(GCRef {
+            index: gc_ref_data_idx as usize,
+            marked: false,
+        }));
+        let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::STRING(StringObject {
+            s: Rc::new("limit".to_owned()),
+        }));
+        kwarg_strings.push(Object::GC_REF(GCRef {
+            index: gc_ref_data_idx as usize,
+            marked: false,
+        }));
+
+        // get the numbers setup for the 0..3
+        let first_arg_register = self.get_available_register();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::ADDI,
+                arg_0: 0,
+                arg_1: 0,
+                arg_2: first_arg_register,
+            },
+            position.line as usize,
+        );
+        let second_arg_register = self.get_available_register();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::ADDI,
+                arg_0: 0,
+                arg_1: 3,
+                arg_2: second_arg_register,
+            },
+            position.line as usize,
+        );
+
+        // now construct the duple and do the call on the RangeIterator
+        let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::TUPLE(kwarg_strings));
+        let constant_idx = self.push_constant(Object::GC_REF(GCRef {
+            index: gc_ref_data_idx as usize,
+            marked: false,
+        }));
+
+        let const_reg = self.get_available_register();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::LOAD_CONST,
+                arg_0: constant_idx,
+                arg_1: 0,
+                arg_2: const_reg,
+            },
+            0,
+        );
+        let range_iterator_type = &self.codegen_context.chunks
+            [self.codegen_context.current_chunk_pointer]
+            .variable_map
+            .get(&Type::IDENTIFIER(Rc::new("RangeIterator".to_string())));
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::CALL_KW,
+                arg_0: *range_iterator_type.unwrap(),
+                arg_1: const_reg,
+                arg_2: first_arg_register,
+            },
+            0,
+        );
+        // self.visit(annotation_context, &body);
         0
     }
 

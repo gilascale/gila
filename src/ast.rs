@@ -47,6 +47,7 @@ pub enum Statement {
     NAMED_TYPE_DECL(Token, Vec<ASTNode>),
     TEST(Box<ASTNode>, Box<ASTNode>),
     IF(Box<ASTNode>, Box<ASTNode>, Option<Box<ASTNode>>),
+    FOR(Token, Token, Token, Box<ASTNode>),
     INDEX(Box<ASTNode>, Box<ASTNode>),
     ANNOTATION(Token, Vec<Token>, Box<ASTNode>),
     STRUCT_ACCESS(Box<ASTNode>, Token),

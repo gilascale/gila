@@ -6,16 +6,7 @@ std = import std
 print = std.io.print
 
 
-r = RangeIterator(counter=0,limit=10)
 
-
-
-
-take_iterator fn(i:Iterator)
-    print("got iterator "+i)
+for _ in 0..3
+    print(123)
 end
-
-
-take_iterator(r)
-
-

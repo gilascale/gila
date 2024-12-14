@@ -513,28 +513,44 @@ impl<'a> Parser<'a> {
     }
 
     fn forr(&mut self) -> ASTNode {
-        let if_pos = self.tokens[self.counter].pos.clone();
+        let for_pos = self.tokens[self.counter].pos.clone();
         self.counter += 1;
 
-        let condition = self.expression();
-        let body = self.statement();
-        let body_pos = body.position.clone();
+        let var = &self.tokens[self.counter];
+        self.counter += 1;
 
-        let mut else_body: Option<Box<ASTNode>> = None;
-        if self.tokens[self.counter].typ == Type::ELSE {
-            self.counter += 1;
-            else_body = Some(Box::new(self.statement()));
-        }
+        // consume 'in'
+        self.counter += 1;
+
+        // parse range
+        let range_start = &self.tokens[self.counter];
+        self.counter += 1;
+
+        // skip the ..
+        self.counter += 2;
+        let range_end = &self.tokens[self.counter];
+        self.counter += 1;
+
+        let body = self.statement();
+
+        let end_pos = self.tokens[self.counter].pos.clone();
         // consume end
         // fixme this needs to be done properly
         // because right now we can't do else if
         self.counter += 1;
 
-        ASTNode {
-            statement: Statement::IF(Box::new(condition), Box::new(body), else_body),
-            position: if_pos.join(body_pos),
-        }
+        return ASTNode {
+            statement: Statement::FOR(
+                var.clone(),
+                range_start.clone(),
+                range_end.clone(),
+                Box::new(body),
+            ),
+            position: for_pos.join(end_pos),
+        };
     }
+
+    fn parse_range(&mut self) {}
 
     // fn lett(&mut self) -> ASTNode {
     //     let let_pos = self.tokens[self.counter].pos.clone();

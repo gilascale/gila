@@ -44,6 +44,7 @@ impl Analyser {
             Statement::NAMED_FUNCTION(t, params, return_type, body) => Ok(DataType::U32),
             Statement::TEST(name, body) => Ok(DataType::U32),
             Statement::IF(cond, body, else_body) => self.visit_if(cond, body, else_body),
+            Statement::FOR(var, range_start, range_end, body) => Ok(DataType::U32),
             Statement::DEFINE(t, typ, val) => self.visit_define(t, typ, val),
             Statement::ASSIGN(lhs, rhs) => Ok(DataType::U32),
             Statement::CALL(calee, args) => self.visit_call(calee, args),

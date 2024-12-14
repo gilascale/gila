@@ -33,5 +33,5 @@ end
 
 __iter fn(self: RangeIterator) -> bool
     self.counter = self.counter + 1
-    return self.counter == self.limit
+    self.counter
 end
