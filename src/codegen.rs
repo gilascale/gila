@@ -457,7 +457,42 @@ impl BytecodeGenerator<'_> {
             },
             0,
         );
-        // self.visit(annotation_context, &body);
+
+        // now lets actually call the iterator!
+
+        let range_iterator_reg = first_arg_register + 2;
+
+        let __iter_str: u8 = self.create_constant_string("__iter".to_string());
+        let __iter_fn_reg = self.get_available_register();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::STRUCT_ACCESS,
+                arg_0: range_iterator_reg,
+                arg_1: __iter_str,
+                arg_2: __iter_fn_reg,
+            },
+            0,
+        );
+
+        // now we are in the loop!!!
+        let __iter_result_reg = self.get_available_register();
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::CALL,
+                arg_0: __iter_fn_reg,
+                arg_1: __iter_result_reg,
+                arg_2: 0,
+            },
+            0,
+        );
+
+        // now we need to check if its done!!!
+
+        // generate the body!
+        self.visit(annotation_context, &body);
+
+        // now add a jump back!
+
         0
     }
 

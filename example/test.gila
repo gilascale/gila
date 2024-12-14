@@ -8,5 +8,5 @@ print = std.io.print
 
 
 for _ in 0..3
-    print(123)
+    print("ffs")
 end
