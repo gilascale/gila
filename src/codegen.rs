@@ -68,6 +68,7 @@ pub enum OpInstruction {
 
     // IMPORT <module path> <dest>
     IMPORT,
+    // FOR_ITER <iter obj> <where to jump if done> <iter result reg>
     FOR_ITER,
 }
 
@@ -466,12 +467,13 @@ impl BytecodeGenerator<'_> {
             .instructions
             .len();
         // now lets actually call the iterator!
+        let iter_result_reg = self.get_available_register();
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::FOR_ITER,
                 arg_0: range_iterator_reg,
                 arg_1: 0, // todo later on in this fn we need to set this to the end
-                arg_2: 0,
+                arg_2: iter_result_reg,
             },
             0,
         );
@@ -491,39 +493,6 @@ impl BytecodeGenerator<'_> {
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
             [for_iter_instruction_ptr]
             .arg_1 = current_ip as u8;
-
-        // this code below is for NOT using FOR_ITER instruction
-
-        // let __iter_str: u8 = self.create_constant_string("__iter".to_string());
-        // let __iter_fn_reg = self.get_available_register();
-        // self.push_instruction(
-        //     Instruction {
-        //         op_instruction: OpInstruction::STRUCT_ACCESS,
-        //         arg_0: range_iterator_reg,
-        //         arg_1: __iter_str,
-        //         arg_2: __iter_fn_reg,
-        //     },
-        //     0,
-        // );
-
-        // // now we are in the loop!!!
-        // let __iter_result_reg = self.get_available_register();
-        // self.push_instruction(
-        //     Instruction {
-        //         op_instruction: OpInstruction::CALL,
-        //         arg_0: __iter_fn_reg,
-        //         arg_1: __iter_result_reg,
-        //         arg_2: 0,
-        //     },
-        //     0,
-        // );
-
-        // now we need to check if its done!!!
-
-        // // generate the body!
-        // self.visit(annotation_context, &body);
-
-        // now add a jump back!
 
         0
     }

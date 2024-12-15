@@ -3,7 +3,7 @@ use crate::lex::Type;
 use deepsize::DeepSizeOf;
 use std::hash::Hash;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
-use std::{fs, vec};
+use std::{fs, iter, vec};
 
 // todo deal with multi-platform
 // use std::os::windows::io::AsRawHandle;
@@ -1266,13 +1266,9 @@ impl<'a> ExecutionEngine<'a> {
                         }
 
                         // now we have iterator!!!
-                        println!(
-                            "got bounded iterator {:?}",
-                            obj.print(self.shared_execution_context)
-                        );
-
                         // todo now we need to somehow call it?
                         // we need a nice way of calling functions nicely
+                        let mut iter_result: Object;
                         match obj {
                             Object::GC_REF(method_gc_ref) => {
                                 let res = self.shared_execution_context.heap.deref(&method_gc_ref);
@@ -1280,18 +1276,40 @@ impl<'a> ExecutionEngine<'a> {
                                     return Err(res.err().unwrap());
                                 }
                                 match res.unwrap() {
-                                    GCRefData::FN(method) => {}
+                                    GCRefData::FN(method) => {
+                                        let result = self.execute_fn(&method, instr.arg_2);
+                                        if result.is_err() {
+                                            return Err(result.err().unwrap());
+                                        }
+                                        iter_result = result.unwrap().unwrap();
+                                        // println!("got iter result {:?}", iter_result);
+                                    }
                                     _ => panic!(),
                                 }
                             }
+                            _ => panic!(),
                         }
 
-                        let done = true;
+                        let done = match iter_result {
+                            Object::BOOL(b) => b,
+                            _ => panic!(),
+                        };
+
                         if done {
                             self.environment.stack_frames[self.environment.stack_frame_pointer]
                                 .instruction_pointer = instr.arg_1 as usize;
                         } else {
                             increment_ip!(self);
+                            let ip = self.environment.stack_frames
+                                [self.environment.stack_frame_pointer]
+                                .instruction_pointer;
+                            println!(
+                                "not done moving on! {:?}",
+                                self.environment.stack_frames[self.environment.stack_frame_pointer]
+                                    .fn_object
+                                    .chunk
+                                    .instructions[ip]
+                            );
                         }
 
                         return Ok(0);
@@ -1302,6 +1320,59 @@ impl<'a> ExecutionEngine<'a> {
             }
             _ => panic!(),
         }
+    }
+
+    fn execute_fn(
+        &mut self,
+        fn_object: &FnObject,
+        destination: u8,
+    ) -> Result<Option<Object>, RuntimeError> {
+        self.push_stack_frame(Box::new(fn_object.clone()), destination);
+        self.zero_stack();
+        self.init_constants();
+
+        if fn_object.bounded_object.is_some() {
+            self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                [fn_object.param_slots[0] as usize] =
+                Object::GC_REF(fn_object.bounded_object.clone().unwrap());
+        }
+
+        // println!("executing {:#?}", fn_object);
+        // todo pass other args
+
+        let current_stack_frame = self.environment.stack_frame_pointer;
+        while self.running {
+            // we have returned
+            if self.environment.stack_frame_pointer != current_stack_frame {
+                let result = stack_access!(self, destination);
+                return Ok(Some(result.clone()));
+            }
+            let instr = {
+                let current_frame =
+                    &self.environment.stack_frames[self.environment.stack_frame_pointer];
+                &current_frame.fn_object.chunk.instructions[current_frame.instruction_pointer]
+                    .clone()
+            };
+            // println!("doing instr {:?}", instr);
+
+            let reg_result = self.exec_instr(instr);
+
+            if let Err(e) = reg_result {
+                return Err(e);
+            }
+
+            if self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer
+                == self.environment.stack_frames[self.environment.stack_frame_pointer]
+                    .fn_object
+                    .chunk
+                    .instructions
+                    .len()
+            {
+                return Ok(None);
+            }
+        }
+        Ok(None)
     }
 
     fn exec_build_slice(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
