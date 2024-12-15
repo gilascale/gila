@@ -124,7 +124,7 @@ fn print_typecheck_error(source: String, typecheck_err: TypeCheckError) {
     }
 }
 
-fn exec() {
+fn exec(file_to_exec: String) {
     let start = Instant::now();
 
     fs::create_dir_all("./gila-build");
@@ -162,9 +162,6 @@ fn exec() {
         &mut codegen_context,
         &mut environment,
     );
-
-    let args: Vec<String> = std::env::args().collect();
-    let file_to_exec: String = args[3].to_string();
 
     let source = fs::read_to_string(file_to_exec.to_string()).expect("Unable to read file");
     let mut lexer = lex::Lexer::new();
@@ -218,12 +215,22 @@ fn exec() {
     );
 }
 
-fn main() {
-    let should_repl = false;
+fn do_test(file_to_test: String) {}
 
-    if should_repl {
-        repl()
-    } else {
-        exec();
+enum Mode {
+    FILE(String),
+    REPL,
+    TEST(String),
+}
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let file_to_exec: String = args[3].to_string();
+    let mode = Mode::FILE(file_to_exec);
+
+    match mode {
+        Mode::FILE(path) => exec(path),
+        Mode::REPL => repl(),
+        Mode::TEST(path) => do_test(path),
     }
 }
