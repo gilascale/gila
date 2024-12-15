@@ -4,6 +4,32 @@ use crate::{
     r#type::DataType,
 };
 
+macro_rules! consume_token {
+    ($self:expr, $expected:expr) => {
+        if $self.tokens[$self.counter].typ != $expected {
+            panic!(
+                "Unexpected token: expected {:?}, found {:?}",
+                $expected, $self.tokens[$self.counter].typ
+            );
+        }
+        $self.counter += 1;
+    };
+}
+
+macro_rules! get_position {
+    ($self:expr) => {
+        $self.tokens[$self.counter].pos.clone()
+    };
+}
+
+macro_rules! get_next {
+    ($self:expr) => {{
+        let t = &$self.tokens[$self.counter];
+        $self.counter += 1;
+        t
+    }};
+}
+
 pub struct Parser<'a> {
     pub tokens: &'a std::vec::Vec<Token>,
     pub counter: usize,
@@ -51,8 +77,7 @@ impl<'a> Parser<'a> {
         let lhs_pos = higher_precedence.position.clone();
 
         if !self.end() && self.tokens[self.counter].typ == Type::ASSIGN {
-            // todo
-            self.counter += 1;
+            consume_token!(self, Type::ASSIGN);
             let rhs = self.expression();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
@@ -66,14 +91,14 @@ impl<'a> Parser<'a> {
 
     fn import(&mut self) -> ASTNode {
         if self.tokens[self.counter].typ == Type::IMPORT {
-            let lhs = self.tokens[self.counter].pos.clone();
-            self.counter += 1;
+            let lhs_pos = get_position!(self);
+            consume_token!(self, Type::IMPORT);
             // todo parse module path properly
             let t = &self.tokens[self.counter];
             self.counter += 1;
             return ASTNode {
                 statement: Statement::IMPORT(t.clone()),
-                position: lhs.join(t.pos.clone()),
+                position: lhs_pos.join(t.pos.clone()),
             };
         }
 
@@ -82,8 +107,8 @@ impl<'a> Parser<'a> {
 
     fn tryy(&mut self) -> ASTNode {
         if self.tokens[self.counter].typ == Type::EXCLAIM {
-            let lhs_pos = self.tokens[self.counter].pos.clone();
-            self.counter += 1;
+            let lhs_pos = get_position!(self);
+            consume_token!(self, Type::EXCLAIM);
             // fixme should this be self.expression()
             let rhs = self.call();
             let rhs_pos = rhs.position.clone();
@@ -136,13 +161,13 @@ impl<'a> Parser<'a> {
         if !self.end() && self.tokens[self.counter].typ == Type::LSQUARE {
             let lhs_pos = higher_precedence.position.clone();
             // consume [
-            self.counter += 1;
+            consume_token!(self, Type::LSQUARE);
 
             let the_index = self.struct_access();
 
             let rhs_pos = self.tokens[self.counter].pos.clone();
             // consume ]
-            self.counter += 1;
+            consume_token!(self, Type::RSQUARE);
 
             return ASTNode {
                 statement: Statement::INDEX(Box::new(higher_precedence), Box::new(the_index)),
@@ -155,17 +180,12 @@ impl<'a> Parser<'a> {
     // fixme we are not parsing this correctly
     fn struct_access(&mut self) -> ASTNode {
         // Parse the leftmost expression first (e.g., x in x.y.z)
+        let lhs_pos = get_position!(self);
         let mut lhs = self.single();
 
         // Keep parsing as long as there's a DOT token followed by an identifier
         while !self.end() && self.tokens[self.counter].typ == Type::DOT {
-            let lhs_pos = lhs.position.clone(); // Position of the left-hand side
-            self.counter += 1; // Consume the DOT token
-
-            // Ensure there is an identifier after the DOT
-            // if self.end() || self.tokens[self.counter].typ != Type::IDENTIFIER(_) {
-            //     panic!("Expected identifier after '.'");
-            // }
+            consume_token!(self, Type::DOT);
 
             let field = self.tokens[self.counter].clone(); // Field being accessed
             let rhs_pos = field.pos.clone(); // Position of the field
