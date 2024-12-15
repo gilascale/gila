@@ -9,6 +9,7 @@ mod parse;
 mod r#type;
 
 use std::collections::HashMap;
+use std::fs::File;
 use std::time::Instant;
 use std::vec;
 use std::{
@@ -125,6 +126,9 @@ fn print_typecheck_error(source: String, typecheck_err: TypeCheckError) {
 
 fn exec() {
     let start = Instant::now();
+
+    fs::create_dir_all("./gila-build");
+
     let config = Config {
         max_memory: 100_000,
     };
@@ -183,6 +187,10 @@ fn exec() {
 
     let bytecode = bytecode_generator.generate(&ast);
     // println!("{:#?}", bytecode);
+
+    let mut file = File::create("./gila-build/bytecode.giladbg");
+    file.unwrap()
+        .write_all(bytecode.dump_to_file_format().as_bytes());
 
     let mut execution_engine =
         ExecutionEngine::new(&config, &mut shared_execution_context, &mut environment);

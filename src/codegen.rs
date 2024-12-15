@@ -112,6 +112,25 @@ impl Chunk {
             counter += 1;
         }
     }
+
+    pub fn dump_to_file_format(&self) -> String {
+        let mut s = "".to_string();
+
+        for instruction in &self.instructions {
+            s.push_str(
+                format!(
+                    "{:<15}{:3?}{:3?}{:3?}\n",
+                    format!("{:?}", instruction.op_instruction),
+                    instruction.arg_0,
+                    instruction.arg_1,
+                    instruction.arg_2
+                )
+                .as_str(),
+            );
+        }
+
+        return s;
+    }
 }
 
 #[derive(Debug)]
