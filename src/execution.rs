@@ -90,7 +90,7 @@ pub enum GCRefData {
 }
 
 impl GCRefData {
-    pub fn print(&self, shared_execution_context: &mut SharedExecutionContext) -> String {
+    pub fn print(&self, shared_execution_context: &SharedExecutionContext) -> String {
         match self {
             Self::STRING(s) => s.s.to_string(),
             Self::FN(fn_object) => {
@@ -158,10 +158,7 @@ impl Object {
         }
     }
 
-    pub fn print(
-        &self,
-        shared_execution_context: &mut SharedExecutionContext,
-    ) -> std::string::String {
+    pub fn print(&self, shared_execution_context: &SharedExecutionContext) -> std::string::String {
         match self {
             Self::BOOL(b) => b.to_string(),
             Self::F64(f) => f.to_string(),

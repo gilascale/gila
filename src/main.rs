@@ -24,6 +24,7 @@ use deepsize::DeepSizeOf;
 use execution::Heap;
 use execution::{ExecutionEngine, SharedExecutionContext};
 use execution::{Object, ProcessContext};
+use lex::Lexer;
 
 fn load_prelude<'a>(
     config: &'a Config,
@@ -50,7 +51,12 @@ fn load_prelude<'a>(
 
 fn repl() {
     // let config = Config { max_memory: 1000 };
-
+    // let mut shared_execution_context = SharedExecutionContext {
+    //     heap: Heap {
+    //         live_slots: vec![],
+    //         dead_objects: vec![],
+    //     },
+    // };
     // let mut codegen_context = CodegenContext {
     //     current_chunk_pointer: 0,
     //     chunks: vec![Chunk {
@@ -69,11 +75,17 @@ fn repl() {
     //     native_fns: HashMap::new(),
     // };
 
-    // load_prelude(&config, &mut codegen_context, &mut environment);
+    // load_prelude(
+    //     &config,
+    //     &mut shared_execution_context,
+    //     &mut codegen_context,
+    //     &mut environment,
+    // );
 
     // let mut lexer = lex::Lexer::new();
     // let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
-    // let mut exec_engine = ExecutionEngine::new(&config, &mut environment);
+    // let mut exec_engine =
+    //     ExecutionEngine::new(&config, &mut shared_execution_context, &mut environment);
 
     // loop {
     //     let mut line = String::new();
@@ -92,7 +104,7 @@ fn repl() {
     //     let result = exec_engine.exec("anon".to_string(), bytecode, true);
     //     match result {
     //         Ok(o) => {
-    //             println!("={}", o.print());
+    //             println!("={:?}", o);
     //         }
     //         Err(e) => {
     //             println!("encountered runtime exception {:?}", e);
@@ -227,6 +239,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let file_to_exec: String = args[3].to_string();
     let mode = Mode::FILE(file_to_exec);
+    // let mode = Mode::REPL;
 
     match mode {
         Mode::FILE(path) => exec(path),
