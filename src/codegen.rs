@@ -1,20 +1,35 @@
 use deepsize::DeepSizeOf;
-use std::{collections::HashMap, hash::Hash, rc::Rc, vec};
+use std::{collections::HashMap, rc::Rc, vec};
 
 use crate::{
     ast::{ASTNode, Op, Statement},
     config::Config,
-    execution::{DynamicObject, FnObject, GCRef, GCRefData, Heap, Object, StringObject},
+    execution::{DynamicObject, FnObject, GCRef, GCRefData, Object, StringObject},
     lex::{Position, Token, Type},
     r#type::DataType,
 };
+
+macro_rules! current_ip {
+    ($self:expr) => {
+        $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer]
+            .instructions
+            .len()
+    };
+}
+
+macro_rules! set_arg_value_at_loc {
+    ($self:expr,$location:expr,$arg_num:ident,$value:expr) => {
+        $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer].instructions
+            [$location]
+            .$arg_num = $value
+    };
+}
 
 #[derive(Debug, Clone, DeepSizeOf)]
 #[repr(u8)]
 pub enum OpInstruction {
     // RETURN <location of values> <num values>
     RETURN = 0,
-
     EQUAL,
     NOT_EQUALS,
     GREATER_THAN,
@@ -22,9 +37,7 @@ pub enum OpInstruction {
     LESS_THAN,
     LESS_EQUAL,
     LOGICAL_OR,
-
     LOAD_CLOSURE,
-
     ADD,
     // ADDI <r1> <r2> <desination>
     ADDI,
@@ -32,40 +45,28 @@ pub enum OpInstruction {
     SUBI,
     // CALL <location of fn> <args starting register> <num args>
     CALL,
-
     // CALL_KW <location of fn> <location of tuple containing arg names> <args starting register>
     CALL_KW,
-
     // NATIVE_CALL <name of fn string> <args starting register> <num args> <destination is implicitly the register after>
     NATIVE_CALL,
-    // NEW <location of type> <args starting register> <number of args>
-    NEW,
     // LOAD_CONST <constant index> <> <destination>
     LOAD_CONST,
-
     // JUMP IF ITS FALSE
     IF_JMP_FALSE, // IF <value> <jump to instruction> <>
-
     // JMP <dest>
     JMP,
-
     // BUILD_SLICE <starting reg> <num args> <destination>
     BUILD_SLICE,
-
     // BUILD_FN <code obj> <destination>
     // the purpose of this is so function specifications can be evaluated at runtime, i.e. is it static, is it a method etc.
     // it also processes default arguments etc
     BUILD_FN,
-
     // INDEX <item> <index> <destination>
     INDEX,
-
     STRUCT_ACCESS,
-
     // STRUCT_SET <obj> <member> <value>
     // we store the result in arg_1 which is the member string
     STRUCT_SET,
-
     // IMPORT <module path> <dest>
     IMPORT,
     // FOR_ITER <iter obj> <where to jump if done> <iter result reg>
@@ -367,9 +368,7 @@ impl BytecodeGenerator<'_> {
     ) -> u8 {
         // todo
         let value_register = self.visit(annotation_context.clone(), cond);
-        let saved_if_ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-            .instructions
-            .len();
+        let saved_if_ip = current_ip!(self);
 
         // if the if condition evaluates to false, we jump to the else, otherwise we execute what we got bby
         self.push_instruction(
@@ -379,13 +378,11 @@ impl BytecodeGenerator<'_> {
                 arg_1: 0,
                 arg_2: 0,
             },
-            position.line.try_into().unwrap(),
+            position.line as usize,
         );
         self.visit(annotation_context.clone(), body);
 
-        let jump_ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-            .instructions
-            .len();
+        let jump_ip = current_ip!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::JMP,
@@ -393,29 +390,17 @@ impl BytecodeGenerator<'_> {
                 arg_1: 0,
                 arg_2: 0,
             },
-            0,
+            position.line as usize,
         );
 
-        let ip_after_body = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-            .instructions
-            .len();
-
+        let ip_after_body = current_ip!(self);
         if else_body.is_some() {
             self.visit(annotation_context, &else_body.as_ref().unwrap());
         }
-
-        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
-            [saved_if_ip]
-            .arg_1 = ip_after_body.try_into().unwrap();
-
+        set_arg_value_at_loc!(self, saved_if_ip, arg_1, ip_after_body.try_into().unwrap());
         // now insert the jump after the body
-        let ip_at_end = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-            .instructions
-            .len();
-        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
-            [jump_ip]
-            .arg_0 = ip_at_end.try_into().unwrap();
-
+        let ip_at_end = current_ip!(self);
+        set_arg_value_at_loc!(self, jump_ip, arg_0, ip_at_end.try_into().unwrap());
         0
     }
 
@@ -542,9 +527,7 @@ impl BytecodeGenerator<'_> {
             },
             position.line as usize,
         );
-        let current_ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-            .instructions
-            .len();
+        let current_ip = current_ip!(self);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
             [for_iter_instruction_ptr]
             .arg_1 = current_ip as u8;

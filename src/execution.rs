@@ -678,7 +678,6 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::CALL => self.exec_call(instr),
             OpInstruction::CALL_KW => self.exec_call_kw(instr),
             OpInstruction::NATIVE_CALL => self.exec_native_call(instr),
-            OpInstruction::NEW => self.exec_new(instr),
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
             OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
             OpInstruction::JMP => self.exec_jmp(instr),
@@ -1157,23 +1156,6 @@ impl<'a> ExecutionEngine<'a> {
         self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
             1;
         return Err(RuntimeError::INVALID_OPERATION);
-    }
-
-    fn exec_new(&mut self, new: &Instruction) -> Result<u8, RuntimeError> {
-        // todo allocate on stack
-        // for now just GC now
-        self.mark_and_sweep();
-
-        // get the type from the stack
-        let type_object = &self.environment.stack_frames[self.environment.stack_frame_pointer]
-            .stack[new.arg_0 as usize];
-
-        // self.environment.heap.mark_and_sweep();
-        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
-            1;
-
-        // fixme
-        Ok(0)
     }
 
     fn exec_load_const(&mut self, load_const: &Instruction) -> Result<u8, RuntimeError> {

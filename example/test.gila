@@ -1,14 +1,10 @@
 std =import std
 print = std.io.print
 
-Vec type
-    x: u32
-    y: u32
-end
 
-display fn(self:Vec) do
-  print("im a vec "+self)
-end
 
-v = Vec(x=1,y=2)
-v.display()
+
+if false
+    print("true!")
+else
+    print("not")
