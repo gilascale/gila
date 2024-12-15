@@ -63,6 +63,7 @@ v.display()
 
 ### Non functional features
 
+- reuse registers
 - add implicit returns to functions without them
 - fix nested GCRefs in constant data
   - the issue is we do `init_constants()` which assigns a heap allocation to
@@ -82,6 +83,10 @@ v.display()
 
 ### Language Features
 
+- support larger numbers
+- garbage collection
+- pattern matching
+- tuple unpacking
 - breaks
 - class methods
 - including other std stuff in std (circular import caching)

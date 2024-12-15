@@ -3,8 +3,8 @@ print = std.io.print
 
 
 
+x = 1000000000000
+y = 2436324634347
 
-if false
-    print("true!")
-else
-    print("not")
+
+print(x+y)

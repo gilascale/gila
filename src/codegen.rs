@@ -551,9 +551,25 @@ impl BytecodeGenerator<'_> {
                     arg_1: n,
                     arg_2: reg,
                 },
-                t.pos.line.try_into().unwrap(),
+                pos.line as usize,
             );
             return reg;
+        } else {
+            if let Some(n) = self.parse_i64(&t.typ) {
+                // create constant
+                let constant_idx = self.push_constant(Object::I64(n));
+                let dest = self.get_available_register();
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::LOAD_CONST,
+                        arg_0: constant_idx,
+                        arg_1: 0,
+                        arg_2: dest,
+                    },
+                    pos.line as usize,
+                );
+                return dest;
+            }
         }
         panic!();
     }
@@ -782,6 +798,14 @@ impl BytecodeGenerator<'_> {
     fn parse_embedding_instruction_number(&self, typ: &Type) -> Option<u8> {
         if let Type::NUMBER(n) = typ {
             n.to_string().parse::<u8>().ok()
+        } else {
+            None
+        }
+    }
+
+    fn parse_i64(&self, typ: &Type) -> Option<i64> {
+        if let Type::NUMBER(n) = typ {
+            n.to_string().parse::<i64>().ok()
         } else {
             None
         }
