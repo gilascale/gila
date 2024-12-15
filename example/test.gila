@@ -1,10 +1,11 @@
 
 
-
-
 std = import std
-print = std.io.print
 
-for _ in 0..5
-    print("hi")
+for _ in 0..10 do
+    std.io.print("looop start")
+
+    // middle
+
+    std.io.print("looop end")
 end

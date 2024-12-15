@@ -1,7 +1,3 @@
 HTTPServer type
     socket: Socket
 end
-
-run fn(self: HTTPServer) -> Result
-
-end

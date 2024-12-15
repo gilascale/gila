@@ -15,23 +15,12 @@ Result type
   is_ok: bool
 end
 
-
-Printable type
-end
-
-
-Iterator type
-end
-
-__iter fn(self:Iterator) end
-
-
 RangeIterator type
     counter: u32
     limit: u32
 end
 
-__iter fn(self: RangeIterator) -> bool
+__iter fn(self: RangeIterator) -> bool do
     self.counter = self.counter + 1
     return self.counter==self.limit+1
 end

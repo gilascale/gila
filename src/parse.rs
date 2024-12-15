@@ -36,6 +36,7 @@ impl<'a> Parser<'a> {
         let current: &Token = &self.tokens[self.counter];
 
         match current.typ {
+            Type::DO => self.block(),
             Type::TEST => self.test(),
             Type::IF => self.iff(),
             Type::FOR => self.forr(),
@@ -444,19 +445,20 @@ impl<'a> Parser<'a> {
     }
 
     fn block(&mut self) -> ASTNode {
+        // consume the 'do'
+        let do_pos = self.tokens[self.counter].pos.clone();
+        self.counter += 1;
+
         // todo get the block start token somehow?
         let mut stms = vec![];
         while !self.end() && self.tokens[self.counter].typ != Type::END {
             stms.push(self.statement());
         }
-        let start_pos: Position;
         let end_pos: Position;
         if stms.len() > 0 {
-            start_pos = stms[0].position.clone();
             end_pos = stms[stms.len() - 1].position.clone();
         } else {
             // todo this is a hack so if the block is empty we don't crash
-            start_pos = self.tokens[self.counter - 1].pos.clone();
             end_pos = self.tokens[self.counter - 1].pos.clone();
         }
         // consume the END
@@ -464,7 +466,7 @@ impl<'a> Parser<'a> {
         return ASTNode {
             statement: Statement::BLOCK(stms),
             // todo this will error if block is empty
-            position: start_pos.join(end_pos),
+            position: do_pos.join(end_pos),
         };
     }
 
@@ -476,15 +478,9 @@ impl<'a> Parser<'a> {
         let body = self.statement();
         let body_pos = body.position.clone();
 
-        // consume end
-        // fixme this needs to be done properly
-        // because right now we can't do else if
-        let end_pos = self.tokens[self.counter].pos.clone();
-        self.counter += 1;
-
         ASTNode {
             statement: Statement::TEST(Box::new(test_name), Box::new(body)),
-            position: test_pos.join(end_pos),
+            position: test_pos.join(body_pos),
         }
     }
 
@@ -501,10 +497,6 @@ impl<'a> Parser<'a> {
             self.counter += 1;
             else_body = Some(Box::new(self.statement()));
         }
-        // consume end
-        // fixme this needs to be done properly
-        // because right now we can't do else if
-        self.counter += 1;
 
         ASTNode {
             statement: Statement::IF(Box::new(condition), Box::new(body), else_body),
@@ -532,12 +524,7 @@ impl<'a> Parser<'a> {
         self.counter += 1;
 
         let body = self.statement();
-
-        let end_pos = self.tokens[self.counter].pos.clone();
-        // consume end
-        // fixme this needs to be done properly
-        // because right now we can't do else if
-        self.counter += 1;
+        let body_pos = body.position.clone();
 
         return ASTNode {
             statement: Statement::FOR(
@@ -546,7 +533,7 @@ impl<'a> Parser<'a> {
                 range_end.clone(),
                 Box::new(body),
             ),
-            position: for_pos.join(end_pos),
+            position: for_pos.join(body_pos.clone()),
         };
     }
 
@@ -676,7 +663,7 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            let rhs = self.block();
+            let rhs = self.statement();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
                 statement: Statement::NAMED_FUNCTION(
