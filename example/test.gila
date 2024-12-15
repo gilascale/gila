@@ -1,9 +1,1 @@
-
-
-std = import std
-p = std.io.print
-
-
-
-server = std.web.HTTPServer(port=80)
-server.start()
+x=1+2

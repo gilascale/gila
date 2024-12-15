@@ -113,21 +113,65 @@ impl Chunk {
         }
     }
 
-    pub fn dump_to_file_format(&self) -> String {
+    pub fn dump_to_file_format(&self, source: &String) -> String {
+        let source_split = source.split('\n');
+
         let mut s = "".to_string();
 
-        for instruction in &self.instructions {
-            s.push_str(
-                format!(
-                    "{:<15}{:3?}{:3?}{:3?}\n",
-                    format!("{:?}", instruction.op_instruction),
-                    instruction.arg_0,
-                    instruction.arg_1,
-                    instruction.arg_2
-                )
-                .as_str(),
-            );
+        let mut lines_for_instr: HashMap<usize, Vec<Instruction>> = HashMap::new();
+
+        let mut i = 0;
+        for instr in &self.instructions {
+            let line = self.debug_line_info[i];
+
+            if !lines_for_instr.contains_key(&line) {
+                lines_for_instr.insert(line, vec![]);
+            }
+
+            lines_for_instr.get_mut(&line).unwrap().push(instr.clone());
+
+            i += 1;
         }
+
+        let mut i = 0;
+        for line in source_split {
+            s.push_str(format!("{:<5}{}", i, line).as_str());
+
+            let all_instructions = lines_for_instr.get(&i);
+            if all_instructions.is_some() {
+                for instr in all_instructions.unwrap() {
+                    s.push_str(
+                        format!(
+                            "{:>75}{:3?}{:3?}{:3?}\n",
+                            format!("{:?}", instr.op_instruction),
+                            instr.arg_0,
+                            instr.arg_1,
+                            instr.arg_2
+                        )
+                        .as_str(),
+                    );
+                }
+            }
+            i += 1;
+        }
+
+        // let mut i = 0;
+        // for instruction in &self.instructions {
+        //     let line = self.debug_line_info[i];
+
+        //     s.push_str(
+        //         format!(
+        //             "{:<5}{:<15}{:3?}{:3?}{:3?}\n",
+        //             line,
+        //             format!("{:?}", instruction.op_instruction),
+        //             instruction.arg_0,
+        //             instruction.arg_1,
+        //             instruction.arg_2
+        //         )
+        //         .as_str(),
+        //     );
+        //     i += 1;
+        // }
 
         return s;
     }
@@ -291,12 +335,14 @@ impl BytecodeGenerator<'_> {
             Statement::NAMED_TYPE_DECL(t, decls) => {
                 self.gen_named_type(annotation_context, &t, &decls)
             }
-            Statement::SLICE(items) => self.gen_slice(annotation_context, &items),
+            Statement::SLICE(items) => {
+                self.gen_slice(annotation_context, ast.position.clone(), &items)
+            }
             Statement::INDEX(obj, index) => self.gen_index(annotation_context, &obj, &index),
             Statement::ANNOTATION(annotation, args, expr) => {
                 self.gen_annotation(annotation_context, &annotation, &args, &expr)
             }
-            Statement::RETURN(value) => self.gen_return(annotation_context, &value),
+            Statement::RETURN(value) => self.gen_return(annotation_context, &ast.position, &value),
             Statement::STRUCT_ACCESS(expr, field) => {
                 self.gen_struct_access(annotation_context, &expr, &field)
             }
@@ -472,7 +518,7 @@ impl BytecodeGenerator<'_> {
                 arg_1: 0,
                 arg_2: const_reg,
             },
-            0,
+            position.line as usize,
         );
         let range_iterator_type = &self.codegen_context.chunks
             [self.codegen_context.current_chunk_pointer]
@@ -485,7 +531,7 @@ impl BytecodeGenerator<'_> {
                 arg_1: const_reg,
                 arg_2: first_arg_register,
             },
-            0,
+            position.line as usize,
         );
 
         let range_iterator_reg = first_arg_register + 2;
@@ -503,7 +549,7 @@ impl BytecodeGenerator<'_> {
                 arg_1: 0, // todo later on in this fn we need to set this to the end
                 arg_2: iter_result_reg,
             },
-            0,
+            position.line as usize,
         );
         self.visit(annotation_context, &body);
         self.push_instruction(
@@ -513,7 +559,7 @@ impl BytecodeGenerator<'_> {
                 arg_1: 0,
                 arg_2: 0,
             },
-            0,
+            position.line as usize,
         );
         let current_ip = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .instructions
@@ -621,7 +667,7 @@ impl BytecodeGenerator<'_> {
         }
     }
 
-    fn create_constant_string(&mut self, s: String) -> u8 {
+    fn create_constant_string(&mut self, s: String, position: &Position) -> u8 {
         let constant = self.gen_string_constant(s.to_string());
 
         let dest = self.get_available_register();
@@ -632,7 +678,7 @@ impl BytecodeGenerator<'_> {
                 arg_1: 0,
                 arg_2: dest,
             },
-            0,
+            position.line as usize,
         );
         dest
     }
@@ -645,7 +691,7 @@ impl BytecodeGenerator<'_> {
     ) -> u8 {
         //FIXME
         if let Type::STRING(str) = &s.typ {
-            return self.create_constant_string(str.to_string());
+            return self.create_constant_string(str.to_string(), &pos);
         }
         panic!()
     }
@@ -679,7 +725,7 @@ impl BytecodeGenerator<'_> {
                             arg_1: *v,
                             arg_2: reg,
                         },
-                        0,
+                        pos.line as usize,
                     );
                     return reg;
                 }
@@ -744,7 +790,7 @@ impl BytecodeGenerator<'_> {
             Statement::STRUCT_ACCESS(obj_to_access, token) => {
                 if let Type::IDENTIFIER(i) = &token.typ {
                     let obj_to_access_reg = self.visit(annotation_context.clone(), &obj_to_access);
-                    let string_reg = self.create_constant_string(i.to_string());
+                    let string_reg = self.create_constant_string(i.to_string(), &pos);
 
                     let value_reg = self.visit(annotation_context.clone(), rhs);
 
@@ -809,7 +855,7 @@ impl BytecodeGenerator<'_> {
                             arg_1: 0,
                             arg_2: name_reg,
                         },
-                        0,
+                        pos.line as usize,
                     );
 
                     let mut arg_registers: Vec<u8> = vec![];
@@ -846,7 +892,7 @@ impl BytecodeGenerator<'_> {
                             arg_1: first_arg_register,
                             arg_2: arg_registers.len() as u8,
                         },
-                        0,
+                        pos.line as usize,
                     );
                     return destination;
                 }
@@ -932,7 +978,7 @@ impl BytecodeGenerator<'_> {
                         arg_1: 0,
                         arg_2: const_reg,
                     },
-                    0,
+                    pos.line as usize,
                 );
 
                 self.push_instruction(
@@ -942,7 +988,7 @@ impl BytecodeGenerator<'_> {
                         arg_1: const_reg,
                         arg_2: first_arg_register,
                     },
-                    pos.line.try_into().unwrap(),
+                    pos.line as usize,
                 );
 
                 return first_arg_register + num_kwargs as u8;
@@ -954,7 +1000,7 @@ impl BytecodeGenerator<'_> {
                         arg_1: first_arg_register,
                         arg_2: arg_registers.len() as u8,
                     },
-                    pos.line.try_into().unwrap(),
+                    pos.line as usize,
                 );
             }
 
@@ -1017,7 +1063,7 @@ impl BytecodeGenerator<'_> {
                         arg_1: self.parse_embedding_instruction_number(&i1.typ).unwrap(),
                         arg_2: register,
                     },
-                    0,
+                    pos.line as usize,
                 );
 
                 self.push_instruction(
@@ -1027,7 +1073,7 @@ impl BytecodeGenerator<'_> {
                         arg_1: rhs_register,
                         arg_2: register,
                     },
-                    0,
+                    pos.line as usize,
                 );
 
                 return register;
@@ -1035,7 +1081,8 @@ impl BytecodeGenerator<'_> {
                 // dealing with an identifier here so load it and perform add
 
                 let register = self.get_available_register();
-                let variable_register = self.get_variable(annotation_context.clone(), pos, v1);
+                let variable_register =
+                    self.get_variable(annotation_context.clone(), pos.clone(), v1);
 
                 let rhs_register = self.visit(annotation_context.clone(), e2);
 
@@ -1046,7 +1093,7 @@ impl BytecodeGenerator<'_> {
                         arg_1: rhs_register,
                         arg_2: register,
                     },
-                    0,
+                    pos.line as usize,
                 );
 
                 return register;
@@ -1062,7 +1109,7 @@ impl BytecodeGenerator<'_> {
                         arg_1: rhs_register,
                         arg_2: register,
                     },
-                    0,
+                    pos.line as usize,
                 );
 
                 return register;
@@ -1168,7 +1215,7 @@ impl BytecodeGenerator<'_> {
                 arg_1: 0,
                 arg_2: 0,
             },
-            0,
+            token.pos.line as usize,
         );
 
         // FIXME
@@ -1263,7 +1310,12 @@ impl BytecodeGenerator<'_> {
         reg
     }
 
-    fn gen_slice(&mut self, annotation_context: AnnotationContext, items: &Vec<ASTNode>) -> u8 {
+    fn gen_slice(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        items: &Vec<ASTNode>,
+    ) -> u8 {
         // todo we should probably do what python does and do a BUILD_SLICE command
 
         let mut registers: Vec<u8> = vec![];
@@ -1279,7 +1331,7 @@ impl BytecodeGenerator<'_> {
                 arg_1: registers.len() as u8,
                 arg_2: dest,
             },
-            0,
+            pos.line as usize,
         );
         dest
     }
@@ -1301,7 +1353,7 @@ impl BytecodeGenerator<'_> {
                 arg_1: val_reg,
                 arg_2: dest,
             },
-            0,
+            obj.position.line as usize,
         );
 
         dest
@@ -1336,6 +1388,7 @@ impl BytecodeGenerator<'_> {
     fn gen_return(
         &mut self,
         mut annotation_context: AnnotationContext,
+        pos: &Position,
         expr: &Option<Box<ASTNode>>,
     ) -> u8 {
         let val_register = {
@@ -1361,7 +1414,7 @@ impl BytecodeGenerator<'_> {
                 arg_1: num_vals,
                 arg_2: 0,
             },
-            0,
+            pos.line as usize,
         );
 
         0
@@ -1377,7 +1430,7 @@ impl BytecodeGenerator<'_> {
 
         if let Type::IDENTIFIER(i) = &field.typ {
             let lhs = self.visit(annotation_context.clone(), &expr);
-            let field = self.create_constant_string(i.to_string());
+            let field = self.create_constant_string(i.to_string(), &expr.position);
             let register = self.get_available_register();
             self.push_instruction(
                 Instruction {
@@ -1386,7 +1439,7 @@ impl BytecodeGenerator<'_> {
                     arg_1: field,
                     arg_2: register,
                 },
-                0,
+                expr.position.line as usize,
             );
             return register;
         }
@@ -1395,7 +1448,7 @@ impl BytecodeGenerator<'_> {
 
     fn gen_import(&mut self, mut annotation_context: AnnotationContext, path: &Token) -> u8 {
         if let Type::IDENTIFIER(i) = &path.typ {
-            let s = self.create_constant_string(i.to_string());
+            let s = self.create_constant_string(i.to_string(), &path.pos);
             let destination = self.get_available_register();
             self.push_instruction(
                 Instruction {
@@ -1404,7 +1457,7 @@ impl BytecodeGenerator<'_> {
                     arg_1: destination,
                     arg_2: 0,
                 },
-                0,
+                path.pos.line as usize,
             );
             return destination;
         }

@@ -190,7 +190,7 @@ fn exec() {
 
     let mut file = File::create("./gila-build/bytecode.giladbg");
     file.unwrap()
-        .write_all(bytecode.dump_to_file_format().as_bytes());
+        .write_all(bytecode.dump_to_file_format(&source).as_bytes());
 
     let mut execution_engine =
         ExecutionEngine::new(&config, &mut shared_execution_context, &mut environment);
