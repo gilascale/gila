@@ -6,10 +6,12 @@ Vec type
     y: u32
 end
 
+display fn(self:Vec) do
+  print("im a vec "+self)
+end
 
-vecs = [Vec(1,2), Vec(3,4)]
-
-print(vecs)
+v = Vec(x=1,y=2)
+v.display()
 ```
 
 ## Todo
