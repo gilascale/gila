@@ -1271,7 +1271,28 @@ impl<'a> ExecutionEngine<'a> {
                             obj.print(self.shared_execution_context)
                         );
 
-                        increment_ip!(self);
+                        // todo now we need to somehow call it?
+                        // we need a nice way of calling functions nicely
+                        match obj {
+                            Object::GC_REF(method_gc_ref) => {
+                                let res = self.shared_execution_context.heap.deref(&method_gc_ref);
+                                if res.is_err() {
+                                    return Err(res.err().unwrap());
+                                }
+                                match res.unwrap() {
+                                    GCRefData::FN(method) => {}
+                                    _ => panic!(),
+                                }
+                            }
+                        }
+
+                        let done = true;
+                        if done {
+                            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                                .instruction_pointer = instr.arg_1 as usize;
+                        } else {
+                            increment_ip!(self);
+                        }
 
                         return Ok(0);
                         //
