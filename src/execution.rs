@@ -1299,17 +1299,10 @@ impl<'a> ExecutionEngine<'a> {
                             self.environment.stack_frames[self.environment.stack_frame_pointer]
                                 .instruction_pointer = instr.arg_1 as usize;
                         } else {
-                            increment_ip!(self);
+                            // increment_ip!(self);
                             let ip = self.environment.stack_frames
                                 [self.environment.stack_frame_pointer]
                                 .instruction_pointer;
-                            println!(
-                                "not done moving on! {:?}",
-                                self.environment.stack_frames[self.environment.stack_frame_pointer]
-                                    .fn_object
-                                    .chunk
-                                    .instructions[ip]
-                            );
                         }
 
                         return Ok(0);
