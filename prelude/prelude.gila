@@ -24,3 +24,13 @@ __iter fn(self: RangeIterator) -> bool do
     self.counter = self.counter + 1
     return self.counter==self.limit+1
 end
+
+
+List type
+    l: u32[]
+end
+
+
+append fn(self:List, item: u32) do
+    return 0
+end

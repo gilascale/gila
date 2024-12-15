@@ -16,11 +16,12 @@ print(vecs)
 
 ### Bugs
 
-- struct constructor is still random
-- print function calls just aren't executing
+- need a return statement otherwise subsequent calls dont work
+- structs with no constructors don't work and loop/hang
 
 ### Non functional features
 
+- add implicit returns to functions without them
 - fix nested GCRefs in constant data
   - the issue is we do `init_constants()` which assigns a heap allocation to
     each GCRef in the constant pool. the problem is it doesn't then allocate
@@ -39,12 +40,12 @@ print(vecs)
 
 ### Language Features
 
+- breaks
 - class methods
 - including other std stuff in std (circular import caching)
 - std type hints
   - printable interface for print
 - named args
-- tuples
 - dictionaries
 - try
 - interface/prototype system

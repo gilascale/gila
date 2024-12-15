@@ -1,11 +1,9 @@
 
 
 std = import std
+p = std.io.print
 
-for _ in 0..10 do
-    std.io.print("looop start")
 
-    // middle
 
-    std.io.print("looop end")
-end
+server = std.web.HTTPServer(port=80)
+server.start()
