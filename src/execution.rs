@@ -93,7 +93,13 @@ impl GCRefData {
     pub fn print(&self, shared_execution_context: &mut SharedExecutionContext) -> String {
         match self {
             Self::STRING(s) => s.s.to_string(),
-            Self::FN(fn_object) => format!("fn {}", fn_object.name),
+            Self::FN(fn_object) => {
+                if fn_object.bounded_object.is_some() {
+                    return format!("bounded fn {}", fn_object.name);
+                } else {
+                    return format!("fn {}", fn_object.name);
+                }
+            }
             Self::SLICE(slice) => {
                 format!(
                     "[{}]",
@@ -676,6 +682,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
             OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
             OpInstruction::JMP => self.exec_jmp(instr),
+            OpInstruction::FOR_ITER => self.exec_for_iter(instr),
             OpInstruction::BUILD_SLICE => self.exec_build_slice(instr),
             OpInstruction::BUILD_FN => self.exec_build_fn(instr),
             OpInstruction::INDEX => self.exec_index(instr),
@@ -1206,6 +1213,76 @@ impl<'a> ExecutionEngine<'a> {
         Ok(0)
     }
 
+    fn exec_for_iter(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let iterator_obj = stack_access!(self, instr.arg_0);
+
+        match iterator_obj {
+            Object::GC_REF(gc_ref) => {
+                let res = self.shared_execution_context.heap.deref(gc_ref);
+                if res.is_err() {
+                    return Err(res.err().unwrap());
+                }
+                match res.unwrap() {
+                    GCRefData::DYNAMIC_OBJECT(iterator_obj) => {
+                        let result =
+                            self.recursively_access_struct("__iter".to_string(), iterator_obj);
+
+                        if result.is_err() {
+                            return Err(result.err().unwrap());
+                        }
+
+                        let obj = result.unwrap();
+                        // BINDING HAPPENS HERE
+                        // TODO MAKE THIS A FUNCTION
+                        match obj.clone() {
+                            Object::GC_REF(method_to_bind_gc_ref) => {
+                                let deref = self
+                                    .shared_execution_context
+                                    .heap
+                                    .deref(&method_to_bind_gc_ref);
+                                if deref.is_err() {
+                                    return Err(deref.err().unwrap());
+                                }
+                                match deref.unwrap() {
+                                    GCRefData::FN(mut f) => {
+                                        if f.requires_method_binding {
+                                            f.bounded_object = Some(gc_ref.clone());
+
+                                            // todo we should probably not set the actual object? and instead return another?
+                                            // because now its forever bound?
+                                            let res = self.shared_execution_context.heap.set(
+                                                &method_to_bind_gc_ref,
+                                                GCRefData::FN(f.clone()),
+                                            );
+                                            if res.is_err() {
+                                                return Err(res.err().unwrap());
+                                            }
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            _ => {}
+                        }
+
+                        // now we have iterator!!!
+                        println!(
+                            "got bounded iterator {:?}",
+                            obj.print(self.shared_execution_context)
+                        );
+
+                        increment_ip!(self);
+
+                        return Ok(0);
+                        //
+                    }
+                    _ => panic!(),
+                }
+            }
+            _ => panic!(),
+        }
+    }
+
     fn exec_build_slice(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
         let mut slice_objects: Vec<Object> = vec![];
         for i in 0..instr.arg_1 {
@@ -1323,6 +1400,48 @@ impl<'a> ExecutionEngine<'a> {
         Ok(0)
     }
 
+    fn recursively_access_struct(
+        &self,
+        field: String,
+        o: DynamicObject,
+    ) -> Result<Object, RuntimeError> {
+        let mut next_prototype_in_chain = o.clone();
+        let mut result: &Object;
+        let mut found = false;
+        loop {
+            let res = next_prototype_in_chain.fields.get(&field);
+            if res.is_some() {
+                found = true;
+                result = res.unwrap();
+                break;
+            }
+            let prototype = next_prototype_in_chain.fields.get("__prototype__");
+            if prototype.is_none() {
+                return Err(RuntimeError::INVALID_ACCESS);
+            }
+            match prototype.unwrap() {
+                Object::GC_REF(g) => {
+                    let deref = self.shared_execution_context.heap.deref(g);
+                    if deref.is_err() {
+                        return Err(deref.err().unwrap());
+                    }
+                    match deref.unwrap() {
+                        GCRefData::DYNAMIC_OBJECT(d) => next_prototype_in_chain = d,
+                        _ => panic!(),
+                    }
+                }
+                _ => panic!(),
+            }
+        }
+        // go up the chain!
+
+        if !found {
+            return Err(RuntimeError::INVALID_ACCESS);
+        }
+
+        return Ok(result.clone());
+    }
+
     fn exec_struct_access(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
         let obj = stack_access!(self, instr.arg_0);
         // fixme this is horrible nesting
@@ -1346,53 +1465,22 @@ impl<'a> ExecutionEngine<'a> {
                                 }
                                 match result.unwrap() {
                                     GCRefData::STRING(s) => {
-                                        let mut next_prototype_in_chain = o.clone();
-                                        let mut result: &Object;
-                                        let mut found = false;
-                                        loop {
-                                            let res = next_prototype_in_chain
-                                                .fields
-                                                .get(&s.s.to_string());
-                                            if res.is_some() {
-                                                found = true;
-                                                result = res.unwrap();
-                                                break;
-                                            }
-                                            let prototype =
-                                                next_prototype_in_chain.fields.get("__prototype__");
-                                            if prototype.is_none() {
-                                                return Err(RuntimeError::INVALID_ACCESS);
-                                            }
-                                            match prototype.unwrap() {
-                                                Object::GC_REF(g) => {
-                                                    let deref =
-                                                        self.shared_execution_context.heap.deref(g);
-                                                    if deref.is_err() {
-                                                        return Err(deref.err().unwrap());
-                                                    }
-                                                    match deref.unwrap() {
-                                                        GCRefData::DYNAMIC_OBJECT(d) => {
-                                                            next_prototype_in_chain = d
-                                                        }
-                                                        _ => panic!(),
-                                                    }
-                                                }
-                                                _ => panic!(),
-                                            }
-                                        }
-                                        // go up the chain!
+                                        let result =
+                                            self.recursively_access_struct(s.s.to_string(), o);
 
-                                        if !found {
-                                            return Err(RuntimeError::INVALID_ACCESS);
+                                        if result.is_err() {
+                                            return Err(result.err().unwrap());
                                         }
 
+                                        let obj = result.unwrap();
                                         // BINDING HAPPENS HERE
-                                        match result {
+                                        // TODO MAKE THIS A FUNCTION
+                                        match obj.clone() {
                                             Object::GC_REF(method_to_bind_gc_ref) => {
                                                 let deref = self
                                                     .shared_execution_context
                                                     .heap
-                                                    .deref(method_to_bind_gc_ref);
+                                                    .deref(&method_to_bind_gc_ref);
                                                 if deref.is_err() {
                                                     return Err(deref.err().unwrap());
                                                 }
@@ -1408,7 +1496,7 @@ impl<'a> ExecutionEngine<'a> {
                                                                 .shared_execution_context
                                                                 .heap
                                                                 .set(
-                                                                    method_to_bind_gc_ref,
+                                                                    &method_to_bind_gc_ref,
                                                                     GCRefData::FN(f.clone()),
                                                                 );
                                                             if res.is_err() {
@@ -1422,7 +1510,7 @@ impl<'a> ExecutionEngine<'a> {
                                             _ => {}
                                         }
 
-                                        stack_set!(self, instr.arg_2, result.clone());
+                                        stack_set!(self, instr.arg_2, obj.clone());
                                         increment_ip!(self);
                                     }
                                     _ => return Err(RuntimeError::INVALID_ACCESS),
