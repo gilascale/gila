@@ -143,7 +143,7 @@ impl Chunk {
                 for instr in all_instructions.unwrap() {
                     s.push_str(
                         format!(
-                            "{:>75}{:3?}{:3?}{:3?}\n",
+                            "{:>75}{:5?}{:5?}{:5?}\n",
                             format!("{:?}", instr.op_instruction),
                             instr.arg_0,
                             instr.arg_1,
@@ -438,36 +438,41 @@ impl BytecodeGenerator<'_> {
             marked: false,
         }));
 
-        let counter = match &range_start.typ {
-            Type::NUMBER(n) => n.parse::<u8>().unwrap(),
-            _ => panic!(),
-        };
-        let limit = match &range_end.typ {
-            Type::NUMBER(n) => n.parse::<u8>().unwrap(),
-            _ => panic!(),
-        };
+        let first_arg_register =
+            self.gen_literal_num(annotation_context.clone(), position.clone(), range_start);
+        let second_arg_register =
+            self.gen_literal_num(annotation_context.clone(), position.clone(), range_end);
 
-        // get the numbers setup for the 0..3
-        let first_arg_register = self.get_available_register();
-        self.push_instruction(
-            Instruction {
-                op_instruction: OpInstruction::ADDI,
-                arg_0: 0,
-                arg_1: counter,
-                arg_2: first_arg_register,
-            },
-            position.line as usize,
-        );
-        let second_arg_register = self.get_available_register();
-        self.push_instruction(
-            Instruction {
-                op_instruction: OpInstruction::ADDI,
-                arg_0: 0,
-                arg_1: limit,
-                arg_2: second_arg_register,
-            },
-            position.line as usize,
-        );
+        // let counter = match &range_start.typ {
+        //     Type::NUMBER(n) => n.parse::<u8>().unwrap(),
+        //     _ => panic!(),
+        // };
+        // let limit = match &range_end.typ {
+        //     Type::NUMBER(n) => n.parse::<u8>().unwrap(),
+        //     _ => panic!(),
+        // };
+
+        // // get the numbers setup for the 0..3
+        // let first_arg_register = self.get_available_register();
+        // self.push_instruction(
+        //     Instruction {
+        //         op_instruction: OpInstruction::ADDI,
+        //         arg_0: 0,
+        //         arg_1: counter,
+        //         arg_2: first_arg_register,
+        //     },
+        //     position.line as usize,
+        // );
+        // let second_arg_register = self.get_available_register();
+        // self.push_instruction(
+        //     Instruction {
+        //         op_instruction: OpInstruction::ADDI,
+        //         arg_0: 0,
+        //         arg_1: limit,
+        //         arg_2: second_arg_register,
+        //     },
+        //     position.line as usize,
+        // );
 
         // now construct the duple and do the call on the RangeIterator
         let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::TUPLE(kwarg_strings));

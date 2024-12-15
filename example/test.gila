@@ -1,10 +1,5 @@
 std =import std
 print = std.io.print
 
-
-
-x = 1000000000000
-y = 2436324634347
-
-
-print(x+y)
+for _ in 0..99999999 do
+end

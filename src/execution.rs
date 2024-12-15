@@ -35,9 +35,9 @@ macro_rules! increment_ip {
 
 #[derive(Debug)]
 pub enum RuntimeError {
-    INVALID_OPERATION,
+    INVALID_OPERATION(String),
     INVALID_GC_REF,
-    INVALID_ACCESS,
+    INVALID_ACCESS(String),
     OUT_OF_MEMORY,
     UNKNOWN_MODULE,
 }
@@ -212,11 +212,23 @@ impl Object {
                 // integer addition
                 match other {
                     Object::I64(i2) => return Ok(Object::I64(i1 + i2)),
-                    _ => return Err(RuntimeError::INVALID_OPERATION),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(
+                            format!(
+                                "only support i64+i64 but got {}",
+                                other.print(shared_execution_context)
+                            )
+                            .to_string(),
+                        ))
+                    }
                 }
             }
             // Self::HEAP_OBJECT(h1) => h1.data.add(other),
-            _ => return Err(RuntimeError::INVALID_OPERATION),
+            _ => {
+                return Err(RuntimeError::INVALID_OPERATION(
+                    format!("cant add to us {}", self.print(shared_execution_context)).to_string(),
+                ))
+            }
         }
     }
 
@@ -238,7 +250,12 @@ impl Object {
                 // integer addition
                 match other {
                     Object::I64(i2) => return Ok(*i1 == i2),
-                    _ => return Err(RuntimeError::INVALID_OPERATION),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(format!(
+                            "i64 only supports == with i64 but got {}",
+                            other.print(shared_execution_context)
+                        )))
+                    }
                 }
             }
             Self::GC_REF(gc_ref) => {
@@ -269,73 +286,146 @@ impl Object {
         }
     }
 
-    pub fn not_equals(&self, other: Object) -> Result<bool, RuntimeError> {
+    pub fn not_equals(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        other: Object,
+    ) -> Result<bool, RuntimeError> {
         match self {
             Self::I64(i1) => {
                 // integer addition
                 match other {
                     Object::I64(i2) => return Ok(*i1 != i2),
-                    _ => return Err(RuntimeError::INVALID_OPERATION),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(format!(
+                            "i64 != only supports i64 but got {}",
+                            other.print(shared_execution_context)
+                        )))
+                    }
                 }
             }
-            // Self::HEAP_OBJECT(h1) => h1.data.add(other),
-            _ => return Err(RuntimeError::INVALID_OPERATION),
+            _ => {
+                return Err(RuntimeError::INVALID_OPERATION(format!(
+                    "!= only supports i64 rn"
+                )))
+            }
         }
     }
 
-    pub fn greater_than(&self, other: Object) -> Result<bool, RuntimeError> {
+    pub fn greater_than(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        other: Object,
+    ) -> Result<bool, RuntimeError> {
         match self {
             Self::I64(i1) => {
                 // integer addition
                 match other {
                     Object::I64(i2) => return Ok(*i1 > i2),
-                    _ => return Err(RuntimeError::INVALID_OPERATION),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(
+                            format!(
+                                "i64 > only supports i64 but got {}",
+                                other.print(shared_execution_context)
+                            )
+                            .to_string(),
+                        ))
+                    }
                 }
             }
             // Self::HEAP_OBJECT(h1) => h1.data.add(other),
-            _ => return Err(RuntimeError::INVALID_OPERATION),
+            _ => {
+                return Err(RuntimeError::INVALID_OPERATION(
+                    "> only supports i64".to_string(),
+                ))
+            }
         }
     }
 
-    pub fn greater_than_equals(&self, other: Object) -> Result<bool, RuntimeError> {
+    pub fn greater_than_equals(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        other: Object,
+    ) -> Result<bool, RuntimeError> {
         match self {
             Self::I64(i1) => {
                 // integer addition
                 match other {
                     Object::I64(i2) => return Ok(*i1 >= i2),
-                    _ => return Err(RuntimeError::INVALID_OPERATION),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(
+                            format!(
+                                "i64 >= only supports i64 but got {}",
+                                other.print(shared_execution_context)
+                            )
+                            .to_string(),
+                        ))
+                    }
                 }
             }
-            // Self::HEAP_OBJECT(h1) => h1.data.add(other),
-            _ => return Err(RuntimeError::INVALID_OPERATION),
+            _ => {
+                return Err(RuntimeError::INVALID_OPERATION(
+                    ">= only supports i64".to_string(),
+                ))
+            }
         }
     }
 
-    pub fn less_than(&self, other: Object) -> Result<bool, RuntimeError> {
+    pub fn less_than(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        other: Object,
+    ) -> Result<bool, RuntimeError> {
         match self {
             Self::I64(i1) => {
                 // integer addition
                 match other {
                     Object::I64(i2) => return Ok(*i1 < i2),
-                    _ => return Err(RuntimeError::INVALID_OPERATION),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(
+                            format!(
+                                "i64 < only supports i64 but got {}",
+                                other.print(shared_execution_context)
+                            )
+                            .to_string(),
+                        ))
+                    }
                 }
             }
-            // Self::HEAP_OBJECT(h1) => h1.data.add(other),
-            _ => return Err(RuntimeError::INVALID_OPERATION),
+            _ => {
+                return Err(RuntimeError::INVALID_OPERATION(
+                    "< only supports i64".to_string(),
+                ))
+            }
         }
     }
 
-    pub fn less_than_equals(&self, other: Object) -> Result<bool, RuntimeError> {
+    pub fn less_than_equals(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        other: Object,
+    ) -> Result<bool, RuntimeError> {
         match self {
             Self::I64(i1) => {
                 // integer addition
                 match other {
                     Object::I64(i2) => return Ok(*i1 <= i2),
-                    _ => return Err(RuntimeError::INVALID_OPERATION),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(
+                            format!(
+                                "i64 <= only supports i64 but got {}",
+                                other.print(shared_execution_context)
+                            )
+                            .to_string(),
+                        ))
+                    }
                 }
             }
-            // Self::HEAP_OBJECT(h1) => h1.data.add(other),
-            _ => return Err(RuntimeError::INVALID_OPERATION),
+            _ => {
+                return Err(RuntimeError::INVALID_OPERATION(
+                    "<= only supports i64".to_string(),
+                ))
+            }
         }
     }
 
@@ -714,8 +804,9 @@ impl<'a> ExecutionEngine<'a> {
     }
 
     fn zero_stack(&mut self) {
+        let STACK_SIZE = 255;
         // fixme dynamically setup stack
-        for _ in 0..100 {
+        for _ in 0..STACK_SIZE {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .stack
                 .push(Object::I64(0));
@@ -775,7 +866,7 @@ impl<'a> ExecutionEngine<'a> {
         let lhs = stack_access!(self, not_equal.arg_0);
         let rhs = stack_access!(self, not_equal.arg_1);
 
-        let result = lhs.not_equals(rhs.clone());
+        let result = lhs.not_equals(&mut self.shared_execution_context, rhs.clone());
         if result.is_err() {
             return Err(result.err().unwrap());
         }
@@ -788,7 +879,7 @@ impl<'a> ExecutionEngine<'a> {
         let lhs = stack_access!(self, greater.arg_0);
         let rhs = stack_access!(self, greater.arg_1);
 
-        let result = lhs.greater_than(rhs.clone());
+        let result = lhs.greater_than(&mut self.shared_execution_context, rhs.clone());
         if result.is_err() {
             return Err(result.err().unwrap());
         }
@@ -802,7 +893,7 @@ impl<'a> ExecutionEngine<'a> {
         let lhs = stack_access!(self, greater.arg_0);
         let rhs = stack_access!(self, greater.arg_1);
 
-        let result = lhs.greater_than_equals(rhs.clone());
+        let result = lhs.greater_than_equals(&mut self.shared_execution_context, rhs.clone());
         if result.is_err() {
             return Err(result.err().unwrap());
         }
@@ -816,7 +907,7 @@ impl<'a> ExecutionEngine<'a> {
         let lhs = stack_access!(self, greater.arg_0);
         let rhs = stack_access!(self, greater.arg_1);
 
-        let result = lhs.less_than(rhs.clone());
+        let result = lhs.less_than(&mut self.shared_execution_context, rhs.clone());
         if result.is_err() {
             return Err(result.err().unwrap());
         }
@@ -830,7 +921,7 @@ impl<'a> ExecutionEngine<'a> {
         let lhs = stack_access!(self, greater.arg_0);
         let rhs = stack_access!(self, greater.arg_1);
 
-        let result = lhs.less_than_equals(rhs.clone());
+        let result = lhs.less_than_equals(&mut self.shared_execution_context, rhs.clone());
         if result.is_err() {
             return Err(result.err().unwrap());
         }
@@ -1153,9 +1244,10 @@ impl<'a> ExecutionEngine<'a> {
                 return Ok(instr.arg_2 + instr.arg_2);
             }
         }
-        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
-            1;
-        return Err(RuntimeError::INVALID_OPERATION);
+        increment_ip!(self);
+        return Err(RuntimeError::INVALID_OPERATION(
+            "native call must be a string".to_string(),
+        ));
     }
 
     fn exec_load_const(&mut self, load_const: &Instruction) -> Result<u8, RuntimeError> {
@@ -1457,7 +1549,9 @@ impl<'a> ExecutionEngine<'a> {
             }
         }
 
-        Err(RuntimeError::INVALID_OPERATION)
+        Err(RuntimeError::INVALID_OPERATION(
+            "obj to index must be an obj".to_string(),
+        ))
     }
 
     fn exec_load_closure(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
@@ -1484,7 +1578,9 @@ impl<'a> ExecutionEngine<'a> {
             }
             let prototype = next_prototype_in_chain.fields.get("__prototype__");
             if prototype.is_none() {
-                return Err(RuntimeError::INVALID_ACCESS);
+                return Err(RuntimeError::INVALID_ACCESS(
+                    "__prototype__ is none".to_string(),
+                ));
             }
             match prototype.unwrap() {
                 Object::GC_REF(g) => {
@@ -1503,7 +1599,9 @@ impl<'a> ExecutionEngine<'a> {
         // go up the chain!
 
         if !found {
-            return Err(RuntimeError::INVALID_ACCESS);
+            return Err(RuntimeError::INVALID_ACCESS(
+                format!("couldn't find field '{}' to access", field).to_string(),
+            ));
         }
 
         return Ok(result.clone());
@@ -1530,7 +1628,8 @@ impl<'a> ExecutionEngine<'a> {
                                 if result.is_err() {
                                     return Err(result.err().unwrap());
                                 }
-                                match result.unwrap() {
+                                let unwrapped = result.unwrap();
+                                match unwrapped {
                                     GCRefData::STRING(s) => {
                                         let result =
                                             self.recursively_access_struct(s.s.to_string(), o);
@@ -1580,16 +1679,36 @@ impl<'a> ExecutionEngine<'a> {
                                         stack_set!(self, instr.arg_2, obj.clone());
                                         increment_ip!(self);
                                     }
-                                    _ => return Err(RuntimeError::INVALID_ACCESS),
+                                    _ => {
+                                        return Err(RuntimeError::INVALID_ACCESS(
+                                            format!(
+                                                "struct access field should be string but got {}",
+                                                unwrapped.print(self.shared_execution_context)
+                                            )
+                                            .to_string(),
+                                        ))
+                                    }
                                 }
                             }
-                            _ => return Err(RuntimeError::INVALID_ACCESS),
+                            _ => {
+                                return Err(RuntimeError::INVALID_ACCESS(
+                                    "struct access field should be string".to_string(),
+                                ))
+                            }
                         }
                     }
-                    _ => return Err(RuntimeError::INVALID_ACCESS),
+                    _ => {
+                        return Err(RuntimeError::INVALID_ACCESS(
+                            "struct access should be accessing object".to_string(),
+                        ))
+                    }
                 }
             }
-            _ => return Err(RuntimeError::INVALID_ACCESS),
+            _ => {
+                return Err(RuntimeError::INVALID_ACCESS(
+                    "struct access should be accessing object".to_string(),
+                ))
+            }
         }
 
         Ok(0)

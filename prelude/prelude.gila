@@ -1,20 +1,3 @@
-Error type
-    msg: string
-end
-
-// what this gets compiled to is
-// __result = my_fn()
-// if !__result.is_ok
-//   return __result
-// end
-// r = __result.data
-//
-// Eventually we may want an algebraic data type like so
-// Result = type $T | Error end
-Result type
-  is_ok: bool
-end
-
 RangeIterator type
     counter: u32
     limit: u32
@@ -23,14 +6,4 @@ end
 __iter fn(self: RangeIterator) -> bool do
     self.counter = self.counter + 1
     return self.counter==self.limit+1
-end
-
-
-List type
-    l: u32[]
-end
-
-
-append fn(self:List, item: u32) do
-    return 0
 end
