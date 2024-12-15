@@ -1,6 +1,9 @@
 # Gila
 
 ```
+std =import std
+print = std.io.print
+
 Vec type
     x: u32
     y: u32
@@ -12,6 +15,43 @@ end
 
 v = Vec(x=1,y=2)
 v.display()
+```
+
+```
+0    std =import std
+                                                                 LOAD_CONST  0  0  0
+                                                                 LOAD_CONST  6  0  6
+                                                                     IMPORT  6  7  0
+1    print = std.io.print
+                                                                 LOAD_CONST  7  0  8
+                                                              STRUCT_ACCESS  7  8  9
+                                                                 LOAD_CONST  8  0 10
+                                                              STRUCT_ACCESS  9 10 11
+2    
+3    Vec type
+                                                                 LOAD_CONST  9  0 12
+4        x: u32
+                                                                 LOAD_CONST  1  0  1
+5        y: u32
+6    end
+7    
+8    display fn(self:Vec) do
+                                                                 LOAD_CONST  2  0  2
+                                                                 LOAD_CONST 10  0 13
+                                                                   BUILD_FN 13  0  0
+9      print("im a vec "+self)
+10   end
+11   
+12   v = Vec(x=1,y=2)
+                                                                       ADDI  0  1 14
+                                                                       ADDI  0  2 15
+                                                                 LOAD_CONST 11  0 18
+                                                                    CALL_KW 12 18 14
+13   v.display()                                                                 LOAD_CONST  3  0  3
+                                                                   BUILD_FN  3  0  0
+                                                                 LOAD_CONST 12  0 19
+                                                              STRUCT_ACCESS 16 19 20
+                                                                       CALL 20 21  0
 ```
 
 ## Todo

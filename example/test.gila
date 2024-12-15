@@ -1,15 +1,14 @@
+std =import std
+print = std.io.print
 
-std = import std
-
-
-
-Foo type
-    x: string
+Vec type
+    x: u32
+    y: u32
 end
 
-
-Foo(x="hi")
-
-for _ in 0..5 do
-    std.io.print("hi")
+display fn(self:Vec) do
+  print("im a vec "+self)
 end
+
+v = Vec(x=1,y=2)
+v.display()

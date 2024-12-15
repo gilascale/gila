@@ -154,25 +154,6 @@ impl Chunk {
             }
             i += 1;
         }
-
-        // let mut i = 0;
-        // for instruction in &self.instructions {
-        //     let line = self.debug_line_info[i];
-
-        //     s.push_str(
-        //         format!(
-        //             "{:<5}{:<15}{:3?}{:3?}{:3?}\n",
-        //             line,
-        //             format!("{:?}", instruction.op_instruction),
-        //             instruction.arg_0,
-        //             instruction.arg_1,
-        //             instruction.arg_2
-        //         )
-        //         .as_str(),
-        //     );
-        //     i += 1;
-        // }
-
         return s;
     }
 }
