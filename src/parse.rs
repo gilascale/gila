@@ -68,6 +68,7 @@ impl<'a> Parser<'a> {
         let current: &Token = &self.tokens[self.counter];
 
         match current.typ {
+            Type::ASSERT => self.assert(),
             Type::DO => self.block(),
             Type::TEST => self.test(),
             Type::IF => self.iff(),
@@ -444,6 +445,24 @@ impl<'a> Parser<'a> {
             };
         }
         return higher_precedence;
+    }
+
+    fn assert(&mut self) -> ASTNode {
+        let assert_pos = get_position!(self);
+        consume_token!(self, Type::ASSERT);
+        let expr = self.expression();
+        let mut name: Option<Token> = None;
+        let mut rhs_pos = expr.position.clone();
+        if !self.end() && self.tokens[self.counter].typ == Type::COMMA {
+            consume_token!(self, Type::COMMA);
+            let next = get_next!(self);
+            name = Some(next.clone());
+            rhs_pos = name.as_ref().unwrap().pos.clone();
+        }
+        return ASTNode {
+            statement: Statement::ASSERT(Box::new(expr), name),
+            position: assert_pos.join(rhs_pos),
+        };
     }
 
     fn block(&mut self) -> ASTNode {

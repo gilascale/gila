@@ -1,5 +1,9 @@
-std =import std
-print = std.io.print
 
-for _ in 0..99999999 do
+
+
+
+test "example test" do
+
+    assert 1+2==3, "assert maths works"
+    
 end

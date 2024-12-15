@@ -24,6 +24,7 @@ impl Position {
 
 #[derive(Eq, PartialEq, Debug, Clone, Hash, DeepSizeOf)]
 pub enum Type {
+    ASSERT,
     EXCLAIM,
     TEST,
     AMPERSAND,
@@ -447,6 +448,29 @@ impl Lexer {
                         });
                         self.counter += 3;
                         self.index += 3;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
+                    }
+                }
+                'a' => {
+                    if chars[self.counter as usize + 1] == 's'
+                        && chars[self.counter as usize + 2] == 's'
+                        && chars[self.counter as usize + 3] == 'e'
+                        && chars[self.counter as usize + 4] == 'r'
+                        && chars[self.counter as usize + 5] == 't'
+                    {
+                        v.push(Token {
+                            typ: Type::ASSERT,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 6,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 5;
+                        self.index += 5;
                     } else {
                         self.identifier(&chars, &mut v);
                         continue;
