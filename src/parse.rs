@@ -30,6 +30,12 @@ macro_rules! get_next {
     }};
 }
 
+macro_rules! get_current {
+    ($self:expr) => {
+        &$self.tokens[$self.counter];
+    };
+}
+
 pub struct Parser<'a> {
     pub tokens: &'a std::vec::Vec<Token>,
     pub counter: usize,
@@ -94,8 +100,7 @@ impl<'a> Parser<'a> {
             let lhs_pos = get_position!(self);
             consume_token!(self, Type::IMPORT);
             // todo parse module path properly
-            let t = &self.tokens[self.counter];
-            self.counter += 1;
+            let t = get_next!(self);
             return ASTNode {
                 statement: Statement::IMPORT(t.clone()),
                 position: lhs_pos.join(t.pos.clone()),
@@ -122,31 +127,27 @@ impl<'a> Parser<'a> {
     }
 
     fn call(&mut self) -> ASTNode {
+        let lhs_pos = get_position!(self);
         let higher_precedence = self.index();
 
         if !self.end() && self.tokens[self.counter].typ == Type::LPAREN {
-            self.counter += 1;
-            let lhs_pos = higher_precedence.position.clone();
-
+            consume_token!(self, Type::LPAREN);
             let mut args: Vec<ASTNode> = vec![];
-
             let mut rhs_pos: Position;
             if self.tokens[self.counter].typ != Type::RPAREN {
                 loop {
                     args.push(self.expression());
                     if self.tokens[self.counter].typ == Type::RPAREN {
-                        rhs_pos = self.tokens[self.counter].pos.clone();
-                        self.counter += 1;
+                        rhs_pos = get_position!(self);
+                        consume_token!(self, Type::RPAREN);
                         break;
                     }
-                    // skip ,
-                    self.counter += 1;
+                    consume_token!(self, Type::COMMA);
                 }
             } else {
-                rhs_pos = self.tokens[self.counter].pos.clone();
-                self.counter += 1;
+                rhs_pos = get_position!(self);
+                get_next!(self);
             }
-
             return ASTNode {
                 statement: Statement::CALL(Box::new(higher_precedence), args),
                 position: lhs_pos.join(rhs_pos),
@@ -157,18 +158,13 @@ impl<'a> Parser<'a> {
     }
 
     fn index(&mut self) -> ASTNode {
+        let lhs_pos = get_position!(self);
         let higher_precedence = self.struct_access();
         if !self.end() && self.tokens[self.counter].typ == Type::LSQUARE {
-            let lhs_pos = higher_precedence.position.clone();
-            // consume [
             consume_token!(self, Type::LSQUARE);
-
             let the_index = self.struct_access();
-
             let rhs_pos = self.tokens[self.counter].pos.clone();
-            // consume ]
             consume_token!(self, Type::RSQUARE);
-
             return ASTNode {
                 statement: Statement::INDEX(Box::new(higher_precedence), Box::new(the_index)),
                 position: lhs_pos.join(rhs_pos),
@@ -177,28 +173,21 @@ impl<'a> Parser<'a> {
         higher_precedence
     }
 
-    // fixme we are not parsing this correctly
     fn struct_access(&mut self) -> ASTNode {
         // Parse the leftmost expression first (e.g., x in x.y.z)
         let lhs_pos = get_position!(self);
         let mut lhs = self.single();
-
         // Keep parsing as long as there's a DOT token followed by an identifier
         while !self.end() && self.tokens[self.counter].typ == Type::DOT {
             consume_token!(self, Type::DOT);
-
-            let field = self.tokens[self.counter].clone(); // Field being accessed
-            let rhs_pos = field.pos.clone(); // Position of the field
-            self.counter += 1; // Consume the identifier token
-
-            // Create a new STRUCT_ACCESS node for this level
+            let rhs_pos = get_position!(self);
+            let field = get_next!(self); // Field being accessed
+                                         // Create a new STRUCT_ACCESS node for this level
             lhs = ASTNode {
-                statement: Statement::STRUCT_ACCESS(Box::new(lhs), field),
+                statement: Statement::STRUCT_ACCESS(Box::new(lhs), field.clone()),
                 position: lhs_pos.join(rhs_pos),
             };
         }
-
-        // Return the fully parsed access chain
         lhs
     }
 
@@ -206,14 +195,14 @@ impl<'a> Parser<'a> {
         let next: &Token = &self.tokens[self.counter];
         match (next.typ) {
             Type::TRUE => {
-                self.counter += 1;
+                consume_token!(self, Type::TRUE);
                 return ASTNode {
                     statement: Statement::LITERAL_BOOL(true),
                     position: next.pos.clone(),
                 };
             }
             Type::FALSE => {
-                self.counter += 1;
+                consume_token!(self, Type::FALSE);
                 return ASTNode {
                     statement: Statement::LITERAL_BOOL(false),
                     position: next.pos.clone(),
@@ -222,22 +211,22 @@ impl<'a> Parser<'a> {
             Type::STRING(_) => self.string(),
             Type::ATOM(_) => self.atom(),
             Type::IDENTIFIER(_) => {
-                self.counter += 1;
+                get_next!(self);
                 return ASTNode {
                     statement: Statement::VARIABLE(next.clone()),
                     position: next.pos.clone(),
                 };
             }
             Type::NUMBER(_) => {
-                self.counter += 1;
+                get_next!(self);
                 return ASTNode {
                     statement: Statement::LITERAL_NUM(next.clone()),
                     position: next.pos.clone(),
                 };
             }
             Type::LSQUARE => {
-                let lhs_pos = self.tokens[self.counter].pos.clone();
-                self.counter += 1;
+                let lhs_pos = get_position!(self);
+                consume_token!(self, Type::LSQUARE);
                 let mut items: Vec<ASTNode> = vec![];
                 if self.tokens[self.counter].typ != Type::RSQUARE {
                     loop {
@@ -245,52 +234,46 @@ impl<'a> Parser<'a> {
                         if self.tokens[self.counter].typ == Type::RSQUARE {
                             break;
                         }
-                        // loop over the ,
-                        self.counter += 1;
+                        consume_token!(self, Type::COMMA);
                     }
                 }
-                let rhs_pos = self.tokens[self.counter].pos.clone();
-                self.counter += 1;
+                let rhs_pos = get_position!(self);
+                consume_token!(self, Type::RSQUARE);
                 return ASTNode {
                     statement: Statement::SLICE(items),
                     position: lhs_pos.join(rhs_pos),
                 };
             }
             Type::COLON => {
-                let lhs_pos = self.tokens[self.counter].pos.clone();
-                self.counter += 1;
-                let atom = self.tokens[self.counter].clone();
-                let rhs_pos = atom.pos.clone();
-                self.counter += 1;
+                let lhs_pos = get_position!(self);
+                consume_token!(self, Type::COLON);
+                let rhs_pos = get_position!(self);
+                let atom = get_next!(self);
                 return ASTNode {
-                    statement: Statement::ATOM(atom),
+                    statement: Statement::ATOM(atom.clone()),
                     position: lhs_pos.join(rhs_pos),
                 };
             }
             Type::AMPERSAND => {
                 // doing annotation
-                let lhs_pos = self.tokens[self.counter].pos.clone();
-                self.counter += 1;
-                let annotation = self.tokens[self.counter].clone();
-                self.counter += 1;
-
+                let lhs_pos = get_position!(self);
+                consume_token!(self, Type::AMPERSAND);
+                let annotation = get_next!(self);
                 let mut args: Vec<Token> = vec![];
                 if self.tokens[self.counter].typ == Type::LPAREN {
-                    self.counter += 1;
+                    consume_token!(self, Type::LPAREN);
                     if self.tokens[self.counter].typ != Type::RPAREN {
                         loop {
-                            args.push(self.tokens[self.counter].clone());
-                            self.counter += 1;
-
+                            let next = get_next!(self);
+                            args.push(next.clone());
                             if self.tokens[self.counter].typ == Type::RPAREN {
-                                self.counter += 1;
+                                consume_token!(self, Type::RPAREN);
                                 break;
                             }
-                            // consume ,
-                            self.counter += 1;
+                            consume_token!(self, Type::COMMA);
                         }
                     } else {
-                        self.counter += 1;
+                        get_next!(self);
                     }
                 }
 
@@ -299,7 +282,7 @@ impl<'a> Parser<'a> {
                 let rhs_pos = expr.position.clone();
 
                 return ASTNode {
-                    statement: Statement::ANNOTATION(annotation, args, Box::new(expr)),
+                    statement: Statement::ANNOTATION(annotation.clone(), args, Box::new(expr)),
                     position: lhs_pos.join(rhs_pos),
                 };
             }
@@ -312,7 +295,7 @@ impl<'a> Parser<'a> {
         let higher_precedence = self.equality();
 
         if !self.end() && self.tokens[self.counter].typ == Type::OR {
-            self.counter += 1;
+            consume_token!(self, Type::OR);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -333,9 +316,8 @@ impl<'a> Parser<'a> {
 
     fn equality(&mut self) -> ASTNode {
         let higher_precedence = self.add_sub();
-
         if !self.end() && self.tokens[self.counter].typ == Type::EQUALS {
-            self.counter += 1;
+            consume_token!(self, Type::EQUALS);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -346,7 +328,7 @@ impl<'a> Parser<'a> {
                 position: pos,
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::NOT_EQUALS {
-            self.counter += 1;
+            consume_token!(self, Type::NOT_EQUALS);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -357,7 +339,7 @@ impl<'a> Parser<'a> {
                 position: pos,
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::GREATER_THAN {
-            self.counter += 1;
+            consume_token!(self, Type::GREATER_THAN);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -369,7 +351,7 @@ impl<'a> Parser<'a> {
             };
         }
         if !self.end() && self.tokens[self.counter].typ == Type::GREATER_EQ {
-            self.counter += 1;
+            consume_token!(self, Type::GREATER_EQ);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -381,7 +363,7 @@ impl<'a> Parser<'a> {
             };
         }
         if !self.end() && self.tokens[self.counter].typ == Type::LESS_THAN {
-            self.counter += 1;
+            consume_token!(self, Type::LESS_THAN);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -393,7 +375,7 @@ impl<'a> Parser<'a> {
             };
         }
         if !self.end() && self.tokens[self.counter].typ == Type::LESS_EQ {
-            self.counter += 1;
+            consume_token!(self, Type::LESS_EQ);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -411,7 +393,7 @@ impl<'a> Parser<'a> {
     fn add_sub(&mut self) -> ASTNode {
         let higher_precedence = self.mul_div();
         if !self.end() && self.tokens[self.counter].typ == Type::ADD {
-            self.counter += 1;
+            consume_token!(self, Type::ADD);
             let rhs: ASTNode = self.expression();
             let pos = higher_precedence
                 .position
@@ -422,7 +404,7 @@ impl<'a> Parser<'a> {
                 position: pos,
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::SUB {
-            self.counter += 1;
+            consume_token!(self, Type::SUB);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -439,7 +421,7 @@ impl<'a> Parser<'a> {
     fn mul_div(&mut self) -> ASTNode {
         let higher_precedence = self.tryy();
         if !self.end() && self.tokens[self.counter].typ == Type::MUL {
-            self.counter += 1;
+            consume_token!(self, Type::MUL);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -450,7 +432,7 @@ impl<'a> Parser<'a> {
                 position: pos,
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::DIV {
-            self.counter += 1;
+            consume_token!(self, Type::DIV);
             let rhs = self.expression();
             let pos = higher_precedence
                 .position
@@ -465,11 +447,8 @@ impl<'a> Parser<'a> {
     }
 
     fn block(&mut self) -> ASTNode {
-        // consume the 'do'
-        let do_pos = self.tokens[self.counter].pos.clone();
-        self.counter += 1;
-
-        // todo get the block start token somehow?
+        let do_pos = get_position!(self);
+        consume_token!(self, Type::DO);
         let mut stms = vec![];
         while !self.end() && self.tokens[self.counter].typ != Type::END {
             stms.push(self.statement());
@@ -478,26 +457,21 @@ impl<'a> Parser<'a> {
         if stms.len() > 0 {
             end_pos = stms[stms.len() - 1].position.clone();
         } else {
-            // todo this is a hack so if the block is empty we don't crash
             end_pos = self.tokens[self.counter - 1].pos.clone();
         }
-        // consume the END
-        self.counter += 1;
+        consume_token!(self, Type::END);
         return ASTNode {
             statement: Statement::BLOCK(stms),
-            // todo this will error if block is empty
             position: do_pos.join(end_pos),
         };
     }
 
     fn test(&mut self) -> ASTNode {
-        let test_pos = self.tokens[self.counter].pos.clone();
-        self.counter += 1;
-
+        let test_pos = get_position!(self);
+        consume_token!(self, Type::TEST);
         let test_name = self.string();
         let body = self.statement();
         let body_pos = body.position.clone();
-
         ASTNode {
             statement: Statement::TEST(Box::new(test_name), Box::new(body)),
             position: test_pos.join(body_pos),
@@ -505,19 +479,16 @@ impl<'a> Parser<'a> {
     }
 
     fn iff(&mut self) -> ASTNode {
-        let if_pos = self.tokens[self.counter].pos.clone();
-        self.counter += 1;
-
+        let if_pos = get_position!(self);
+        consume_token!(self, Type::IF);
         let condition = self.expression();
         let body = self.statement();
         let body_pos = body.position.clone();
-
         let mut else_body: Option<Box<ASTNode>> = None;
         if self.tokens[self.counter].typ == Type::ELSE {
-            self.counter += 1;
+            consume_token!(self, Type::ELSE);
             else_body = Some(Box::new(self.statement()));
         }
-
         ASTNode {
             statement: Statement::IF(Box::new(condition), Box::new(body), else_body),
             position: if_pos.join(body_pos),
@@ -525,27 +496,17 @@ impl<'a> Parser<'a> {
     }
 
     fn forr(&mut self) -> ASTNode {
-        let for_pos = self.tokens[self.counter].pos.clone();
-        self.counter += 1;
-
-        let var = &self.tokens[self.counter];
-        self.counter += 1;
-
-        // consume 'in'
-        self.counter += 1;
-
-        // parse range
-        let range_start = &self.tokens[self.counter];
-        self.counter += 1;
-
-        // skip the ..
-        self.counter += 2;
-        let range_end = &self.tokens[self.counter];
-        self.counter += 1;
-
+        let for_pos = get_position!(self);
+        consume_token!(self, Type::FOR);
+        let var = get_next!(self);
+        consume_token!(self, Type::IN);
+        let range_start = get_next!(self);
+        // consume the ..
+        consume_token!(self, Type::DOT);
+        consume_token!(self, Type::DOT);
+        let range_end = get_next!(self);
         let body = self.statement();
         let body_pos = body.position.clone();
-
         return ASTNode {
             statement: Statement::FOR(
                 var.clone(),
@@ -559,29 +520,9 @@ impl<'a> Parser<'a> {
 
     fn parse_range(&mut self) {}
 
-    // fn lett(&mut self) -> ASTNode {
-    //     let let_pos = self.tokens[self.counter].pos.clone();
-    //     self.counter += 1;
-
-    //     let identifier = &self.tokens[self.counter];
-
-    //     // consume identifier and =
-    //     self.counter += 1;
-    //     self.counter += 1;
-
-    //     let value = self.expression();
-    //     let value_pos = value.position.clone();
-
-    //     // fixme add type
-    //     ASTNode {
-    //         statement: Statement::DEFINE(identifier.clone(), Box::new(value)),
-    //         position: let_pos.join(value_pos),
-    //     }
-    // }
-
     fn ret(&mut self) -> ASTNode {
-        let pos = &self.tokens[self.counter].pos;
-        self.counter += 1;
+        let pos = get_position!(self);
+        consume_token!(self, Type::RETURN);
         let val = self.expression();
         let rhs_pos = val.position.clone();
         return ASTNode {
@@ -591,8 +532,7 @@ impl<'a> Parser<'a> {
     }
 
     fn string(&mut self) -> ASTNode {
-        let s = &self.tokens[self.counter];
-        self.counter += 1;
+        let s = get_next!(self);
         ASTNode {
             statement: Statement::STRING(s.clone()),
             position: s.pos.clone(),
@@ -600,9 +540,8 @@ impl<'a> Parser<'a> {
     }
 
     fn atom(&mut self) -> ASTNode {
-        let tok = &self.tokens[self.counter];
-        let pos = tok.pos.clone();
-        self.counter += 1;
+        let pos = get_position!(self);
+        let tok = get_next!(self);
         return ASTNode {
             statement: Statement::ATOM(tok.clone()),
             position: pos,
@@ -610,13 +549,9 @@ impl<'a> Parser<'a> {
     }
 
     fn identifier(&mut self) -> ASTNode {
-        // todo assume define?
-
-        let identifier = &self.tokens[self.counter];
-        // self.counter += 1;
-
+        let identifier = get_current!(self);
         if self.end_away(1) {
-            self.counter += 1;
+            get_next!(self);
             return ASTNode {
                 statement: Statement::VARIABLE(identifier.clone()),
                 position: identifier.pos.clone(),
@@ -624,13 +559,13 @@ impl<'a> Parser<'a> {
         }
 
         if self.tokens[self.counter + 1].typ == Type::COLON {
-            self.counter += 1;
+            get_next!(self);
             let lhs_pos = identifier.pos.clone();
             // move over the :
-            self.counter += 1;
+            consume_token!(self, Type::COLON);
             let typ = self.parse_type();
             // move over the =
-            self.counter += 1;
+            consume_token!(self, Type::ASSIGN);
             let rhs = self.expression();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
@@ -640,45 +575,34 @@ impl<'a> Parser<'a> {
         }
 
         // function
-        // todo deal with blocks?
         if self.tokens[self.counter + 1].typ == Type::FN {
-            self.counter += 1;
+            get_next!(self);
             let lhs_pos = identifier.pos.clone();
-            // move over the fn
-            self.counter += 1;
+            consume_token!(self, Type::FN);
 
             let mut params: Vec<ASTNode> = vec![];
 
             if self.tokens[self.counter].typ == Type::LPAREN {
-                self.counter += 1;
+                consume_token!(self, Type::LPAREN);
                 if self.tokens[self.counter].typ != Type::RPAREN {
                     loop {
-                        // fixme do proper decl
                         params.push(self.parse_decl());
-                        // params.push(ASTNode {
-                        //     statement: Statement::VARIABLE(self.tokens[self.counter].clone()),
-                        //     position: self.tokens[self.counter].pos.clone(),
-                        // });
-                        // self.counter += 1;
-
                         if self.tokens[self.counter].typ == Type::RPAREN {
-                            self.counter += 1;
+                            consume_token!(self, Type::RPAREN);
                             break;
                         }
-                        // skip ,
-                        self.counter += 1;
+                        consume_token!(self, Type::COMMA);
                     }
                 } else {
-                    self.counter += 1;
+                    get_next!(self);
                 }
             }
 
             let mut return_type: Option<DataType> = None;
             if self.tokens[self.counter].typ == Type::SUB {
-                self.counter += 1;
+                consume_token!(self, Type::SUB);
                 if self.tokens[self.counter].typ == Type::GREATER_THAN {
-                    self.counter += 1;
-                    //consume type
+                    consume_token!(self, Type::GREATER_THAN);
                     return_type = Some(self.parse_type());
                 }
             }
@@ -699,29 +623,23 @@ impl<'a> Parser<'a> {
         // type
         // todo deal with blocks?
         if self.tokens[self.counter + 1].typ == Type::TYPE {
-            self.counter += 1;
+            get_next!(self);
             let lhs_pos = identifier.pos.clone();
-            // move over the type
-            self.counter += 1;
-
+            consume_token!(self, Type::TYPE);
             let mut decls: Vec<ASTNode> = vec![];
-
             let mut rhs_pos: Position;
             if self.tokens[self.counter].typ != Type::END {
                 loop {
-                    // consume types
-
                     decls.push(self.parse_decl());
-
                     if self.tokens[self.counter].typ == Type::END {
-                        rhs_pos = self.tokens[self.counter].pos.clone();
-                        self.counter += 1;
+                        rhs_pos = get_position!(self);
+                        consume_token!(self, Type::END);
                         break;
                     }
                 }
             } else {
-                rhs_pos = self.tokens[self.counter].pos.clone();
-                self.counter += 1;
+                rhs_pos = get_position!(self);
+                get_next!(self);
             }
 
             return ASTNode {
@@ -732,10 +650,9 @@ impl<'a> Parser<'a> {
 
         // fixme this should be lower precedence
         if self.tokens[self.counter + 1].typ == Type::ASSIGN {
-            self.counter += 1;
+            get_next!(self);
             let lhs_pos = identifier.pos.clone();
-            // move over the =
-            self.counter += 1;
+            consume_token!(self, Type::ASSIGN);
             let rhs = self.expression();
             let rhs_pos = rhs.position.clone();
             return ASTNode {
@@ -748,8 +665,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_type(&mut self) -> DataType {
-        let current = &self.tokens[self.counter];
-        self.counter += 1;
+        let current = get_next!(self);
         let mut t: DataType;
         match &current.typ {
             Type::U32 => t = DataType::U32,
@@ -757,20 +673,17 @@ impl<'a> Parser<'a> {
             _ => panic!("umm what is {:?}", current.typ),
         }
         if self.tokens[self.counter].typ == Type::LSQUARE {
-            // todo do this properly - consume the []
-            self.counter += 2;
+            consume_token!(self, Type::LSQUARE);
+            consume_token!(self, Type::RSQUARE);
             return DataType::SLICE(Box::new(t));
         }
         t
     }
 
     fn parse_decl(&mut self) -> ASTNode {
-        let identifier = &self.tokens[self.counter];
-        let lhs_pos = identifier.pos.clone();
-        // consume identifier
-        self.counter += 1;
-        // consume :
-        self.counter += 1;
+        let lhs_pos = get_position!(self);
+        let identifier = get_next!(self);
+        consume_token!(self, Type::COLON);
         let rhs_pos = self.tokens[self.counter].pos.clone();
         let typ = self.parse_type();
         return ASTNode {

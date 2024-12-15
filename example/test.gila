@@ -2,4 +2,14 @@
 std = import std
 
 
-x = 3
+
+Foo type
+    x: string
+end
+
+
+Foo(x="hi")
+
+for _ in 0..5 do
+    std.io.print("hi")
+end
