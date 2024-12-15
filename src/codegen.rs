@@ -407,13 +407,22 @@ impl BytecodeGenerator<'_> {
             marked: false,
         }));
 
+        let counter = match &range_start.typ {
+            Type::NUMBER(n) => n.parse::<u8>().unwrap(),
+            _ => panic!(),
+        };
+        let limit = match &range_end.typ {
+            Type::NUMBER(n) => n.parse::<u8>().unwrap(),
+            _ => panic!(),
+        };
+
         // get the numbers setup for the 0..3
         let first_arg_register = self.get_available_register();
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::ADDI,
                 arg_0: 0,
-                arg_1: 0,
+                arg_1: counter,
                 arg_2: first_arg_register,
             },
             position.line as usize,
@@ -423,7 +432,7 @@ impl BytecodeGenerator<'_> {
             Instruction {
                 op_instruction: OpInstruction::ADDI,
                 arg_0: 0,
-                arg_1: 3,
+                arg_1: limit,
                 arg_2: second_arg_register,
             },
             position.line as usize,
