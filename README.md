@@ -108,7 +108,6 @@ v.display()
 - function return types
 - import supports . in it
 - import supports non-required assignment
-- booleans
 - generics
 - builtin result type
 - lhs struct field assignment

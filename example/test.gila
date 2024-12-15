@@ -1,13 +1,16 @@
-my_fn fn return 5
 
-test "example test" do
-    assert my_fn()==5, "assert maths works"
+
+
+
+
+
+Generic type
+    foo: $T
+    bar: $J
 end
-
-
-
-
 
 std = import std
 
-std.io.print("hi")
+
+std.io.print(Generic)
+

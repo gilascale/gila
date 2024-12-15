@@ -1254,6 +1254,7 @@ impl BytecodeGenerator<'_> {
             DataType::U32 => Object::ATOM(Rc::new("u32".to_string())),
             DataType::SLICE(t) => Object::ATOM(Rc::new("slice".to_string())),
             DataType::DYNAMIC_OBJECT(d) => Object::ATOM(Rc::new(d.to_string())),
+            DataType::GENERIC(g) => Object::ATOM(Rc::new(format!("${}", g).to_string())),
             _ => panic!("cant create atom from type {:?}", data_type),
         }
     }

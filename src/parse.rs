@@ -687,6 +687,13 @@ impl<'a> Parser<'a> {
         let current = get_next!(self);
         let mut t: DataType;
         match &current.typ {
+            Type::DOLLAR => {
+                let next = get_next!(self);
+                return match &next.typ {
+                    Type::IDENTIFIER(i) => DataType::GENERIC(i.clone()),
+                    _ => panic!(),
+                };
+            }
             Type::U32 => t = DataType::U32,
             Type::IDENTIFIER(i) => t = DataType::DYNAMIC_OBJECT(i.clone()),
             _ => panic!("umm what is {:?}", current.typ),

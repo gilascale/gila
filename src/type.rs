@@ -12,6 +12,7 @@ pub enum DataType {
     STRING,
     SLICE(Box<DataType>),
     DYNAMIC_OBJECT(Rc<String>),
+    GENERIC(Rc<String>),
 }
 
 impl DataType {

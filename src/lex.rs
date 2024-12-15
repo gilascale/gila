@@ -24,6 +24,7 @@ impl Position {
 
 #[derive(Eq, PartialEq, Debug, Clone, Hash, DeepSizeOf)]
 pub enum Type {
+    DOLLAR,
     ASSERT,
     EXCLAIM,
     TEST,
@@ -113,6 +114,17 @@ impl Lexer {
             // potential identifier?
 
             match current {
+                '$' => {
+                    v.push(Token {
+                        typ: Type::DOLLAR,
+                        pos: Position {
+                            index: self.index,
+                            line: self.line,
+                            index_end: self.index + 1,
+                            line_end: self.line,
+                        },
+                    });
+                }
                 '@' => {
                     v.push(Token {
                         typ: Type::AMPERSAND,
