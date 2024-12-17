@@ -5,12 +5,12 @@
 
 
 Generic type
-    foo: $T
-    bar: $J
+    foo: string
+    bar: string
 end
 
-std = import std
 
 
-std.io.print(Generic)
+
+b: Generic = Generic(foo="hi", bar="hi")
 

@@ -11,7 +11,8 @@ pub enum DataType {
     U32,
     STRING,
     SLICE(Box<DataType>),
-    DYNAMIC_OBJECT(Rc<String>),
+    NAMED_REFERENCE(Rc<String>),
+    DYNAMIC_OBJECT(Vec<DataType>),
     GENERIC(Rc<String>),
 }
 

@@ -131,7 +131,13 @@ fn print_typecheck_error(source: String, typecheck_err: TypeCheckError) {
                 " ".repeat(offset as usize),
                 right_squiggle
             );
-            println!("{:?} not assignable to {:?}\n", rhs_type, lhs_type)
+            println!("{:?} not assignable to {:?}.\n", rhs_type, lhs_type)
+        }
+        TypeCheckError::UNKNOWN_VARIABLE(t) => {
+            println!("{}", split_source[t.pos.line as usize]);
+            let left_squiggle = "^".repeat((t.pos.index_end - t.pos.index) as usize);
+            println!("{}{}", " ".repeat(t.pos.index as usize), left_squiggle);
+            println!("unknown variable {:?}.\n", t.typ);
         }
     }
 }

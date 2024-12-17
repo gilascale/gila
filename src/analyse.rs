@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     ast::{ASTNode, Statement},
@@ -9,10 +9,11 @@ use crate::{
 #[derive(Debug)]
 pub enum TypeCheckError {
     TYPE_NOT_ASSIGNABLE(Position, Position, DataType, DataType),
+    UNKNOWN_VARIABLE(Token),
 }
 
 struct Scope {
-    vars: HashMap<Token, DataType>,
+    vars: HashMap<Rc<String>, DataType>,
 }
 
 pub struct Analyser {
@@ -51,7 +52,8 @@ impl Analyser {
             Statement::LITERAL_NUM(n) => self.visit_literal_num(n),
             Statement::STRING(s) => self.visit_string(s),
             Statement::SLICE(s) => self.visit_slice(s),
-            Statement::NAMED_TYPE_DECL(t, decls) => Ok(DataType::U32),
+            Statement::VARIABLE(t) => self.visit_variable(t),
+            Statement::NAMED_TYPE_DECL(t, decls) => self.visit_named_type_decl(&t, &decls),
             _ => panic!("Missing visit for {:?}", statement),
         }
     }
@@ -83,8 +85,9 @@ impl Analyser {
     ) -> Result<DataType, TypeCheckError> {
         // lets analyse!
 
+        let identifier = token.as_identifier();
         // existing var
-        if self.scopes[self.scope_index].vars.contains_key(token) {
+        if self.scopes[self.scope_index].vars.contains_key(&identifier) {
         } else {
             if let Some(t) = typ {
                 if let Some(v) = val {
@@ -96,12 +99,21 @@ impl Analyser {
                         return Err(value_type.err().unwrap());
                     }
 
-                    if t.clone()
+                    let resolved_type = match t {
+                        DataType::NAMED_REFERENCE(named_reference) => self.scopes[self.scope_index]
+                            .vars
+                            .get(named_reference)
+                            .unwrap(),
+                        _ => panic!(),
+                    };
+
+                    if resolved_type
+                        .clone()
                         .assignable_from(value_type.as_ref().unwrap().clone())
                     {
                         self.scopes[self.scope_index]
                             .vars
-                            .insert(token.clone(), t.clone());
+                            .insert(token.as_identifier(), t.clone());
                     } else {
                         return Err(TypeCheckError::TYPE_NOT_ASSIGNABLE(
                             token.pos.clone(),
@@ -122,7 +134,7 @@ impl Analyser {
         callee: &Box<ASTNode>,
         args: &Vec<ASTNode>,
     ) -> Result<DataType, TypeCheckError> {
-        Ok(DataType::U32)
+        self.visit(&callee)
     }
 
     fn visit_literal_num(&mut self, n: &Token) -> Result<DataType, TypeCheckError> {
@@ -136,5 +148,41 @@ impl Analyser {
     fn visit_slice(&mut self, s: &Vec<ASTNode>) -> Result<DataType, TypeCheckError> {
         // todo check whats in the slice
         Ok(DataType::SLICE(Box::new(DataType::U32)))
+    }
+
+    fn visit_variable(&mut self, t: &Token) -> Result<DataType, TypeCheckError> {
+        if self.scopes[self.scope_index]
+            .vars
+            .contains_key(&t.as_identifier())
+        {
+            return Ok(self.scopes[self.scope_index]
+                .vars
+                .get(&t.as_identifier())
+                .unwrap()
+                .clone());
+        }
+        return Err(TypeCheckError::UNKNOWN_VARIABLE(t.clone()));
+    }
+
+    fn visit_named_type_decl(
+        &mut self,
+        t: &Token,
+        decls: &Vec<ASTNode>,
+    ) -> Result<DataType, TypeCheckError> {
+        let mut v: Vec<DataType> = vec![];
+        for decl in decls {
+            let decl_type = self.visit(decl);
+            if decl_type.is_err() {
+                return Err(decl_type.err().unwrap());
+            }
+            v.push(decl_type.unwrap());
+        }
+
+        // todo insert type into scope
+        self.scopes[self.scope_index]
+            .vars
+            .insert(t.as_identifier(), DataType::DYNAMIC_OBJECT(v));
+
+        Ok(DataType::U32)
     }
 }

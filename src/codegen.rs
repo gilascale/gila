@@ -1154,7 +1154,7 @@ impl BytecodeGenerator<'_> {
                 if let Type::IDENTIFIER(i) = &t.typ {
                     if i.to_string().eq("self") {
                         let t = typ.clone().unwrap();
-                        if let DataType::DYNAMIC_OBJECT(d) = t {
+                        if let DataType::NAMED_REFERENCE(d) = t {
                             is_method = true;
                             // todo add this function as a method
                             method_obj = *self.codegen_context.chunks
@@ -1253,7 +1253,7 @@ impl BytecodeGenerator<'_> {
             // todo use object "types" rather than atoms
             DataType::U32 => Object::ATOM(Rc::new("u32".to_string())),
             DataType::SLICE(t) => Object::ATOM(Rc::new("slice".to_string())),
-            DataType::DYNAMIC_OBJECT(d) => Object::ATOM(Rc::new(d.to_string())),
+            DataType::NAMED_REFERENCE(d) => Object::ATOM(Rc::new(d.to_string())),
             DataType::GENERIC(g) => Object::ATOM(Rc::new(format!("${}", g).to_string())),
             _ => panic!("cant create atom from type {:?}", data_type),
         }

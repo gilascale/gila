@@ -77,6 +77,15 @@ pub struct Token {
     pub typ: Type,
 }
 
+impl Token {
+    pub fn as_identifier(&self) -> Rc<String> {
+        match &self.typ {
+            Type::IDENTIFIER(i) => i.clone(),
+            _ => panic!(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Lexer {
     pub counter: u32,

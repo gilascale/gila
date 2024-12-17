@@ -695,7 +695,7 @@ impl<'a> Parser<'a> {
                 };
             }
             Type::U32 => t = DataType::U32,
-            Type::IDENTIFIER(i) => t = DataType::DYNAMIC_OBJECT(i.clone()),
+            Type::IDENTIFIER(i) => t = DataType::NAMED_REFERENCE(i.clone()),
             _ => panic!("umm what is {:?}", current.typ),
         }
         if self.tokens[self.counter].typ == Type::LSQUARE {
