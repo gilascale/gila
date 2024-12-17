@@ -196,6 +196,8 @@ fn exec(file_to_exec: String) {
     };
     let ast = parser.parse();
     // println!("ast {:#?}", ast);
+    let mut file = File::create("./gila-build/parsed.gilaast");
+    file.unwrap().write_all(format!("{:#?}", ast).as_bytes());
 
     let mut analyser = analyse::Analyser::new();
     let typecheck_res = analyser.analyse(&ast);

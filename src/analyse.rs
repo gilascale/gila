@@ -48,7 +48,7 @@ impl Analyser {
             Statement::IF(cond, body, else_body) => self.visit_if(cond, body, else_body),
             Statement::FOR(var, range_start, range_end, body) => Ok(DataType::U32),
             Statement::DEFINE(t, typ, val) => self.visit_define(t, typ, val),
-            Statement::ASSIGN(lhs, rhs) => Ok(DataType::U32),
+            Statement::ASSIGN(lhs, rhs) => self.visit_assign(lhs, rhs),
             Statement::CALL(calee, args) => self.visit_call(calee, args),
             Statement::LITERAL_NUM(n) => self.visit_literal_num(n),
             Statement::STRING(s) => self.visit_string(s),
@@ -84,11 +84,28 @@ impl Analyser {
         typ: &Option<DataType>,
         val: &Option<Box<ASTNode>>,
     ) -> Result<DataType, TypeCheckError> {
-        // lets analyse!
-
         let identifier = token.as_identifier();
-        // existing var
+
         if self.scopes[self.scope_index].vars.contains_key(&identifier) {
+            let rhs_value = val.as_ref().unwrap();
+            let rhs_type = self.visit(&rhs_value);
+            let lhs_type = self.scopes[self.scope_index].vars.get(&identifier).unwrap();
+
+            if rhs_type.is_err() {
+                return Err(rhs_type.err().unwrap());
+            }
+
+            let rhs_unrapped = rhs_type.unwrap();
+            let res = lhs_type.clone().assignable_from(rhs_unrapped.clone());
+            if !res {
+                return Err(TypeCheckError::TYPE_NOT_ASSIGNABLE(
+                    token.pos.clone(),
+                    rhs_value.position.clone(),
+                    lhs_type.clone(),
+                    rhs_unrapped.clone(),
+                ));
+            }
+            return Ok(DataType::U32);
         } else {
             if let Some(t) = typ {
                 if let Some(v) = val {
@@ -125,7 +142,7 @@ impl Analyser {
                     {
                         self.scopes[self.scope_index]
                             .vars
-                            .insert(token.as_identifier(), t.clone());
+                            .insert(identifier, t.clone());
                     } else {
                         return Err(TypeCheckError::TYPE_NOT_ASSIGNABLE(
                             token.pos.clone(),
@@ -135,9 +152,50 @@ impl Analyser {
                         ));
                     }
                 }
+            } else {
+                let rhs_value = val.as_ref().unwrap();
+                let value_type = self.visit(&rhs_value);
+
+                if value_type.is_err() {
+                    return Err(value_type.err().unwrap());
+                }
+
+                self.scopes[self.scope_index]
+                    .vars
+                    .insert(identifier, value_type.unwrap());
             }
         }
 
+        Ok(DataType::U32)
+    }
+
+    fn visit_assign(
+        &mut self,
+        lhs: &Box<ASTNode>,
+        rhs: &Box<ASTNode>,
+    ) -> Result<DataType, TypeCheckError> {
+        // todo this is never parsed, may remove!
+        // let lhs_type = self.visit(&lhs);
+        // let rhs_type = self.visit(&rhs);
+
+        // if lhs_type.is_err() {
+        //     return Err(lhs_type.err().unwrap());
+        // }
+        // if rhs_type.is_err() {
+        //     return Err(rhs_type.err().unwrap());
+        // }
+
+        // let lhs_unrapped = lhs_type.unwrap();
+        // let rhs_unrapped = rhs_type.unwrap();
+        // let res = lhs_unrapped.clone().assignable_from(rhs_unrapped.clone());
+        // if !res {
+        //     return Err(TypeCheckError::TYPE_NOT_ASSIGNABLE(
+        //         lhs.position.clone(),
+        //         rhs.position.clone(),
+        //         lhs_unrapped.clone(),
+        //         rhs_unrapped.clone(),
+        //     ));
+        // }
         Ok(DataType::U32)
     }
 
