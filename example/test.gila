@@ -14,6 +14,9 @@ end
 
 booo = Generic(foo="hi", bar="hi")
 
-booo = "waaa"
 
 
+
+std = import std
+
+std.io.print(booo)

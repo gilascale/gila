@@ -43,6 +43,7 @@ impl Analyser {
     fn visit(&mut self, statement: &ASTNode) -> Result<DataType, TypeCheckError> {
         match &statement.statement {
             Statement::PROGRAM(p) => self.visit_program(p),
+            Statement::IMPORT(module) => Ok(DataType::U32),
             Statement::NAMED_FUNCTION(t, params, return_type, body) => Ok(DataType::U32),
             Statement::TEST(name, body) => Ok(DataType::U32),
             Statement::IF(cond, body, else_body) => self.visit_if(cond, body, else_body),
@@ -55,6 +56,7 @@ impl Analyser {
             Statement::SLICE(s) => self.visit_slice(s),
             Statement::VARIABLE(t) => self.visit_variable(t),
             Statement::NAMED_TYPE_DECL(t, decls) => self.visit_named_type_decl(&t, &decls),
+            Statement::STRUCT_ACCESS(strct, member) => Ok(DataType::U32),
             _ => panic!("Missing visit for {:?}", statement),
         }
     }
