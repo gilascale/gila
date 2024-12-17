@@ -139,6 +139,12 @@ fn print_typecheck_error(source: String, typecheck_err: TypeCheckError) {
             println!("{}{}", " ".repeat(t.pos.index as usize), left_squiggle);
             println!("unknown variable {:?}.\n", t.typ);
         }
+        TypeCheckError::UNKNOWN_DATA_TYPE(data_type, pos) => {
+            println!("{}", split_source[pos.line as usize]);
+            let left_squiggle = "^".repeat((pos.index_end - pos.index) as usize);
+            println!("{}{}", " ".repeat(pos.index as usize), left_squiggle);
+            println!("unknown data type {:?}.\n", data_type);
+        }
     }
 }
 

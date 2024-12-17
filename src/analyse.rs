@@ -10,6 +10,7 @@ use crate::{
 pub enum TypeCheckError {
     TYPE_NOT_ASSIGNABLE(Position, Position, DataType, DataType),
     UNKNOWN_VARIABLE(Token),
+    UNKNOWN_DATA_TYPE(Rc<String>, Position),
 }
 
 struct Scope {
@@ -100,10 +101,21 @@ impl Analyser {
                     }
 
                     let resolved_type = match t {
-                        DataType::NAMED_REFERENCE(named_reference) => self.scopes[self.scope_index]
-                            .vars
-                            .get(named_reference)
-                            .unwrap(),
+                        DataType::NAMED_REFERENCE(named_reference) => {
+                            if !self.scopes[self.scope_index]
+                                .vars
+                                .contains_key(named_reference)
+                            {
+                                return Err(TypeCheckError::UNKNOWN_DATA_TYPE(
+                                    named_reference.clone(),
+                                    token.pos.clone(),
+                                ));
+                            }
+                            self.scopes[self.scope_index]
+                                .vars
+                                .get(named_reference)
+                                .unwrap()
+                        }
                         _ => panic!(),
                     };
 

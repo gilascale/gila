@@ -12,5 +12,5 @@ end
 
 
 
-b: Generic = Generic(foo="hi", bar="hi")
+b: asdgsadgh = Generic(foo="hi", bar="hi")
 
