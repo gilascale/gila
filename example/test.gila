@@ -6,18 +6,6 @@ foo fn(s:string)->string return s
 
 
 
-
-x = foo("foo")
-y = foo("bar")
-
-print(y)
-
-
-
-
-
-foo("hello")
-foo("hello")
-foo("hello")
-foo("hello")
-foo("hello")
+for _ in 0..100 do
+    print("hi")
+end
