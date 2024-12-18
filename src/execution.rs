@@ -242,6 +242,76 @@ impl Object {
         }
     }
 
+    pub fn mul(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        config: &Config,
+        other: Object,
+    ) -> Result<Object, RuntimeError> {
+        match self {
+            Self::I64(i1) => {
+                // integer addition
+                match other {
+                    Object::I64(i2) => return Ok(Object::I64(i1 * i2)),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(
+                            format!(
+                                "only support i64*i64 but got {}",
+                                other.print(shared_execution_context)
+                            )
+                            .to_string(),
+                        ))
+                    }
+                }
+            }
+            // Self::HEAP_OBJECT(h1) => h1.data.add(other),
+            _ => {
+                return Err(RuntimeError::INVALID_OPERATION(
+                    format!(
+                        "cant multiple with us {}",
+                        self.print(shared_execution_context)
+                    )
+                    .to_string(),
+                ))
+            }
+        }
+    }
+
+    pub fn div(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        config: &Config,
+        other: Object,
+    ) -> Result<Object, RuntimeError> {
+        match self {
+            Self::I64(i1) => {
+                // integer addition
+                match other {
+                    Object::I64(i2) => return Ok(Object::I64(i1 / i2)),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(
+                            format!(
+                                "only support i64/i64 but got {}",
+                                other.print(shared_execution_context)
+                            )
+                            .to_string(),
+                        ))
+                    }
+                }
+            }
+            // Self::HEAP_OBJECT(h1) => h1.data.add(other),
+            _ => {
+                return Err(RuntimeError::INVALID_OPERATION(
+                    format!(
+                        "cant divide with us {}",
+                        self.print(shared_execution_context)
+                    )
+                    .to_string(),
+                ))
+            }
+        }
+    }
+
     pub fn equals(
         &self,
         shared_execution_context: &mut SharedExecutionContext,
@@ -801,6 +871,8 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::ADDI => self.exec_addi(instr),
             OpInstruction::SUBI => self.exec_subi(instr),
             OpInstruction::ADD => self.exec_add(instr),
+            OpInstruction::MUL => self.exec_mul(instr),
+            OpInstruction::DIV => self.exec_mul(instr),
             OpInstruction::CALL => self.exec_call(instr),
             OpInstruction::CALL_KW => self.exec_call_kw(instr),
             OpInstruction::NATIVE_CALL => self.exec_native_call(instr),
@@ -1005,6 +1077,52 @@ impl<'a> ExecutionEngine<'a> {
             [add.arg_1 as usize];
 
         let addition: Result<Object, RuntimeError> = lhs.add(
+            &mut self.shared_execution_context,
+            &self.config,
+            rhs.clone(),
+        );
+        if let Ok(res) = addition {
+            self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                [add.arg_2 as usize] = res;
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer += 1;
+
+            return Ok(add.arg_2);
+        } else {
+            return Err(addition.err().unwrap());
+        }
+    }
+
+    fn exec_mul(&mut self, add: &Instruction) -> Result<u8, RuntimeError> {
+        let lhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [add.arg_0 as usize];
+        let rhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [add.arg_1 as usize];
+
+        let addition: Result<Object, RuntimeError> = lhs.mul(
+            &mut self.shared_execution_context,
+            &self.config,
+            rhs.clone(),
+        );
+        if let Ok(res) = addition {
+            self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                [add.arg_2 as usize] = res;
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer += 1;
+
+            return Ok(add.arg_2);
+        } else {
+            return Err(addition.err().unwrap());
+        }
+    }
+
+    fn exec_div(&mut self, add: &Instruction) -> Result<u8, RuntimeError> {
+        let lhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [add.arg_0 as usize];
+        let rhs = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [add.arg_1 as usize];
+
+        let addition: Result<Object, RuntimeError> = lhs.div(
             &mut self.shared_execution_context,
             &self.config,
             rhs.clone(),

@@ -38,6 +38,11 @@ pub enum OpInstruction {
     LESS_EQUAL,
     LOGICAL_OR,
     LOAD_CLOSURE,
+    // MUL <r1> <r2> <desination>
+    MUL,
+    // DIV <r1> <r2> <desination>
+    DIV,
+    // ADD <r1> <r2> <desination>
     ADD,
     // ADDI <r1> <r2> <desination>
     ADDI,
@@ -1129,6 +1134,7 @@ impl BytecodeGenerator<'_> {
                         Op::LT => OpInstruction::LESS_THAN,
                         Op::LE => OpInstruction::LESS_EQUAL,
                         Op::LOGICAL_OR => OpInstruction::LOGICAL_OR,
+                        Op::MUL => OpInstruction::MUL,
                         _ => panic!(),
                     },
                     arg_0: lhs,

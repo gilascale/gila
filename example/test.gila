@@ -3,3 +3,13 @@
 
 
 print("hi im coming natively "+346346)
+
+
+
+
+print("whoo")
+
+
+x = 134634673*342346
+
+print(""+x)

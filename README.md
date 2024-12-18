@@ -83,6 +83,7 @@ v.display()
 
 ### Language Features
 
+- groups i.e. 3 + (4+3)
 - support larger numbers
 - garbage collection
 - pattern matching
