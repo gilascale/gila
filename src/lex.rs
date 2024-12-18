@@ -65,10 +65,11 @@ pub enum Type {
     DIV,
     COLON,
     U32,
+    STRING,
     NUMBER(Rc<String>),
     ATOM(Rc<String>),
     IDENTIFIER(Rc<String>),
-    STRING(Rc<String>),
+    STRING_LITERAL(Rc<String>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -497,6 +498,29 @@ impl Lexer {
                         continue;
                     }
                 }
+                's' => {
+                    if chars[self.counter as usize + 1] == 't'
+                        && chars[self.counter as usize + 2] == 'r'
+                        && chars[self.counter as usize + 3] == 'i'
+                        && chars[self.counter as usize + 4] == 'n'
+                        && chars[self.counter as usize + 5] == 'g'
+                    {
+                        v.push(Token {
+                            typ: Type::STRING,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 6,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 5;
+                        self.index += 5;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
+                    }
+                }
                 'l' => {
                     if chars[self.counter as usize + 1] == 'e'
                         && chars[self.counter as usize + 2] == 't'
@@ -741,7 +765,7 @@ impl Lexer {
                         self.counter += 1;
                     }
                     v.push(Token {
-                        typ: Type::STRING(s.into()),
+                        typ: Type::STRING_LITERAL(s.into()),
                         pos: Position {
                             index: tmp_index,
                             line: self.line,

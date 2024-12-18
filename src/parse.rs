@@ -209,7 +209,7 @@ impl<'a> Parser<'a> {
                     position: next.pos.clone(),
                 };
             }
-            Type::STRING(_) => self.string(),
+            Type::STRING_LITERAL(_) => self.string(),
             Type::ATOM(_) => self.atom(),
             Type::IDENTIFIER(_) => {
                 get_next!(self);
@@ -694,9 +694,10 @@ impl<'a> Parser<'a> {
                     _ => panic!(),
                 };
             }
+            Type::STRING => t = DataType::STRING,
             Type::U32 => t = DataType::U32,
             Type::IDENTIFIER(i) => t = DataType::NAMED_REFERENCE(i.clone()),
-            _ => panic!("umm what is {:?}", current.typ),
+            _ => panic!(),
         }
         if self.tokens[self.counter].typ == Type::LSQUARE {
             consume_token!(self, Type::LSQUARE);

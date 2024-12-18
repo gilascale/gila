@@ -44,7 +44,9 @@ impl Analyser {
         match &statement.statement {
             Statement::PROGRAM(p) => self.visit_program(p),
             Statement::IMPORT(module) => Ok(DataType::U32),
-            Statement::NAMED_FUNCTION(t, params, return_type, body) => Ok(DataType::U32),
+            Statement::NAMED_FUNCTION(t, params, return_type, body) => {
+                self.visit_named_fn(t, params, return_type, body)
+            }
             Statement::TEST(name, body) => Ok(DataType::U32),
             Statement::IF(cond, body, else_body) => self.visit_if(cond, body, else_body),
             Statement::FOR(var, range_start, range_end, body) => Ok(DataType::U32),
@@ -80,6 +82,32 @@ impl Analyser {
         Ok(DataType::U32)
     }
 
+    fn resolve_data_type_to_concrete_type(
+        &self,
+        position: Position,
+        t: DataType,
+    ) -> Result<DataType, TypeCheckError> {
+        match t {
+            DataType::NAMED_REFERENCE(named_reference) => {
+                if !self.scopes[self.scope_index]
+                    .vars
+                    .contains_key(&named_reference)
+                {
+                    return Err(TypeCheckError::UNKNOWN_DATA_TYPE(
+                        named_reference.clone(),
+                        position.clone(),
+                    ));
+                }
+                Ok(self.scopes[self.scope_index]
+                    .vars
+                    .get(&named_reference)
+                    .unwrap()
+                    .clone())
+            }
+            _ => Ok(t),
+        }
+    }
+
     fn visit_define(
         &mut self,
         token: &Token,
@@ -107,7 +135,7 @@ impl Analyser {
                     rhs_unrapped.clone(),
                 ));
             }
-            return Ok(DataType::U32);
+            return Ok(lhs_type.clone());
         } else {
             if let Some(t) = typ {
                 if let Some(v) = val {
@@ -119,24 +147,14 @@ impl Analyser {
                         return Err(value_type.err().unwrap());
                     }
 
-                    let resolved_type = match t {
-                        DataType::NAMED_REFERENCE(named_reference) => {
-                            if !self.scopes[self.scope_index]
-                                .vars
-                                .contains_key(named_reference)
-                            {
-                                return Err(TypeCheckError::UNKNOWN_DATA_TYPE(
-                                    named_reference.clone(),
-                                    token.pos.clone(),
-                                ));
-                            }
-                            self.scopes[self.scope_index]
-                                .vars
-                                .get(named_reference)
-                                .unwrap()
-                        }
-                        _ => panic!(),
-                    };
+                    let resolved_type_res =
+                        self.resolve_data_type_to_concrete_type(token.pos.clone(), t.clone());
+
+                    if resolved_type_res.is_err() {
+                        return Err(resolved_type_res.err().unwrap());
+                    }
+
+                    let resolved_type = resolved_type_res.unwrap();
 
                     if resolved_type
                         .clone()
@@ -145,6 +163,7 @@ impl Analyser {
                         self.scopes[self.scope_index]
                             .vars
                             .insert(identifier, t.clone());
+                        return Ok(resolved_type.clone());
                     } else {
                         return Err(TypeCheckError::TYPE_NOT_ASSIGNABLE(
                             token.pos.clone(),
@@ -153,6 +172,9 @@ impl Analyser {
                             value_type.unwrap(),
                         ));
                     }
+                } else {
+                    // todo i think this is an err?
+                    return self.resolve_data_type_to_concrete_type(token.pos.clone(), t.clone());
                 }
             } else {
                 let rhs_value = val.as_ref().unwrap();
@@ -162,13 +184,15 @@ impl Analyser {
                     return Err(value_type.err().unwrap());
                 }
 
+                let v_type = value_type.unwrap();
+
                 self.scopes[self.scope_index]
                     .vars
-                    .insert(identifier, value_type.unwrap());
+                    .insert(identifier, v_type.clone());
+
+                return Ok(v_type);
             }
         }
-
-        Ok(DataType::U32)
     }
 
     fn visit_assign(
@@ -234,6 +258,36 @@ impl Analyser {
                 .clone());
         }
         return Err(TypeCheckError::UNKNOWN_VARIABLE(t.clone()));
+    }
+
+    fn visit_named_fn(
+        &mut self,
+        t: &Token,
+        params: &Vec<ASTNode>,
+        return_type: &Option<DataType>,
+        body: &Box<ASTNode>,
+    ) -> Result<DataType, TypeCheckError> {
+        let mut param_types: Vec<DataType> = vec![];
+        for param in params {
+            let res = self.visit(param);
+            if res.is_err() {
+                return Err(res.err().unwrap());
+            }
+            param_types.push(res.unwrap());
+        }
+
+        let return_type_resolved: DataType = if return_type.is_some() {
+            return_type.clone().unwrap()
+        } else {
+            DataType::VOID
+        };
+
+        let fn_type = DataType::FN(param_types, Box::new(return_type_resolved));
+        self.scopes[self.scope_index]
+            .vars
+            .insert(t.as_identifier(), fn_type.clone());
+
+        Ok(fn_type)
     }
 
     fn visit_named_type_decl(

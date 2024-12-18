@@ -675,7 +675,7 @@ impl BytecodeGenerator<'_> {
         s: &Token,
     ) -> u8 {
         //FIXME
-        if let Type::STRING(str) = &s.typ {
+        if let Type::STRING_LITERAL(str) = &s.typ {
             return self.create_constant_string(str.to_string(), &pos);
         }
         panic!()

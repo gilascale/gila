@@ -2,21 +2,9 @@
 
 
 
-
-
-Generic type
-    foo: string
-    bar: string
-end
+foo fn(x: string)->bool return true
 
 
 
-
-booo = Generic(foo="hi", bar="hi")
-
-
-
-
-std = import std
-
-std.io.print(booo)
+x = foo
+x = 1
