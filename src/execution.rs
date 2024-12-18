@@ -69,6 +69,18 @@ pub struct FnObject {
     pub bounded_object: Option<GCRef>,
 }
 
+#[derive(Debug, Clone)]
+pub struct NativeFnObject {
+    callback: NativeFn,
+}
+
+impl DeepSizeOf for NativeFnObject {
+    fn deep_size_of_children(&self, context: &mut deepsize::Context) -> usize {
+        // todo make this accurate
+        0
+    }
+}
+
 // todo should this be Rc'd?
 #[derive(Debug, Clone, DeepSizeOf)]
 pub struct StringObject {
@@ -84,6 +96,7 @@ pub struct SliceObject {
 pub enum GCRefData {
     TUPLE(Vec<Object>),
     FN(FnObject),
+    NATIVE_FN(NativeFnObject),
     STRING(StringObject),
     SLICE(SliceObject),
     DYNAMIC_OBJECT(DynamicObject),
@@ -533,6 +546,14 @@ impl ProcessContext {
     }
 }
 
+fn builtin_print(
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
+    args: Vec<Object>,
+) -> Object {
+    return Object::I64(0);
+}
+
 fn native_print(
     shared_execution_context: &mut SharedExecutionContext,
     execution_context: &mut ProcessContext,
@@ -604,6 +625,22 @@ impl<'a> ExecutionEngine<'a> {
         self.environment.native_fns.insert(name, native_fn);
     }
 
+    fn init_builtins(&mut self, config: &'a Config) -> Result<(), RuntimeError> {
+        let alloc_res = self.shared_execution_context.heap.alloc(
+            GCRefData::NATIVE_FN(NativeFnObject {
+                callback: native_print,
+            }),
+            config,
+        );
+        if alloc_res.is_err() {
+            return Err(alloc_res.err().unwrap());
+        }
+        let alloc = alloc_res.unwrap();
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[0] =
+            Object::GC_REF(alloc);
+        Ok(())
+    }
+
     pub fn exec(
         &mut self,
         compilation_unit: String,
@@ -640,6 +677,8 @@ impl<'a> ExecutionEngine<'a> {
                 .instruction_pointer = 0;
             self.init_constants();
         }
+
+        self.init_builtins(&self.config);
 
         // println!("{:#?}", self.environment.stack_frames);
 
@@ -1084,6 +1123,7 @@ impl<'a> ExecutionEngine<'a> {
     fn exec_call(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
         let fn_object = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [call.arg_0 as usize];
+        println!("doing call {:?}", call);
         let gc_ref_object: &GCRef = match &fn_object {
             Object::GC_REF(r) => r,
             _ => panic!("can only call func or constructor"),

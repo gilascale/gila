@@ -34,11 +34,19 @@ impl Analyser {
     }
 
     pub fn analyse(&mut self, ast: &ASTNode) -> Result<(), TypeCheckError> {
+        self.init_builtins();
         let res = self.visit(ast);
         if res.is_err() {
             return Err(res.err().unwrap());
         }
         Ok(())
+    }
+
+    fn init_builtins(&mut self) {
+        self.scopes[self.scope_index].vars.insert(
+            Rc::new("print".to_string()),
+            DataType::FN(vec![DataType::STRING], Box::new(DataType::VOID)),
+        );
     }
 
     fn visit(&mut self, statement: &ASTNode) -> Result<DataType, TypeCheckError> {
