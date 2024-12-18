@@ -49,7 +49,7 @@ macro_rules! alloc_perm_slot {
     ($self:expr) => {
         $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer]
             .slot_manager
-            .allocate_slot()
+            .allocate_perm_slot()
     };
 }
 
@@ -1101,6 +1101,10 @@ impl BytecodeGenerator<'_> {
                 );
 
                 // todo free slots
+                free_slot!(self, callee_register);
+                for i in first_arg_register..first_arg_register + arg_registers.len() as u8 {
+                    free_slot!(self, i);
+                }
 
                 // todo i believe this slot is allocated above the is_kw_call
                 return first_arg_register + num_kwargs as u8;
@@ -1309,7 +1313,7 @@ impl BytecodeGenerator<'_> {
 
         // todo set as a local as it is named?
 
-        let location = alloc_slot!(self);
+        let location = alloc_perm_slot!(self);
 
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
@@ -1412,7 +1416,7 @@ impl BytecodeGenerator<'_> {
             marked: false,
         }));
 
-        let reg = alloc_slot!(self);
+        let reg = alloc_perm_slot!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,

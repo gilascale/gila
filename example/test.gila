@@ -1,1 +1,11 @@
-print("hello, world")
+
+
+
+
+Foo type
+    x: u32
+end
+
+
+f = Foo(x=33)
+print(f)

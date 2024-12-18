@@ -202,12 +202,12 @@ fn exec(file_to_exec: String) {
     let mut file = File::create("./gila-build/parsed.gilaast");
     file.unwrap().write_all(format!("{:#?}", ast).as_bytes());
 
-    let mut analyser = analyse::Analyser::new();
-    let typecheck_res = analyser.analyse(&ast);
-    if typecheck_res.is_err() {
-        print_typecheck_error(source.clone(), typecheck_res.err().unwrap());
-        return;
-    }
+    // let mut analyser = analyse::Analyser::new();
+    // let typecheck_res = analyser.analyse(&ast);
+    // if typecheck_res.is_err() {
+    //     print_typecheck_error(source.clone(), typecheck_res.err().unwrap());
+    //     return;
+    // }
 
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 

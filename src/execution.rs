@@ -1136,7 +1136,10 @@ impl<'a> ExecutionEngine<'a> {
             [call.arg_0 as usize];
         let gc_ref_object: &GCRef = match &fn_object {
             Object::GC_REF(r) => r,
-            _ => panic!("can only call func or constructor"),
+            _ => panic!(
+                "exec_call_kw: can only call func or constructor but got {:?}",
+                fn_object
+            ),
         };
         let dereferenced_data = self.shared_execution_context.heap.deref(gc_ref_object);
         if dereferenced_data.is_err() {
