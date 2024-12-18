@@ -53,6 +53,14 @@ macro_rules! alloc_perm_slot {
     };
 }
 
+macro_rules! make_slot_perminant {
+    ($self:expr,$slot:expr) => {
+        $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer]
+            .slot_manager
+            .make_slot_perminant($slot)
+    };
+}
+
 #[derive(Debug, Clone, DeepSizeOf)]
 #[repr(u8)]
 pub enum OpInstruction {
@@ -234,6 +242,11 @@ impl SlotManager {
         }
     }
 
+    pub fn make_slot_perminant(&mut self, slot: u8) {
+        self.allocated_perm.insert(slot);
+        self.allocated.remove(&slot);
+    }
+
     /// Allocate a temporary slot
     pub fn allocate_slot(&mut self) -> u8 {
         if let Some(slot) = self.free_slots.pop() {
@@ -271,6 +284,7 @@ impl SlotManager {
         // Find the next unused slot (incrementally grow slot numbers)
         let mut new_slot = 0;
         while self.is_allocated(new_slot) {
+            // println!("checking new slot {}", new_slot);
             new_slot += 1;
         }
         new_slot
@@ -437,6 +451,9 @@ impl BytecodeGenerator<'_> {
 
     fn gen_program(&mut self, annotation_context: AnnotationContext, p: &Vec<ASTNode>) -> u8 {
         for instruction in p {
+            // todo
+            //
+            // so... we WANT to do this, we just need to make sure defines/assigns are PERMINANT slots
             let result_slot = self.visit(annotation_context.clone(), instruction);
             free_slot!(self, result_slot);
         }
@@ -446,7 +463,7 @@ impl BytecodeGenerator<'_> {
     fn gen_block(&mut self, annotation_context: AnnotationContext, b: &Vec<ASTNode>) -> u8 {
         for instruction in b {
             let result_slot = self.visit(annotation_context.clone(), instruction);
-            free_slot!(self, result_slot);
+            // free_slot!(self, result_slot);
         }
         alloc_slot!(self)
     }
@@ -640,6 +657,10 @@ impl BytecodeGenerator<'_> {
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
             [for_iter_instruction_ptr]
             .arg_1 = current_ip as u8;
+
+        // todo also free the kwarg
+        free_slot!(self, range_iterator_reg);
+        free_slot!(self, iter_result_reg);
 
         alloc_slot!(self)
     }
@@ -863,6 +884,10 @@ impl BytecodeGenerator<'_> {
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
                     .insert(var.typ.clone(), location);
+
+                println!("gen define! {:?} in slot {:?}", var, location);
+                make_slot_perminant!(self, location);
+
                 return location;
             }
             None => panic!(),
@@ -1067,7 +1092,23 @@ impl BytecodeGenerator<'_> {
             // self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             //     .current_register += 1;
             // todo this may not work
-            alloc_slot!(self);
+            //
+            // TODO IDK IF WE NEED THIS AHHHHHHH I DONT THINK SO?
+            //
+            // alloc_slot!(self);
+
+            // figured out the issue, what we have RIGHT NOW is right... with 1 flaw.
+            // the destination is reused because we are re-using the arg registers, the destination
+            // for each call is the same, and so we get the same value. for calls probably don't reuse the same?
+            // or we need the caller function i.e. gen_define to determine whether they are freed or not? maybe with a context param?
+            // we need to pass in a CodegenContext or ScopeContext with free_slots: bool i think
+
+            // 9    x = foo("foo")
+            //                                                      LOAD_CONST    1    0    2
+            //                                                            CALL    1    2    1
+            // 10   y = foo("bar")
+            //                                                      LOAD_CONST    2    0    2
+            //                                                            CALL    1    2    1
 
             if is_kw_call {
                 // build the tuple
@@ -1118,16 +1159,19 @@ impl BytecodeGenerator<'_> {
                     },
                     pos.line as usize,
                 ); // todo free slots
-                free_slot!(self, callee_register);
-                for i in first_arg_register..first_arg_register + arg_registers.len() as u8 {
-                    free_slot!(self, i);
-                }
+
+                // see above comment
+                // for arg in &arg_registers {
+                //     free_slot!(self, *arg);
+                // }
+
+                // free_slot!(self, callee_register);
+                // for i in first_arg_register..first_arg_register + arg_registers.len() as u8 {
+                //     free_slot!(self, i);
+                // }
+                return destination.try_into().unwrap();
             }
-
-            return destination.try_into().unwrap();
         }
-
-        alloc_slot!(self)
     }
 
     fn gen_bin_op(

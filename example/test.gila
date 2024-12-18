@@ -2,10 +2,22 @@
 
 
 
-Foo type
-    x: u32
-end
+foo fn(s:string)->string return s
 
 
-f = Foo(x=33)
-print(f)
+
+
+x = foo("foo")
+y = foo("bar")
+
+print(y)
+
+
+
+
+
+foo("hello")
+foo("hello")
+foo("hello")
+foo("hello")
+foo("hello")

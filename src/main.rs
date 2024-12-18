@@ -39,16 +39,16 @@ fn load_prelude<'a>(
 
     bytecode_generator.init_builtins();
 
-    let mut exec_engine = ExecutionEngine::new(config, shared_execution_context, execution_context);
-    let source = fs::read_to_string("./prelude/prelude.gila").expect("Unable to read file");
-    let tokens = lexer.lex(source);
-    let mut parser = parse::Parser {
-        tokens: &tokens,
-        counter: 0,
-    };
-    let ast = parser.parse();
-    let bytecode = bytecode_generator.generate(&ast);
-    exec_engine.exec("prelude".to_string(), bytecode, false);
+    // let mut exec_engine = ExecutionEngine::new(config, shared_execution_context, execution_context);
+    // let source = fs::read_to_string("./prelude/prelude.gila").expect("Unable to read file");
+    // let tokens = lexer.lex(source);
+    // let mut parser = parse::Parser {
+    //     tokens: &tokens,
+    //     counter: 0,
+    // };
+    // let ast = parser.parse();
+    // let bytecode = bytecode_generator.generate(&ast);
+    // exec_engine.exec("prelude".to_string(), bytecode, false);
 }
 
 fn repl() {

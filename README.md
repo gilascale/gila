@@ -58,6 +58,8 @@ v.display()
 
 ### Bugs
 
+- the prelude is being added into the dumped bytecode file as its the same line
+  as some of the other code
 - need a return statement otherwise subsequent calls dont work
 - structs with no constructors don't work and loop/hang
 

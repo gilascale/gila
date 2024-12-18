@@ -1246,7 +1246,8 @@ impl<'a> ExecutionEngine<'a> {
             return Err(dereferenced_data.err().unwrap());
         }
 
-        match &dereferenced_data.unwrap() {
+        let unrwapped = dereferenced_data.unwrap();
+        match &unrwapped {
             GCRefData::FN(f) => {
                 let destination = {
                     if call.arg_2 > 0 {
@@ -1314,7 +1315,7 @@ impl<'a> ExecutionEngine<'a> {
                 increment_ip!(self);
             }
             _ => {
-                panic!("must be fn or native fn")
+                panic!("exec_call: must be fn or native fn but got {:?}", unrwapped);
             }
         }
 
