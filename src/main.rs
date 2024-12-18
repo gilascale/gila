@@ -212,6 +212,8 @@ fn exec(file_to_exec: String) {
     let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
 
     let bytecode = bytecode_generator.generate(&ast);
+
+    let compilation_elapsed = start.elapsed();
     // println!("{:#?}", bytecode);
 
     let mut file = File::create("./gila-build/bytecode.giladbg");
@@ -233,7 +235,8 @@ fn exec(file_to_exec: String) {
     }
     let denominator = 1000_000;
     println!(
-        "finished in {:.9?}s & used {:.9?}MB",
+        "compiled in {:.9?}s finished in {:.9?}s & used {:.9?}MB",
+        compilation_elapsed.as_secs_f64(),
         elapsed.as_secs_f64(),
         execution_engine
             .shared_execution_context

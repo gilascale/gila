@@ -1100,6 +1100,9 @@ impl BytecodeGenerator<'_> {
                     pos.line as usize,
                 );
 
+                // todo free slots
+
+                // todo i believe this slot is allocated above the is_kw_call
                 return first_arg_register + num_kwargs as u8;
             } else {
                 self.push_instruction(
@@ -1110,7 +1113,11 @@ impl BytecodeGenerator<'_> {
                         arg_2: arg_registers.len() as u8,
                     },
                     pos.line as usize,
-                );
+                ); // todo free slots
+                free_slot!(self, callee_register);
+                for i in first_arg_register..first_arg_register + arg_registers.len() as u8 {
+                    free_slot!(self, i);
+                }
             }
 
             return destination.try_into().unwrap();
