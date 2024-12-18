@@ -66,6 +66,7 @@ pub enum Type {
     COLON,
     U32,
     STRING,
+    BOOL,
     NUMBER(Rc<String>),
     ATOM(Rc<String>),
     IDENTIFIER(Rc<String>),
@@ -461,6 +462,27 @@ impl Lexer {
                     {
                         v.push(Token {
                             typ: Type::ELSE,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 4,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 3;
+                        self.index += 3;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
+                    }
+                }
+                'b' => {
+                    if chars[self.counter as usize + 1] == 'o'
+                        && chars[self.counter as usize + 2] == 'o'
+                        && chars[self.counter as usize + 3] == 'l'
+                    {
+                        v.push(Token {
+                            typ: Type::BOOL,
                             pos: Position {
                                 index: self.index,
                                 line: self.line,

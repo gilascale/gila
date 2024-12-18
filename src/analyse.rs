@@ -230,7 +230,19 @@ impl Analyser {
         callee: &Box<ASTNode>,
         args: &Vec<ASTNode>,
     ) -> Result<DataType, TypeCheckError> {
-        self.visit(&callee)
+        let callee_type_res: Result<DataType, TypeCheckError> = self.visit(&callee);
+
+        if callee_type_res.is_err() {
+            return Err(callee_type_res.err().unwrap());
+        }
+
+        let callee_type = callee_type_res.unwrap();
+
+        match callee_type {
+            // todo check params match
+            DataType::FN(params, return_type) => return Ok(*return_type),
+            _ => panic!(),
+        }
     }
 
     fn visit_literal_num(&mut self, n: &Token) -> Result<DataType, TypeCheckError> {

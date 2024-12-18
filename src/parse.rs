@@ -695,6 +695,7 @@ impl<'a> Parser<'a> {
                 };
             }
             Type::STRING => t = DataType::STRING,
+            Type::BOOL => t = DataType::BOOL,
             Type::U32 => t = DataType::U32,
             Type::IDENTIFIER(i) => t = DataType::NAMED_REFERENCE(i.clone()),
             _ => panic!(),

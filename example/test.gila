@@ -2,9 +2,9 @@
 
 
 
-foo fn(x: string)->bool return true
+foo fn(x: string) -> bool  return true
 
 
 
-x = foo
+x = foo()
 x = 1

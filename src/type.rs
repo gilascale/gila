@@ -10,6 +10,7 @@ use std::rc::Rc;
 pub enum DataType {
     VOID,
     U32,
+    BOOL,
     STRING,
     FN(Vec<DataType>, Box<DataType>),
     SLICE(Box<DataType>),
