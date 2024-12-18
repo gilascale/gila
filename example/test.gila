@@ -6,5 +6,5 @@ foo fn(x: string) -> bool  return true
 
 
 
-x = foo()
-x = 1
+x = foo("hi")
+x = true

@@ -145,6 +145,7 @@ fn print_typecheck_error(source: String, typecheck_err: TypeCheckError) {
             println!("{}{}", " ".repeat(pos.index as usize), left_squiggle);
             println!("unknown data type {:?}.\n", data_type);
         }
+        TypeCheckError::MISSING_ARGUMENT => println!("missing argument"),
     }
 }
 

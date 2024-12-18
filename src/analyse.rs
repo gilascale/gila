@@ -8,6 +8,7 @@ use crate::{
 
 #[derive(Debug)]
 pub enum TypeCheckError {
+    MISSING_ARGUMENT,
     TYPE_NOT_ASSIGNABLE(Position, Position, DataType, DataType),
     UNKNOWN_VARIABLE(Token),
     UNKNOWN_DATA_TYPE(Rc<String>, Position),
@@ -54,6 +55,7 @@ impl Analyser {
             Statement::ASSIGN(lhs, rhs) => self.visit_assign(lhs, rhs),
             Statement::CALL(calee, args) => self.visit_call(calee, args),
             Statement::LITERAL_NUM(n) => self.visit_literal_num(n),
+            Statement::LITERAL_BOOL(_) => Ok(DataType::BOOL),
             Statement::STRING(s) => self.visit_string(s),
             Statement::SLICE(s) => self.visit_slice(s),
             Statement::VARIABLE(t) => self.visit_variable(t),
@@ -240,7 +242,29 @@ impl Analyser {
 
         match callee_type {
             // todo check params match
-            DataType::FN(params, return_type) => return Ok(*return_type),
+            DataType::FN(params, return_type) => {
+                let mut i = 0;
+                for param in params {
+                    if i >= args.len() {
+                        return Err(TypeCheckError::MISSING_ARGUMENT);
+                    }
+                    let arg_typ_res = self.visit(&args[i]);
+                    if arg_typ_res.is_err() {
+                        return Err(arg_typ_res.err().unwrap());
+                    }
+                    let arg_type = arg_typ_res.unwrap();
+                    if !param.clone().assignable_from(arg_type.clone()) {
+                        return Err(TypeCheckError::TYPE_NOT_ASSIGNABLE(
+                            callee.position.clone(),
+                            args[i].position.clone(),
+                            param.clone(),
+                            arg_type.clone(),
+                        ));
+                    }
+                    i += 1;
+                }
+                return Ok(*return_type);
+            }
             _ => panic!(),
         }
     }
