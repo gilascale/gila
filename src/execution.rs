@@ -616,14 +616,6 @@ impl ProcessContext {
     }
 }
 
-fn builtin_print(
-    shared_execution_context: &mut SharedExecutionContext,
-    execution_context: &mut ProcessContext,
-    args: Vec<Object>,
-) -> Object {
-    return Object::I64(0);
-}
-
 fn native_print(
     shared_execution_context: &mut SharedExecutionContext,
     execution_context: &mut ProcessContext,

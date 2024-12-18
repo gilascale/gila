@@ -310,7 +310,6 @@ impl BytecodeGenerator<'_> {
 
     pub fn init_builtins(&mut self) {
         let print_reg = alloc_perm_slot!(self);
-        println!("doing print_reg {:?}", print_reg);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(Type::IDENTIFIER(Rc::new("print".to_string())), print_reg);
@@ -858,6 +857,7 @@ impl BytecodeGenerator<'_> {
 
         match value {
             Some(v) => {
+                // todo improve this, the reason is we need to allocate a perminant slot
                 let location = self.visit(annotation_context, &v);
                 // todo what happened here
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
@@ -1237,6 +1237,7 @@ impl BytecodeGenerator<'_> {
             self.push_instruction(
                 Instruction {
                     op_instruction: match op {
+                        Op::ADD => OpInstruction::ADD,
                         Op::EQ => OpInstruction::EQUAL,
                         Op::NEQ => OpInstruction::NOT_EQUALS,
                         Op::GT => OpInstruction::GREATER_THAN,
