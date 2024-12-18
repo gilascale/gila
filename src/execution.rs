@@ -1123,7 +1123,6 @@ impl<'a> ExecutionEngine<'a> {
     fn exec_call(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
         let fn_object = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [call.arg_0 as usize];
-        println!("doing call {:?}", call);
         let gc_ref_object: &GCRef = match &fn_object {
             Object::GC_REF(r) => r,
             _ => panic!("can only call func or constructor"),
@@ -1173,63 +1172,36 @@ impl<'a> ExecutionEngine<'a> {
 
                 return Ok(call.arg_1 + call.arg_2);
             }
-            GCRefData::DYNAMIC_OBJECT(d) => {
-                // todo we need to set the fields
 
-                // let destination = {
-                //     if call.arg_2 > 0 {
-                //         call.arg_1 + call.arg_2
-                //     } else {
-                //         call.arg_1.into()
-                //     }
-                // };
+            GCRefData::NATIVE_FN(native_fn) => {
+                let destination = {
+                    if call.arg_2 > 0 {
+                        call.arg_1 + call.arg_2
+                    } else {
+                        call.arg_1.into()
+                    }
+                };
+                let starting_reg = call.arg_1;
+                let num_args = call.arg_2;
 
-                // let mut fields: HashMap<String, Object> = HashMap::new();
+                let mut args: Vec<Object> = vec![];
 
-                // fields.insert("__prototype__".to_string(), fn_object.clone());
-
-                // let mut arg_values: Vec<Object> = vec![];
-                // for i in call.arg_1..call.arg_1 + call.arg_2 {
-                //     arg_values.push(stack_access!(self, i).clone());
-                // }
-                // let mut counter = 0;
-                // for key in d.fields.keys() {
-                //     let typ = d.fields.get(key).unwrap();
-                //     // we want to only pass in args for members, not methods
-                //     match typ {
-                //         Object::ATOM(a) => {
-                //             fields.insert(key.to_string(), arg_values[counter].clone());
-                //             counter += 1;
-                //         }
-                //         _ => {
-                //             // dont add methods
-                //             // fields.insert(key.to_string(), typ.clone());
-                //         }
-                //     }
-                // }
-
-                // let gc_ref = self.shared_execution_context.heap.alloc(
-                //     GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }),
-                //     &self.config,
-                // );
-
-                // if gc_ref.is_err() {
-                //     return Err(gc_ref.err().unwrap());
-                // }
-
-                // stack_set!(self, destination, Object::GC_REF(gc_ref.unwrap()));
-                // increment_ip!(self);
-
-                //
-                // self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                //     [call.arg_2 as usize] = Object::GC_REF(gc_ref.unwrap());
-                // self.environment.stack_frames[self.environment.stack_frame_pointer]
-                //     .instruction_pointer += 1;
+                for i in 0..num_args {
+                    let arg_register = starting_reg as usize + i as usize;
+                    let arg = &self.environment.stack_frames[self.environment.stack_frame_pointer]
+                        .stack[arg_register];
+                    args.push(arg.clone());
+                }
+                let result = (native_fn.callback)(
+                    &mut self.shared_execution_context,
+                    &mut self.environment,
+                    args,
+                );
+                stack_set!(self, destination, result);
+                increment_ip!(self);
             }
             _ => {
-                increment_ip!(self);
-                // self.environment.stack_frames[self.environment.stack_frame_pointer]
-                //     .instruction_pointer += 1;
+                panic!("must be fn or native fn")
             }
         }
 

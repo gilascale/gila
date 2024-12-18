@@ -37,6 +37,8 @@ fn load_prelude<'a>(
     let mut lexer = lex::Lexer::new();
     let mut bytecode_generator = BytecodeGenerator::new(&config, codegen_context);
 
+    bytecode_generator.init_builtins();
+
     let mut exec_engine = ExecutionEngine::new(config, shared_execution_context, execution_context);
     let source = fs::read_to_string("./prelude/prelude.gila").expect("Unable to read file");
     let tokens = lexer.lex(source);

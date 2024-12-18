@@ -199,7 +199,6 @@ impl BytecodeGenerator<'_> {
     }
 
     pub fn generate(&mut self, ast: &ASTNode) -> Chunk {
-        self.init_builtins();
         let annotation_context = AnnotationContext {
             annotations: vec![],
         };
@@ -208,12 +207,11 @@ impl BytecodeGenerator<'_> {
         return self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].clone();
     }
 
-    fn init_builtins(&mut self) {
+    pub fn init_builtins(&mut self) {
         let print_reg = self.get_available_register();
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(Type::IDENTIFIER(Rc::new("print".to_string())), print_reg);
-        println!("init_builtins... {:?}", print_reg);
     }
 
     fn get_available_register(&mut self) -> u8 {
