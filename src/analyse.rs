@@ -1,7 +1,7 @@
 use std::{collections::HashMap, rc::Rc};
 
 use crate::{
-    ast::{ASTNode, Statement},
+    ast::{ASTNode, Op, Statement},
     lex::{Position, Token},
     r#type::DataType,
 };
@@ -52,6 +52,7 @@ impl Analyser {
     fn visit(&mut self, statement: &ASTNode) -> Result<DataType, TypeCheckError> {
         match &statement.statement {
             Statement::PROGRAM(p) => self.visit_program(p),
+            Statement::BIN_OP(left, right, op) => self.visit_bin_op(left, right, op),
             Statement::IMPORT(module) => Ok(DataType::U32),
             Statement::NAMED_FUNCTION(t, params, return_type, body) => {
                 self.visit_named_fn(t, params, return_type, body)
@@ -81,6 +82,32 @@ impl Analyser {
             }
         }
         Ok(DataType::U32)
+    }
+
+    fn visit_bin_op(
+        &mut self,
+        left: &Box<ASTNode>,
+        right: &Box<ASTNode>,
+        op: &Op,
+    ) -> Result<DataType, TypeCheckError> {
+        let lhs_type_res = self.visit(&left);
+        let right_type_res = self.visit(&right);
+        if lhs_type_res.is_err() {
+            return Err(lhs_type_res.err().unwrap());
+        }
+        if right_type_res.is_err() {
+            return Err(right_type_res.err().unwrap());
+        }
+
+        let lhs_type = lhs_type_res.unwrap();
+        let rhs_type = right_type_res.unwrap();
+
+        // todo
+        // if !lhs_type.assignable_from(rhs_type){
+        //     return Err(())
+        // }
+
+        return Ok(lhs_type);
     }
 
     fn visit_if(
