@@ -1,5 +1,9 @@
 use deepsize::DeepSizeOf;
-use std::{collections::HashMap, rc::Rc, vec};
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+    vec,
+};
 
 use crate::{
     ast::{ASTNode, Op, Statement},
@@ -22,6 +26,30 @@ macro_rules! set_arg_value_at_loc {
         $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer].instructions
             [$location]
             .$arg_num = $value
+    };
+}
+
+macro_rules! alloc_slot {
+    ($self:expr) => {
+        $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer]
+            .slot_manager
+            .allocate_slot()
+    };
+}
+
+macro_rules! free_slot {
+    ($self:expr, $slot:expr) => {
+        $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer]
+            .slot_manager
+            .free_slot($slot)
+    };
+}
+
+macro_rules! alloc_perm_slot {
+    ($self:expr) => {
+        $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer]
+            .slot_manager
+            .allocate_slot()
     };
 }
 
@@ -89,9 +117,11 @@ pub struct Instruction {
     pub arg_2: u8,
 }
 
+// todo custom DeepSizeOf because the other stuff doesn't mattter
 #[derive(DeepSizeOf, Debug, Clone)]
 pub struct Chunk {
-    pub current_register: u8,
+    // pub current_register: u8,
+    pub slot_manager: SlotManager,
     pub instructions: std::vec::Vec<Instruction>,
     // todo only enable this in debug mode
     pub debug_line_info: std::vec::Vec<usize>,
@@ -181,6 +211,72 @@ pub struct AnnotationContext {
     pub annotations: Vec<Annotation>,
 }
 
+#[derive(Debug, Clone)]
+pub struct SlotManager {
+    allocated: HashSet<u8>,      // Tracks currently allocated temporary slots
+    allocated_perm: HashSet<u8>, // Tracks currently allocated permanent slots
+    free_slots: Vec<u8>,         // Reusable slots (stack for LIFO reuse)
+}
+
+impl DeepSizeOf for SlotManager {
+    // todo
+    fn deep_size_of_children(&self, context: &mut deepsize::Context) -> usize {
+        0
+    }
+}
+
+impl SlotManager {
+    pub fn new() -> Self {
+        SlotManager {
+            allocated: HashSet::new(),
+            allocated_perm: HashSet::new(),
+            free_slots: Vec::new(),
+        }
+    }
+
+    /// Allocate a temporary slot
+    pub fn allocate_slot(&mut self) -> u8 {
+        if let Some(slot) = self.free_slots.pop() {
+            self.allocated.insert(slot);
+            slot
+        } else {
+            let new_slot = self.next_available_slot();
+            self.allocated.insert(new_slot);
+            new_slot
+        }
+    }
+
+    /// Allocate a permanent slot
+    pub fn allocate_perm_slot(&mut self) -> u8 {
+        let new_slot = self.next_available_slot();
+        self.allocated_perm.insert(new_slot);
+        new_slot
+    }
+
+    /// Free a temporary slot
+    pub fn free_slot(&mut self, slot: u8) {
+        // Do not free permanent slots
+        if self.allocated.remove(&slot) {
+            self.free_slots.push(slot);
+        }
+    }
+
+    /// Check if a slot is allocated (temporary or permanent)
+    pub fn is_allocated(&self, slot: u8) -> bool {
+        self.allocated.contains(&slot) || self.allocated_perm.contains(&slot)
+    }
+
+    /// Determine the next available slot
+    fn next_available_slot(&self) -> u8 {
+        // Find the next unused slot (incrementally grow slot numbers)
+        let mut new_slot = 0;
+        while self.is_allocated(new_slot) {
+            new_slot += 1;
+        }
+        new_slot
+    }
+}
+
 #[derive(Debug)]
 pub struct CodegenContext {
     pub current_chunk_pointer: usize,
@@ -213,18 +309,11 @@ impl BytecodeGenerator<'_> {
     }
 
     pub fn init_builtins(&mut self) {
-        let print_reg = self.get_available_register();
+        let print_reg = alloc_perm_slot!(self);
+        println!("doing print_reg {:?}", print_reg);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(Type::IDENTIFIER(Rc::new("print".to_string())), print_reg);
-    }
-
-    fn get_available_register(&mut self) -> u8 {
-        let next = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-            .current_register;
-        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].current_register +=
-            1;
-        next
     }
 
     fn push_instruction(&mut self, instruction: Instruction, line: usize) {
@@ -261,7 +350,7 @@ impl BytecodeGenerator<'_> {
 
     fn push_chunk(&mut self) {
         self.codegen_context.chunks.push(Chunk {
-            current_register: 0,
+            slot_manager: SlotManager::new(),
             debug_line_info: vec![],
             constant_pool: vec![],
             gc_ref_data: vec![],
@@ -349,16 +438,18 @@ impl BytecodeGenerator<'_> {
 
     fn gen_program(&mut self, annotation_context: AnnotationContext, p: &Vec<ASTNode>) -> u8 {
         for instruction in p {
-            self.visit(annotation_context.clone(), instruction);
+            let result_slot = self.visit(annotation_context.clone(), instruction);
+            free_slot!(self, result_slot);
         }
-        0
+        alloc_slot!(self)
     }
 
     fn gen_block(&mut self, annotation_context: AnnotationContext, b: &Vec<ASTNode>) -> u8 {
         for instruction in b {
-            self.visit(annotation_context.clone(), instruction);
+            let result_slot = self.visit(annotation_context.clone(), instruction);
+            free_slot!(self, result_slot);
         }
-        0
+        alloc_slot!(self)
     }
 
     fn gen_test(
@@ -414,7 +505,8 @@ impl BytecodeGenerator<'_> {
         // now insert the jump after the body
         let ip_at_end = current_ip!(self);
         set_arg_value_at_loc!(self, jump_ip, arg_0, ip_at_end.try_into().unwrap());
-        0
+
+        alloc_slot!(self)
     }
 
     fn lookup_var(&self, var: String) -> Option<&u8> {
@@ -494,7 +586,7 @@ impl BytecodeGenerator<'_> {
             marked: false,
         }));
 
-        let const_reg = self.get_available_register();
+        let const_reg = alloc_slot!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
@@ -525,7 +617,7 @@ impl BytecodeGenerator<'_> {
             .instructions
             .len();
         // now lets actually call the iterator!
-        let iter_result_reg = self.get_available_register();
+        let iter_result_reg = alloc_slot!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::FOR_ITER,
@@ -550,7 +642,7 @@ impl BytecodeGenerator<'_> {
             [for_iter_instruction_ptr]
             .arg_1 = current_ip as u8;
 
-        0
+        alloc_slot!(self)
     }
 
     fn gen_literal_num(
@@ -561,7 +653,7 @@ impl BytecodeGenerator<'_> {
     ) -> u8 {
         // so currently we just add to a new register
         if let Some(n) = self.parse_embedding_instruction_number(&t.typ) {
-            let reg = self.get_available_register();
+            let reg = alloc_slot!(self);
             self.push_instruction(
                 Instruction {
                     op_instruction: OpInstruction::ADDI,
@@ -576,7 +668,7 @@ impl BytecodeGenerator<'_> {
             if let Some(n) = self.parse_i64(&t.typ) {
                 // create constant
                 let constant_idx = self.push_constant(Object::I64(n));
-                let dest = self.get_available_register();
+                let dest = alloc_slot!(self);
                 self.push_instruction(
                     Instruction {
                         op_instruction: OpInstruction::LOAD_CONST,
@@ -602,7 +694,7 @@ impl BytecodeGenerator<'_> {
 
         // todo maybe have a constant hashmap?
         let const_index = self.push_constant(Object::BOOL(b));
-        let reg = self.get_available_register();
+        let reg = alloc_slot!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
@@ -625,7 +717,7 @@ impl BytecodeGenerator<'_> {
 
         if let Type::IDENTIFIER(i) = &atom.typ {
             let const_index = self.push_constant(Object::ATOM(i.clone()));
-            let reg = self.get_available_register();
+            let reg = alloc_slot!(self);
             self.push_instruction(
                 Instruction {
                     op_instruction: OpInstruction::LOAD_CONST,
@@ -668,7 +760,7 @@ impl BytecodeGenerator<'_> {
     fn create_constant_string(&mut self, s: String, position: &Position) -> u8 {
         let constant = self.gen_string_constant(s.to_string());
 
-        let dest = self.get_available_register();
+        let dest = alloc_slot!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
@@ -709,7 +801,7 @@ impl BytecodeGenerator<'_> {
         if let Some(v) = result {
             return *v;
         } else {
-            let reg = self.get_available_register();
+            let reg = alloc_slot!(self);
             let mut counter = self.codegen_context.current_chunk_pointer;
             loop {
                 let result = self.codegen_context.chunks[counter]
@@ -810,7 +902,7 @@ impl BytecodeGenerator<'_> {
             _ => todo!(),
         }
 
-        0
+        alloc_slot!(self)
     }
 
     fn parse_embedding_instruction_number(&self, typ: &Type) -> Option<u8> {
@@ -853,7 +945,7 @@ impl BytecodeGenerator<'_> {
 
                     let const_index = self.push_constant(string_object);
 
-                    let name_reg = self.get_available_register();
+                    let name_reg = alloc_slot!(self);
                     self.push_instruction(
                         Instruction {
                             op_instruction: OpInstruction::LOAD_CONST,
@@ -869,7 +961,7 @@ impl BytecodeGenerator<'_> {
                         arg_registers.push(self.visit(annotation_context.clone(), arg));
                     }
 
-                    let destination = self.get_available_register();
+                    let destination = alloc_slot!(self);
                     let first_arg_register = {
                         if arg_registers.len() > 0 {
                             arg_registers[0]
@@ -880,8 +972,10 @@ impl BytecodeGenerator<'_> {
                     };
 
                     // increment one as we allocate end for the return
-                    self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-                        .current_register += 1;
+                    // self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+                    //     .current_register += 1;
+                    // todo this may break... but we alloc a slot here
+                    alloc_slot!(self);
                     // figure out where to put the result
                     let destination: u8 = {
                         if arg_registers.len() > 0 {
@@ -900,6 +994,13 @@ impl BytecodeGenerator<'_> {
                         },
                         pos.line as usize,
                     );
+
+                    // todo free slots
+                    free_slot!(self, name_reg);
+                    for i in first_arg_register..first_arg_register + arg_registers.len() as u8 {
+                        free_slot!(self, i);
+                    }
+
                     return destination;
                 }
             }
@@ -952,7 +1053,7 @@ impl BytecodeGenerator<'_> {
             }
             num_kwargs = kwarg_strings.len();
 
-            let destination = self.get_available_register();
+            let destination = alloc_slot!(self);
             let first_arg_register = {
                 if arg_registers.len() > 0 {
                     arg_registers[0]
@@ -963,8 +1064,10 @@ impl BytecodeGenerator<'_> {
             };
 
             // increment one as we allocate end for the return
-            self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-                .current_register += 1;
+            // self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            //     .current_register += 1;
+            // todo this may not work
+            alloc_slot!(self);
 
             if is_kw_call {
                 // build the tuple
@@ -976,7 +1079,7 @@ impl BytecodeGenerator<'_> {
                     marked: false,
                 }));
 
-                let const_reg = self.get_available_register();
+                let const_reg = alloc_slot!(self);
                 self.push_instruction(
                     Instruction {
                         op_instruction: OpInstruction::LOAD_CONST,
@@ -1013,7 +1116,7 @@ impl BytecodeGenerator<'_> {
             return destination.try_into().unwrap();
         }
 
-        0
+        alloc_slot!(self)
     }
 
     fn gen_bin_op(
@@ -1036,7 +1139,7 @@ impl BytecodeGenerator<'_> {
                     self.parse_embedding_instruction_number(&i1.typ),
                     self.parse_embedding_instruction_number(&i2.typ),
                 ) {
-                    let register = self.get_available_register();
+                    let register = alloc_slot!(self);
 
                     // todo check instruction type
                     self.push_instruction(
@@ -1060,7 +1163,7 @@ impl BytecodeGenerator<'_> {
                 // store the number in register 0
 
                 let rhs_register = self.visit(annotation_context, &e2);
-                let register = self.get_available_register();
+                let register = alloc_slot!(self);
 
                 self.push_instruction(
                     Instruction {
@@ -1086,7 +1189,7 @@ impl BytecodeGenerator<'_> {
             } else if let Statement::VARIABLE(v1) = &e1.statement {
                 // dealing with an identifier here so load it and perform add
 
-                let register = self.get_available_register();
+                let register = alloc_slot!(self);
                 let variable_register =
                     self.get_variable(annotation_context.clone(), pos.clone(), v1);
 
@@ -1107,7 +1210,7 @@ impl BytecodeGenerator<'_> {
                 let lhs_register = self.visit(annotation_context.clone(), &e1);
                 let rhs_register = self.visit(annotation_context.clone(), &e2);
 
-                let register = self.get_available_register();
+                let register = alloc_slot!(self);
                 self.push_instruction(
                     Instruction {
                         op_instruction: OpInstruction::ADD,
@@ -1123,7 +1226,7 @@ impl BytecodeGenerator<'_> {
         } else {
             let lhs = self.visit(annotation_context.clone(), e1);
             let rhs = self.visit(annotation_context.clone(), e2);
-            let register = self.get_available_register();
+            let register = alloc_slot!(self);
             self.push_instruction(
                 Instruction {
                     op_instruction: match op {
@@ -1198,7 +1301,7 @@ impl BytecodeGenerator<'_> {
 
         // todo set as a local as it is named?
 
-        let location = self.get_available_register();
+        let location = alloc_slot!(self);
 
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
@@ -1234,7 +1337,7 @@ impl BytecodeGenerator<'_> {
         let mut param_slots: Vec<u8> = vec![];
         for param in params {
             if let Statement::DEFINE(v, _, _) = &param.statement {
-                let loc = self.get_available_register();
+                let loc = alloc_slot!(self);
                 // todo what happened here
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
@@ -1259,7 +1362,7 @@ impl BytecodeGenerator<'_> {
             param_slots: param_slots,
             bounded_object: None,
         });
-        0
+        alloc_slot!(self)
     }
 
     fn atom_from_type(&self, data_type: DataType) -> Object {
@@ -1301,7 +1404,7 @@ impl BytecodeGenerator<'_> {
             marked: false,
         }));
 
-        let reg = self.get_available_register();
+        let reg = alloc_slot!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
@@ -1331,7 +1434,7 @@ impl BytecodeGenerator<'_> {
             registers.push(self.visit(annotation_context.clone(), item));
         }
 
-        let dest = self.get_available_register();
+        let dest = alloc_slot!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::BUILD_SLICE,
@@ -1350,7 +1453,7 @@ impl BytecodeGenerator<'_> {
         obj: &Box<ASTNode>,
         index: &Box<ASTNode>,
     ) -> u8 {
-        let dest = self.get_available_register();
+        let dest = alloc_slot!(self);
 
         let obj_reg = self.visit(annotation_context.clone(), &obj);
         let val_reg = self.visit(annotation_context.clone(), &index);
@@ -1425,7 +1528,7 @@ impl BytecodeGenerator<'_> {
             pos.line as usize,
         );
 
-        0
+        alloc_slot!(self)
     }
 
     fn gen_struct_access(
@@ -1439,7 +1542,7 @@ impl BytecodeGenerator<'_> {
         if let Type::IDENTIFIER(i) = &field.typ {
             let lhs = self.visit(annotation_context.clone(), &expr);
             let field = self.create_constant_string(i.to_string(), &expr.position);
-            let register = self.get_available_register();
+            let register = alloc_slot!(self);
             self.push_instruction(
                 Instruction {
                     op_instruction: OpInstruction::STRUCT_ACCESS,
@@ -1457,7 +1560,7 @@ impl BytecodeGenerator<'_> {
     fn gen_import(&mut self, mut annotation_context: AnnotationContext, path: &Token) -> u8 {
         if let Type::IDENTIFIER(i) = &path.typ {
             let s = self.create_constant_string(i.to_string(), &path.pos);
-            let destination = self.get_available_register();
+            let destination = alloc_slot!(self);
             self.push_instruction(
                 Instruction {
                     op_instruction: OpInstruction::IMPORT,

@@ -18,7 +18,7 @@ use std::{
 };
 
 use analyse::TypeCheckError;
-use codegen::{BytecodeGenerator, Chunk, CodegenContext};
+use codegen::{BytecodeGenerator, Chunk, CodegenContext, SlotManager};
 use config::Config;
 use deepsize::DeepSizeOf;
 use execution::Heap;
@@ -168,7 +168,7 @@ fn exec(file_to_exec: String) {
     let mut codegen_context = CodegenContext {
         current_chunk_pointer: 0,
         chunks: vec![Chunk {
-            current_register: 0,
+            slot_manager: SlotManager::new(),
             debug_line_info: vec![],
             constant_pool: vec![],
             gc_ref_data: vec![],

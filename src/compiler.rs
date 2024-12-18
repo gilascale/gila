@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fs};
 
 use crate::{
-    codegen::{BytecodeGenerator, Chunk, CodegenContext},
+    codegen::{BytecodeGenerator, Chunk, CodegenContext, SlotManager},
     execution::{ExecutionEngine, Heap, ProcessContext, SharedExecutionContext},
     lex, parse,
 };
@@ -43,7 +43,7 @@ impl Compiler {
             let mut codegen_context = CodegenContext {
                 current_chunk_pointer: 0,
                 chunks: vec![Chunk {
-                    current_register: 0,
+                    slot_manager: SlotManager::new(),
                     debug_line_info: vec![],
                     constant_pool: vec![],
                     gc_ref_data: vec![],
