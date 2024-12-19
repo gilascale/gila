@@ -103,6 +103,14 @@ pub enum GCRefData {
 }
 
 impl GCRefData {
+    pub fn as_slice(&self) -> Result<&SliceObject, RuntimeError> {
+        match self {
+            Self::SLICE(s) => Ok(s),
+            // todo results
+            _ => panic!(),
+        }
+    }
+
     pub fn print(&self, shared_execution_context: &SharedExecutionContext) -> String {
         match self {
             Self::STRING(s) => s.s.to_string(),
@@ -644,6 +652,29 @@ fn native_print(
     return Object::I64(0);
 }
 
+fn native_len(
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
+    args: Vec<Object>,
+) -> Object {
+    let s: String = match &args[0] {
+        Object::GC_REF(gc_ref) => {
+            let res = shared_execution_context.heap.deref(&gc_ref);
+            if res.is_err() {
+                panic!();
+            }
+            let unwrapped = res.unwrap();
+            let slice = unwrapped.as_slice();
+            if slice.is_err() {
+                panic!();
+            }
+
+            return Object::I64(slice.unwrap().s.len().try_into().unwrap());
+        }
+        _ => panic!(),
+    };
+}
+
 fn native_open_windows(
     shared_execution_context: &mut SharedExecutionContext,
     execution_context: &mut ProcessContext,
@@ -700,6 +731,20 @@ impl<'a> ExecutionEngine<'a> {
         let alloc = alloc_res.unwrap();
         self.environment.stack_frames[self.environment.stack_frame_pointer].stack[0] =
             Object::GC_REF(alloc);
+
+        let alloc_res = self.shared_execution_context.heap.alloc(
+            GCRefData::NATIVE_FN(NativeFnObject {
+                callback: native_len,
+            }),
+            config,
+        );
+        if alloc_res.is_err() {
+            return Err(alloc_res.err().unwrap());
+        }
+        let alloc = alloc_res.unwrap();
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[1] =
+            Object::GC_REF(alloc);
+
         Ok(())
     }
 

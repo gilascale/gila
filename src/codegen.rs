@@ -334,6 +334,10 @@ impl BytecodeGenerator<'_> {
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(Type::IDENTIFIER(Rc::new("print".to_string())), print_reg);
+        let len_reg = alloc_perm_slot!(self);
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .variable_map
+            .insert(Type::IDENTIFIER(Rc::new("len".to_string())), len_reg);
     }
 
     fn push_instruction(&mut self, instruction: Instruction, line: usize) {

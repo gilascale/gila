@@ -47,6 +47,13 @@ impl Analyser {
             Rc::new("print".to_string()),
             DataType::FN(vec![DataType::STRING], Box::new(DataType::VOID)),
         );
+        self.scopes[self.scope_index].vars.insert(
+            Rc::new("len".to_string()),
+            DataType::FN(
+                vec![DataType::SLICE(Box::new(DataType::U32))],
+                Box::new(DataType::U32),
+            ),
+        );
     }
 
     fn visit(&mut self, statement: &ASTNode) -> Result<DataType, TypeCheckError> {
