@@ -1076,8 +1076,6 @@ impl BytecodeGenerator<'_> {
                             },
                             _ => panic!(),
                         }
-
-                        // todo CALL_KW
                     }
                     _ => arg_registers.push(self.visit(annotation_context.clone(), arg)),
                 }
@@ -1130,7 +1128,7 @@ impl BytecodeGenerator<'_> {
                     free_slot!(self, i);
                 }
 
-                return first_arg_register;
+                return const_reg;
             } else {
                 self.push_instruction(
                     Instruction {

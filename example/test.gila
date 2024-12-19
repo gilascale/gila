@@ -1,8 +1,10 @@
 
 
+Container type
+    c: u32[]
+end
+
+foo=Container(c=[1,2,3])
+print(foo)
 
 
-x = len([1,2,3,4,5])
-
-
-print(x)
