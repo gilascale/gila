@@ -54,6 +54,9 @@ impl Analyser {
                 Box::new(DataType::U32),
             ),
         );
+        self.scopes[self.scope_index]
+            .vars
+            .insert(Rc::new("__platform__".to_string()), DataType::STRING);
     }
 
     fn visit(&mut self, statement: &ASTNode) -> Result<DataType, TypeCheckError> {

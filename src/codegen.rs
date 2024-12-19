@@ -338,6 +338,13 @@ impl BytecodeGenerator<'_> {
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(Type::IDENTIFIER(Rc::new("len".to_string())), len_reg);
+        let __platform___reg = alloc_perm_slot!(self);
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .variable_map
+            .insert(
+                Type::IDENTIFIER(Rc::new("__platform__".to_string())),
+                __platform___reg,
+            );
     }
 
     fn push_instruction(&mut self, instruction: Instruction, line: usize) {

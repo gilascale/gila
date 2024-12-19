@@ -3,7 +3,7 @@ use crate::lex::Type;
 use deepsize::DeepSizeOf;
 use std::hash::Hash;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
-use std::{fs, iter, vec};
+use std::{env, fs, iter, vec};
 
 // todo deal with multi-platform
 // use std::os::windows::io::AsRawHandle;
@@ -743,6 +743,19 @@ impl<'a> ExecutionEngine<'a> {
         }
         let alloc = alloc_res.unwrap();
         self.environment.stack_frames[self.environment.stack_frame_pointer].stack[1] =
+            Object::GC_REF(alloc);
+
+        let alloc_res = self.shared_execution_context.heap.alloc(
+            GCRefData::STRING(StringObject {
+                s: Rc::new(env::consts::OS.to_owned()),
+            }),
+            config,
+        );
+        if alloc_res.is_err() {
+            return Err(alloc_res.err().unwrap());
+        }
+        let alloc = alloc_res.unwrap();
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[2] =
             Object::GC_REF(alloc);
 
         Ok(())
