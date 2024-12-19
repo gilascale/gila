@@ -835,6 +835,10 @@ impl Lexer {
                         let mut identifier = "".to_string();
                         let tmp_index = self.index;
                         while self.counter < chars.len().try_into().unwrap() {
+                            if chars[self.counter as usize] == '_' {
+                                self.counter += 1;
+                                continue;
+                            }
                             if chars[self.counter as usize].is_whitespace()
                                 || !chars[self.counter as usize].is_numeric()
                             {
