@@ -84,10 +84,13 @@ pub enum OpInstruction {
     ADDI,
     // ADDI <i1> <i2> <desination>
     SUBI,
+
+    // FOR BOTH OF THESE, THE DESTINATION GOES IN arg_1
     // CALL <location of fn> <args starting register> <num args>
     CALL,
     // CALL_KW <location of fn> <location of tuple containing arg names> <args starting register>
     CALL_KW,
+
     // NATIVE_CALL <name of fn string> <args starting register> <num args> <destination is implicitly the register after>
     NATIVE_CALL,
     // LOAD_CONST <constant index> <> <destination>
@@ -112,6 +115,10 @@ pub enum OpInstruction {
     IMPORT,
     // FOR_ITER <iter obj> <where to jump if done> <iter result reg>
     FOR_ITER,
+
+    // this is just a hack to make variables work
+    // MOV <from> <to>
+    MOV,
 }
 
 // todo put these in the enum
@@ -626,7 +633,7 @@ impl BytecodeGenerator<'_> {
             position.line as usize,
         );
 
-        let range_iterator_reg = first_arg_register + 2;
+        let range_iterator_reg = const_reg;
 
         let for_iter_instruction_ptr = self.codegen_context.chunks
             [self.codegen_context.current_chunk_pointer]
@@ -878,17 +885,26 @@ impl BytecodeGenerator<'_> {
 
         match value {
             Some(v) => {
-                // todo improve this, the reason is we need to allocate a perminant slot
                 let location = self.visit(annotation_context, &v);
-                // todo what happened here
+
+                let var_location = alloc_perm_slot!(self);
+                free_slot!(self, location);
+
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
-                    .insert(var.typ.clone(), location);
+                    .insert(var.typ.clone(), var_location);
 
-                println!("gen define! {:?} in slot {:?}", var, location);
-                make_slot_perminant!(self, location);
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::MOV,
+                        arg_0: location,
+                        arg_1: var_location,
+                        arg_2: 0,
+                    },
+                    pos.line.try_into().unwrap(),
+                );
 
-                return location;
+                return var_location;
             }
             None => panic!(),
         }
@@ -986,27 +1002,12 @@ impl BytecodeGenerator<'_> {
                         arg_registers.push(self.visit(annotation_context.clone(), arg));
                     }
 
-                    let destination = alloc_slot!(self);
-                    let first_arg_register = {
+                    let first_arg_register: u8 = {
                         if arg_registers.len() > 0 {
                             arg_registers[0]
                         } else {
                             // if we have no args, just encode the destination!
-                            destination
-                        }
-                    };
-
-                    // increment one as we allocate end for the return
-                    // self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-                    //     .current_register += 1;
-                    // todo this may break... but we alloc a slot here
-                    alloc_slot!(self);
-                    // figure out where to put the result
-                    let destination: u8 = {
-                        if arg_registers.len() > 0 {
-                            arg_registers[0] + arg_registers.len() as u8
-                        } else {
-                            destination
+                            alloc_slot!(self)
                         }
                     };
 
@@ -1022,11 +1023,12 @@ impl BytecodeGenerator<'_> {
 
                     // todo free slots
                     free_slot!(self, name_reg);
-                    for i in first_arg_register..first_arg_register + arg_registers.len() as u8 {
+                    for i in first_arg_register + 1..first_arg_register + arg_registers.len() as u8
+                    {
                         free_slot!(self, i);
                     }
 
-                    return destination;
+                    return first_arg_register;
                 }
             }
 
@@ -1078,37 +1080,14 @@ impl BytecodeGenerator<'_> {
             }
             num_kwargs = kwarg_strings.len();
 
-            let destination = alloc_slot!(self);
-            let first_arg_register = {
+            let first_arg_register: u8 = {
                 if arg_registers.len() > 0 {
                     arg_registers[0]
                 } else {
                     // if we have no args, just encode the destination!
-                    destination
+                    alloc_slot!(self)
                 }
             };
-
-            // increment one as we allocate end for the return
-            // self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-            //     .current_register += 1;
-            // todo this may not work
-            //
-            // TODO IDK IF WE NEED THIS AHHHHHHH I DONT THINK SO?
-            //
-            // alloc_slot!(self);
-
-            // figured out the issue, what we have RIGHT NOW is right... with 1 flaw.
-            // the destination is reused because we are re-using the arg registers, the destination
-            // for each call is the same, and so we get the same value. for calls probably don't reuse the same?
-            // or we need the caller function i.e. gen_define to determine whether they are freed or not? maybe with a context param?
-            // we need to pass in a CodegenContext or ScopeContext with free_slots: bool i think
-
-            // 9    x = foo("foo")
-            //                                                      LOAD_CONST    1    0    2
-            //                                                            CALL    1    2    1
-            // 10   y = foo("bar")
-            //                                                      LOAD_CONST    2    0    2
-            //                                                            CALL    1    2    1
 
             if is_kw_call {
                 // build the tuple
@@ -1143,12 +1122,11 @@ impl BytecodeGenerator<'_> {
 
                 // todo free slots
                 free_slot!(self, callee_register);
-                for i in first_arg_register..first_arg_register + arg_registers.len() as u8 {
+                for i in first_arg_register + 1..first_arg_register + arg_registers.len() as u8 {
                     free_slot!(self, i);
                 }
 
-                // todo i believe this slot is allocated above the is_kw_call
-                return first_arg_register + num_kwargs as u8;
+                return first_arg_register;
             } else {
                 self.push_instruction(
                     Instruction {
@@ -1158,18 +1136,13 @@ impl BytecodeGenerator<'_> {
                         arg_2: arg_registers.len() as u8,
                     },
                     pos.line as usize,
-                ); // todo free slots
+                );
 
-                // see above comment
-                // for arg in &arg_registers {
-                //     free_slot!(self, *arg);
-                // }
-
-                // free_slot!(self, callee_register);
-                // for i in first_arg_register..first_arg_register + arg_registers.len() as u8 {
-                //     free_slot!(self, i);
-                // }
-                return destination.try_into().unwrap();
+                free_slot!(self, callee_register);
+                for i in first_arg_register + 1..first_arg_register + arg_registers.len() as u8 {
+                    free_slot!(self, i);
+                }
+                return first_arg_register;
             }
         }
     }

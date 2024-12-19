@@ -879,6 +879,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::STRUCT_ACCESS => self.exec_struct_access(instr),
             OpInstruction::STRUCT_SET => self.exec_struct_set(instr),
             OpInstruction::IMPORT => self.exec_import(instr),
+            OpInstruction::MOV => self.exec_mov(instr),
             _ => panic!("unknown instruction {:?}", instr.op_instruction),
         }
     }
@@ -1249,13 +1250,7 @@ impl<'a> ExecutionEngine<'a> {
         let unrwapped = dereferenced_data.unwrap();
         match &unrwapped {
             GCRefData::FN(f) => {
-                let destination = {
-                    if call.arg_2 > 0 {
-                        call.arg_1 + call.arg_2
-                    } else {
-                        call.arg_1.into()
-                    }
-                };
+                let destination = call.arg_1;
 
                 // fixme this sucks, we shouldn't clone functions it's so expensive
                 // fixme why is this a Box?
@@ -1288,13 +1283,7 @@ impl<'a> ExecutionEngine<'a> {
             }
 
             GCRefData::NATIVE_FN(native_fn) => {
-                let destination = {
-                    if call.arg_2 > 0 {
-                        call.arg_1 + call.arg_2
-                    } else {
-                        call.arg_1.into()
-                    }
-                };
+                let destination = call.arg_1;
                 let starting_reg = call.arg_1;
                 let num_args = call.arg_2;
 
@@ -1474,7 +1463,7 @@ impl<'a> ExecutionEngine<'a> {
                                 }
                                 match res.unwrap() {
                                     GCRefData::FN(method) => {
-                                        let result = self.execute_fn(&method, instr.arg_2);
+                                        let result = self.execute_fn(&method, instr.arg_1);
                                         if result.is_err() {
                                             return Err(result.err().unwrap());
                                         }
@@ -1884,6 +1873,13 @@ impl<'a> ExecutionEngine<'a> {
             }
             _ => todo!(),
         }
+    }
+
+    fn exec_mov(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let val = stack_access!(self, instr.arg_0);
+        stack_set!(self, instr.arg_1, val.clone());
+        increment_ip!(self);
+        Ok(instr.arg_1)
     }
 
     fn exec_import(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
