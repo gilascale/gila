@@ -4,5 +4,4 @@
 
 
 
-
-print(__platform__)
+if __platform__ == "windows" print("im on windows")

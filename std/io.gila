@@ -1,8 +1,0 @@
-
-
-
-
-// print fn(msg: string) do
-//     @native_call native_print(msg)
-//     return 0
-// end

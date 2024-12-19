@@ -1410,6 +1410,7 @@ impl BytecodeGenerator<'_> {
             DataType::SLICE(t) => Object::ATOM(Rc::new("slice".to_string())),
             DataType::NAMED_REFERENCE(d) => Object::ATOM(Rc::new(d.to_string())),
             DataType::GENERIC(g) => Object::ATOM(Rc::new(format!("${}", g).to_string())),
+            DataType::STRING => Object::ATOM(Rc::new("string".to_string())),
             _ => panic!("cant create atom from type {:?}", data_type),
         }
     }

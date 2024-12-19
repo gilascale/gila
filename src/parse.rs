@@ -504,7 +504,7 @@ impl<'a> Parser<'a> {
         let body = self.statement();
         let body_pos = body.position.clone();
         let mut else_body: Option<Box<ASTNode>> = None;
-        if self.tokens[self.counter].typ == Type::ELSE {
+        if !self.end() && self.tokens[self.counter].typ == Type::ELSE {
             consume_token!(self, Type::ELSE);
             else_body = Some(Box::new(self.statement()));
         }
