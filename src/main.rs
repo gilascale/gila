@@ -12,10 +12,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::time::Instant;
 use std::vec;
-use std::{
-    fs,
-    io::{self, Write},
-};
+use std::{fs, io::Write};
 
 use analyse::TypeCheckError;
 use codegen::{BytecodeGenerator, Chunk, CodegenContext, SlotManager};
@@ -164,7 +161,9 @@ fn exec(file_to_exec: String) {
             live_slots: vec![],
             dead_objects: vec![],
         },
+        gila_abis_dlls: vec![],
     };
+
     let mut codegen_context = CodegenContext {
         current_chunk_pointer: 0,
         chunks: vec![Chunk {

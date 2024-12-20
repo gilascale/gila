@@ -58,6 +58,8 @@ v.display()
 
 ### Bugs
 
+- we are loading DLLs twice
+- cant call returned functions i.e. some_fn()()
 - the prelude is being added into the dumped bytecode file as its the same line
   as some of the other code
 - need a return statement otherwise subsequent calls dont work
@@ -85,6 +87,7 @@ v.display()
 
 ### Language Features
 
+- easy way to add builtin modules/files (i.e. socket library)
 - groups i.e. 3 + (4+3)
 - support larger numbers
 - garbage collection

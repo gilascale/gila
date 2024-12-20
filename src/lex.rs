@@ -406,7 +406,9 @@ impl Lexer {
                         });
                         self.counter += 1;
                         self.index += 1;
-                    } else if chars[self.counter as usize + 1] == 'n' {
+                    } else if chars[self.counter as usize + 1] == 'n'
+                        && !chars[self.counter as usize + 2].is_alphabetic()
+                    {
                         v.push(Token {
                             typ: Type::IN,
                             pos: Position {

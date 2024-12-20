@@ -345,6 +345,13 @@ impl BytecodeGenerator<'_> {
                 Type::IDENTIFIER(Rc::new("__platform__".to_string())),
                 __platform___reg,
             );
+        let gila_socket_reg = alloc_perm_slot!(self);
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .variable_map
+            .insert(
+                Type::IDENTIFIER(Rc::new("gila_socket".to_string())),
+                gila_socket_reg,
+            );
     }
 
     fn push_instruction(&mut self, instruction: Instruction, line: usize) {

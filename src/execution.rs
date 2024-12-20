@@ -1,6 +1,7 @@
 use crate::compiler::Compiler;
 use crate::lex::Type;
 use deepsize::DeepSizeOf;
+use libloading::{Library, Symbol};
 use std::hash::Hash;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
 use std::{env, fs, iter, vec};
@@ -40,6 +41,7 @@ pub enum RuntimeError {
     INVALID_ACCESS(String),
     OUT_OF_MEMORY,
     UNKNOWN_MODULE,
+    INVALID_TYP,
 }
 #[derive(DeepSizeOf, Debug, Clone)]
 pub struct DynamicObject {
@@ -70,11 +72,30 @@ pub struct FnObject {
 }
 
 #[derive(Debug, Clone)]
-pub struct NativeFnObject {
-    callback: NativeFn,
+pub enum GilaABIFunctionObject {
+    RUST_CALL_CONVENTION(GilaABINativeFnType),
+    C_CALL_CONVENTION(CABIGilaABINativeFnType),
 }
 
-impl DeepSizeOf for NativeFnObject {
+impl GilaABIFunctionObject {
+    pub unsafe fn invoke(
+        &self,
+        shared_execution_context: &mut SharedExecutionContext,
+        process_context: &mut ProcessContext,
+        args: Vec<Object>,
+    ) -> Object {
+        match self {
+            Self::RUST_CALL_CONVENTION(rust_version) => {
+                rust_version(shared_execution_context, process_context, args)
+            }
+            Self::C_CALL_CONVENTION(c_version) => {
+                (*c_version)(shared_execution_context, process_context, args)
+            }
+        }
+    }
+}
+
+impl DeepSizeOf for GilaABIFunctionObject {
     fn deep_size_of_children(&self, context: &mut deepsize::Context) -> usize {
         // todo make this accurate
         0
@@ -93,16 +114,28 @@ pub struct SliceObject {
 }
 
 #[derive(DeepSizeOf, Debug, Clone)]
+pub struct GilaABIDLLObject {
+    pub id: usize,
+}
+
+#[derive(DeepSizeOf, Debug, Clone)]
 pub enum GCRefData {
     TUPLE(Vec<Object>),
     FN(FnObject),
-    NATIVE_FN(NativeFnObject),
+    GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject),
     STRING(StringObject),
     SLICE(SliceObject),
     DYNAMIC_OBJECT(DynamicObject),
+    GILA_ABI_DLL(GilaABIDLLObject),
 }
 
 impl GCRefData {
+    pub fn as_gila_abi_dll(&self) -> Result<&GilaABIDLLObject, RuntimeError> {
+        match self {
+            Self::GILA_ABI_DLL(dll) => Ok(dll),
+            _ => panic!(),
+        }
+    }
     pub fn as_slice(&self) -> Result<&SliceObject, RuntimeError> {
         match self {
             Self::SLICE(s) => Ok(s),
@@ -146,6 +179,9 @@ impl GCRefData {
                         .join(" ")
                 )
             }
+            Self::GILA_ABI_DLL(d) => {
+                format!("Gila ABI Dll {}", d.id)
+            }
             _ => panic!("Cant print self {:?}", self),
         }
     }
@@ -167,6 +203,29 @@ impl Object {
     //         is_marked: false,
     //     }))
     // }
+
+    pub fn as_string(&self, shared_execution_context: &SharedExecutionContext) -> StringObject {
+        match &self {
+            Self::GC_REF(gc_ref) => {
+                let res = shared_execution_context.heap.deref(gc_ref);
+                if res.is_err() {
+                    panic!();
+                }
+                match res.unwrap() {
+                    GCRefData::STRING(s) => return s,
+                    _ => panic!(),
+                }
+            }
+            _ => panic!(),
+        }
+    }
+
+    pub fn as_i64(&self) -> Result<i64, RuntimeError> {
+        match &self {
+            Self::I64(i) => Ok(*i),
+            _ => Err(RuntimeError::INVALID_TYP),
+        }
+    }
 
     pub fn get_type(&self) -> Object {
         match self {
@@ -603,16 +662,29 @@ impl Heap {
     }
 }
 
-type NativeFn = fn(&mut SharedExecutionContext, &mut ProcessContext, Vec<Object>) -> Object;
+type GilaABINativeFnType =
+    fn(&mut SharedExecutionContext, &mut ProcessContext, Vec<Object>) -> Object;
+type CABIGilaABINativeFnType =
+    unsafe extern "C" fn(&mut SharedExecutionContext, &mut ProcessContext, Vec<Object>) -> Object;
 
 pub struct ProcessContext {
     pub stack_frames: std::vec::Vec<StackFrame>,
     pub stack_frame_pointer: usize,
-    pub native_fns: HashMap<String, NativeFn>,
+    pub native_fns: HashMap<String, GilaABINativeFnType>,
 }
 
 pub struct SharedExecutionContext {
     pub heap: Heap,
+    pub gila_abis_dlls: Vec<Library>,
+}
+
+impl SharedExecutionContext {
+    pub fn load_gila_abi_dll(&mut self, path: String) -> usize {
+        let id = self.gila_abis_dlls.len();
+        let lib = unsafe { Library::new(path.to_string()).expect("Failed to load library") };
+        self.gila_abis_dlls.push(lib);
+        return id;
+    }
 }
 
 impl ProcessContext {
@@ -624,7 +696,8 @@ impl ProcessContext {
     }
 }
 
-fn native_print(
+#[no_mangle]
+pub fn native_print(
     shared_execution_context: &mut SharedExecutionContext,
     execution_context: &mut ProcessContext,
     args: Vec<Object>,
@@ -714,15 +787,15 @@ impl<'a> ExecutionEngine<'a> {
         }
     }
 
-    pub fn register_native_fn(&mut self, name: String, native_fn: NativeFn) {
+    pub fn register_native_fn(&mut self, name: String, native_fn: GilaABINativeFnType) {
         self.environment.native_fns.insert(name, native_fn);
     }
 
     fn init_builtins(&mut self, config: &'a Config) -> Result<(), RuntimeError> {
         let alloc_res = self.shared_execution_context.heap.alloc(
-            GCRefData::NATIVE_FN(NativeFnObject {
-                callback: native_print,
-            }),
+            GCRefData::GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject::RUST_CALL_CONVENTION(
+                native_print,
+            )),
             config,
         );
         if alloc_res.is_err() {
@@ -733,9 +806,9 @@ impl<'a> ExecutionEngine<'a> {
             Object::GC_REF(alloc);
 
         let alloc_res = self.shared_execution_context.heap.alloc(
-            GCRefData::NATIVE_FN(NativeFnObject {
-                callback: native_len,
-            }),
+            GCRefData::GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject::RUST_CALL_CONVENTION(
+                native_len,
+            )),
             config,
         );
         if alloc_res.is_err() {
@@ -756,6 +829,22 @@ impl<'a> ExecutionEngine<'a> {
         }
         let alloc = alloc_res.unwrap();
         self.environment.stack_frames[self.environment.stack_frame_pointer].stack[2] =
+            Object::GC_REF(alloc);
+
+        let socket_gila_abi_dll = self
+            .shared_execution_context
+            .load_gila_abi_dll("gila_socket/target/debug/gila_socket.dll".to_string());
+        let alloc_res = self.shared_execution_context.heap.alloc(
+            GCRefData::GILA_ABI_DLL(GilaABIDLLObject {
+                id: socket_gila_abi_dll,
+            }),
+            config,
+        );
+        if alloc_res.is_err() {
+            return Err(alloc_res.err().unwrap());
+        }
+        let alloc = alloc_res.unwrap();
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[3] =
             Object::GC_REF(alloc);
 
         Ok(())
@@ -1340,7 +1429,7 @@ impl<'a> ExecutionEngine<'a> {
                 return Ok(call.arg_1 + call.arg_2);
             }
 
-            GCRefData::NATIVE_FN(native_fn) => {
+            GCRefData::GILA_ABI_FUNCTION_OBJECT(native_fn) => {
                 let destination = call.arg_1;
                 let starting_reg = call.arg_1;
                 let num_args = call.arg_2;
@@ -1353,11 +1442,10 @@ impl<'a> ExecutionEngine<'a> {
                         .stack[arg_register];
                     args.push(arg.clone());
                 }
-                let result = (native_fn.callback)(
-                    &mut self.shared_execution_context,
-                    &mut self.environment,
-                    args,
-                );
+
+                let result = unsafe {
+                    native_fn.invoke(self.shared_execution_context, self.environment, args)
+                };
                 stack_set!(self, destination, result);
                 increment_ip!(self);
             }
@@ -1866,6 +1954,31 @@ impl<'a> ExecutionEngine<'a> {
                                 ))
                             }
                         }
+                    }
+                    GCRefData::GILA_ABI_DLL(gila_abi_dll) => {
+                        let field = stack_access!(self, instr.arg_1);
+
+                        let string = field.as_string(&self.shared_execution_context);
+
+                        unsafe {
+                            let function: Symbol<CABIGilaABINativeFnType> =
+                                self.shared_execution_context.gila_abis_dlls[gila_abi_dll.id]
+                                    .get(string.s.as_bytes())
+                                    .expect(&format!("ummm {}", string.s));
+
+                            let native_func = GilaABIFunctionObject::C_CALL_CONVENTION(*function);
+
+                            let alloc_res = self.shared_execution_context.heap.alloc(
+                                GCRefData::GILA_ABI_FUNCTION_OBJECT(native_func),
+                                &self.config,
+                            );
+                            if alloc_res.is_err() {
+                                return Err(alloc_res.err().unwrap());
+                            }
+                            stack_set!(self, instr.arg_2, Object::GC_REF(alloc_res.unwrap()));
+                        };
+
+                        increment_ip!(self)
                     }
                     _ => {
                         return Err(RuntimeError::INVALID_ACCESS(

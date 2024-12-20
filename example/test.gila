@@ -3,5 +3,4 @@
 
 
 
-
-if __platform__ == "windows" print("im on windows")
+x = gila_socket.create_socket()
