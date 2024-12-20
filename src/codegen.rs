@@ -347,6 +347,14 @@ impl BytecodeGenerator<'_> {
                 load_gila_abi_dll_perm_slot,
             );
 
+        let load_c_abi_dll_perm_slot = alloc_perm_slot!(self);
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .variable_map
+            .insert(
+                Type::IDENTIFIER(Rc::new("load_c_abi_dll".to_string())),
+                load_c_abi_dll_perm_slot,
+            );
+
         let __platform___reg = alloc_perm_slot!(self);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map

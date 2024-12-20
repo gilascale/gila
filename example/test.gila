@@ -8,6 +8,11 @@ dll = load_gila_abi_dll("./gila_socket/target/debug/gila_socket.dll")
 
 
 
+socket = dll.create_socket(80)
+dll.listen_socket(socket)
+conn = dll.accept_socket(socket)
 
-res = dll.create_socket(12)
-print(res)
+
+
+
+print(socket)

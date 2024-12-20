@@ -776,6 +776,16 @@ fn native_open_windows(
     return Object::I64(0);
 }
 
+fn native_load_c_abi_dll(
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
+    args: Vec<Object>,
+) -> Object {
+    let path = args[0].as_string(shared_execution_context);
+    let dll = shared_execution_context.load_gila_abi_dll(path.s.to_string());
+    Object::GILA_ABI_DLL(dll)
+}
+
 pub struct ExecutionEngine<'a> {
     pub config: &'a Config,
     pub running: bool,
@@ -845,6 +855,20 @@ impl<'a> ExecutionEngine<'a> {
             Object::GC_REF(alloc);
 
         let alloc_res = self.shared_execution_context.heap.alloc(
+            GCRefData::GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject::RUST_CALL_CONVENTION(
+                native_load_c_abi_dll,
+            )),
+            config,
+        );
+        if alloc_res.is_err() {
+            return Err(alloc_res.err().unwrap());
+        }
+        let alloc = alloc_res.unwrap();
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[3] =
+            Object::GC_REF(alloc);
+
+        ///
+        let alloc_res = self.shared_execution_context.heap.alloc(
             GCRefData::STRING(StringObject {
                 s: Rc::new(env::consts::OS.to_owned()),
             }),
@@ -854,7 +878,7 @@ impl<'a> ExecutionEngine<'a> {
             return Err(alloc_res.err().unwrap());
         }
         let alloc = alloc_res.unwrap();
-        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[3] =
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[4] =
             Object::GC_REF(alloc);
 
         Ok(())
@@ -1456,6 +1480,7 @@ impl<'a> ExecutionEngine<'a> {
                 let result = unsafe {
                     native_fn.invoke(self.shared_execution_context, self.environment, args)
                 };
+                println!("got result {:?}", result);
                 stack_set!(self, destination, result);
                 increment_ip!(self);
             }
