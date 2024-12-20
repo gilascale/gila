@@ -1480,7 +1480,6 @@ impl<'a> ExecutionEngine<'a> {
                 let result = unsafe {
                     native_fn.invoke(self.shared_execution_context, self.environment, args)
                 };
-                println!("got result {:?}", result);
                 stack_set!(self, destination, result);
                 increment_ip!(self);
             }
