@@ -5,5 +5,9 @@
 
 
 dll = load_gila_abi_dll("./gila_socket/target/debug/gila_socket.dll")
-res = dll.create_socket()
+
+
+
+
+res = dll.create_socket(12)
 print(res)
