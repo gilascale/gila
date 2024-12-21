@@ -1858,9 +1858,15 @@ impl BytecodeGenerator<'_> {
         panic!();
     }
 
-    fn gen_import(&mut self, mut annotation_context: AnnotationContext, path: &Token) -> u8 {
-        if let Type::IDENTIFIER(i) = &path.typ {
-            let s = self.create_constant_string(i.to_string(), &path.pos);
+    fn gen_import(&mut self, mut annotation_context: AnnotationContext, path: &Vec<Token>) -> u8 {
+        let t = &path[0];
+        let mut strings: Vec<String> = vec![];
+        for p in path {
+            strings.push(p.as_identifier().to_string());
+        }
+        let path_string = strings.join(".");
+        if let Type::IDENTIFIER(i) = &t.typ {
+            let s = self.create_constant_string(path_string.to_string(), &t.pos);
             let destination = alloc_slot!(self);
             self.push_instruction(
                 Instruction {
@@ -1869,7 +1875,7 @@ impl BytecodeGenerator<'_> {
                     arg_1: destination,
                     arg_2: 0,
                 },
-                path.pos.line as usize,
+                t.pos.line as usize,
             );
             return destination;
         }

@@ -1,3 +1,5 @@
+use std::vec;
+
 use crate::{
     ast::{ASTNode, Op, Statement},
     lex::{Position, Token, Type},
@@ -101,10 +103,20 @@ impl<'a> Parser<'a> {
             let lhs_pos = get_position!(self);
             consume_token!(self, Type::IMPORT);
             // todo parse module path properly
-            let t = get_next!(self);
+            let mut tokens: Vec<Token> = vec![];
+            loop {
+                let t = get_next!(self);
+                tokens.push(t.clone());
+                if self.tokens[self.counter].typ == Type::DOT {
+                    consume_token!(self, Type::DOT);
+                } else {
+                    break;
+                }
+            }
+            let first = &tokens.clone()[0];
             return ASTNode {
-                statement: Statement::IMPORT(t.clone()),
-                position: lhs_pos.join(t.pos.clone()),
+                statement: Statement::IMPORT(tokens),
+                position: lhs_pos.join(first.pos.clone()),
             };
         }
 

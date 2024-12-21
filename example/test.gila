@@ -2,8 +2,12 @@
 
 
 
-foo fn() do
-    return "hi"
-end
 
-foo()
+
+maths = import std.maths
+
+
+
+print(maths.Vec)
+
+

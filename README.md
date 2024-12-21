@@ -88,9 +88,9 @@ v.display()
 
 ### Language Features
 
+- import supports . in it
 - easy way to add builtin modules/files (i.e. socket library)
 - groups i.e. 3 + (4+3)
-- support larger numbers
 - garbage collection
 - pattern matching
 - tuple unpacking
@@ -99,7 +99,6 @@ v.display()
 - including other std stuff in std (circular import caching)
 - std type hints
   - printable interface for print
-- named args
 - dictionaries
 - try
 - interface/prototype system
@@ -110,10 +109,7 @@ v.display()
 - virtual functions?
 - target backend
 - type-hint modules
-- multiple params doesn't work
 - lex/parse/compile atoms
-- function return types
-- import supports . in it
 - import supports non-required assignment
 - generics
 - builtin result type

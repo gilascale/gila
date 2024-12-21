@@ -52,7 +52,7 @@ pub enum Statement {
     INDEX(Box<ASTNode>, Box<ASTNode>),
     ANNOTATION(Token, Vec<Token>, Box<ASTNode>),
     STRUCT_ACCESS(Box<ASTNode>, Token),
-    IMPORT(Token),
+    IMPORT(Vec<Token>),
 }
 
 #[derive(Debug)]

@@ -2103,11 +2103,16 @@ impl<'a> ExecutionEngine<'a> {
                         // paths are the areas that we can find the module
                         let paths = vec!["./".to_string()];
                         for path in paths {
-                            let full_path = path + &s.s.to_string();
+                            let full_path = path + &s.s.replace(".", "/");
+                            let mut full_path_with_extension = full_path.to_string();
+                            full_path_with_extension.push_str(".gila");
+                            println!("full path {}", full_path);
+
                             if fs::metadata(full_path.to_string())
                                 .map(|m| m.is_dir())
                                 .unwrap_or(false)
                             {
+                                println!("1..");
                                 // todo compile!
 
                                 let mut module_objects: HashMap<String, Object> = HashMap::new();
@@ -2179,6 +2184,14 @@ impl<'a> ExecutionEngine<'a> {
                                 stack_set!(self, instr.arg_1, Object::GC_REF(module.unwrap()));
                                 increment_ip!(self);
                                 return Ok(instr.arg_1);
+                            } else if fs::metadata(full_path_with_extension)
+                                .map(|m| m.is_file())
+                                .unwrap_or(false)
+                            {
+                                println!("do!");
+                                //todo
+
+                                increment_ip!(self);
                             }
                         }
                         return Err(RuntimeError::UNKNOWN_MODULE);
