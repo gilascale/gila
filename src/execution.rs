@@ -2128,7 +2128,6 @@ impl<'a> ExecutionEngine<'a> {
                                     let code = fs::read_to_string(normalized_path.to_string())
                                         .expect("Unable to read file");
 
-                                    // todo this is breaking
                                     let mut compiler = Compiler::new();
                                     let compilation_context = compiler.compile_and_exec(
                                         f.file_name().into_string().unwrap(),
@@ -2184,14 +2183,57 @@ impl<'a> ExecutionEngine<'a> {
                                 stack_set!(self, instr.arg_1, Object::GC_REF(module.unwrap()));
                                 increment_ip!(self);
                                 return Ok(instr.arg_1);
-                            } else if fs::metadata(full_path_with_extension)
+                            } else if fs::metadata(full_path_with_extension.to_string())
                                 .map(|m| m.is_file())
                                 .unwrap_or(false)
                             {
-                                println!("do!");
                                 //todo
 
+                                let code = fs::read_to_string(full_path_with_extension.to_string())
+                                    .expect("Unable to read file");
+
+                                let mut compiler = Compiler::new();
+                                let compilation_context = compiler.compile_and_exec(
+                                    "maths".to_string(),
+                                    code,
+                                    &self.config,
+                                    &mut self.shared_execution_context,
+                                );
+
+                                let mut module_objects: HashMap<String, Object> = HashMap::new();
+
+                                if let Some(ctx) = compilation_context {
+                                    for (key, val) in
+                                        ctx.codegen_context.chunks[0].variable_map.clone()
+                                    {
+                                        if let Type::IDENTIFIER(i) = key {
+                                            // lets put the variables in this module
+                                            let val = ctx.process_context.stack_frames[0].stack
+                                                [val as usize]
+                                                .clone();
+                                            // println!("exported val {:?}={:?}", key, val);
+                                            module_objects.insert(i.to_string(), val);
+                                            continue;
+                                        }
+                                        panic!();
+                                    }
+                                }
+
+                                let module_dynamic_object = DynamicObject {
+                                    fields: module_objects,
+                                };
+                                let module = self.shared_execution_context.heap.alloc(
+                                    GCRefData::DYNAMIC_OBJECT(module_dynamic_object),
+                                    &self.config,
+                                );
+
+                                if module.is_err() {
+                                    return Err(module.err().unwrap());
+                                }
+
+                                stack_set!(self, instr.arg_1, Object::GC_REF(module.unwrap()));
                                 increment_ip!(self);
+                                return Ok(instr.arg_1);
                             }
                         }
                         return Err(RuntimeError::UNKNOWN_MODULE);

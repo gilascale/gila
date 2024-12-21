@@ -8,6 +8,6 @@ maths = import std.maths
 
 
 
-print(maths.Vec)
+print(maths)
 
 
