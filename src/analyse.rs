@@ -54,6 +54,15 @@ impl Analyser {
                 Box::new(DataType::U32),
             ),
         );
+
+        // so we don't actually know what the type is here, so how do we do this...
+        self.scopes[self.scope_index].vars.insert(
+            Rc::new("load_gila_abi_dll".to_string()),
+            DataType::FN(
+                vec![DataType::STRING],
+                Box::new(DataType::FN(vec![], Box::new(DataType::VOID))),
+            ),
+        );
         self.scopes[self.scope_index]
             .vars
             .insert(Rc::new("__platform__".to_string()), DataType::STRING);
@@ -310,7 +319,7 @@ impl Analyser {
                 }
                 return Ok(*return_type);
             }
-            _ => panic!(),
+            _ => panic!("found weird callee type {:?}", callee_type),
         }
     }
 
