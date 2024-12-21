@@ -10,8 +10,13 @@ dll = load_gila_abi_dll("./gila_socket/target/debug/gila_socket.dll")
 
 dll.initialise()
 
-socket = dll.create_socket(8080)
+socket = dll.create_socket()
 
 print(socket)
+
+
+dll.listen_socket(socket, 8080)
+
+data = dll.receive_socket(socket)
 
 dll.deinit()
