@@ -136,6 +136,13 @@ pub struct Instruction {
 impl Instruction {
     pub fn to_string(&self) -> String {
         match self.op_instruction {
+            OpInstruction::ADDI => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("{}", self.arg_0),
+                format!("{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
             OpInstruction::BUILD_FN => format!(
                 "{:>75}{:>5}{:>5}\n",
                 format!("{:?}", self.op_instruction),
@@ -1651,7 +1658,6 @@ impl BytecodeGenerator<'_> {
             let lhs = self.visit(annotation_context.clone(), &expr);
             let field = self.create_constant_string(i.to_string(), &expr.position);
             let register = alloc_slot!(self);
-            println!("got destination for STRUCT_ACCESS {:?}", register);
             self.push_instruction(
                 Instruction {
                     op_instruction: OpInstruction::STRUCT_ACCESS,

@@ -8,10 +8,18 @@ dll = load_gila_abi_dll("./gila_socket/target/debug/gila_socket.dll")
 
 
 
-dll.initialise()
-socket = dll.create_socket()
-
-PORT = 8080
-dll.listen_socket(socket, PORT)
+//dll.initialise()
+//socket = dll.create_socket()
+//PORT = 8080
+//dll.listen_socket(socket, PORT)
 //data = dll.receive_socket(socket)
 //dll.deinit()
+
+
+
+
+foo fn(x:u32,y:u32) do
+    print(x)
+end
+
+foo(33,44)
