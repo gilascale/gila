@@ -18,6 +18,10 @@ fn htons(host_short: u16) -> u16 {
     host_short.to_be()
 }
 
+extern "C" {
+    pub fn recv(sockfd: i32, buf: *mut c_void, len: usize, flags: i32) -> isize;
+}
+
 #[no_mangle]
 pub extern "C" fn initialise(
     shared_execution_context: &mut SharedExecutionContext,
@@ -90,7 +94,7 @@ pub extern "C" fn listen_socket(
     args: Vec<Object>,
 ) -> Object {
     let socket = args[0].as_i64().unwrap() as c_int;
-    let port = args[0].as_i64().unwrap() as c_int;
+    let port = args[1].as_i64().unwrap() as c_int;
 
     // Create and populate the sockaddr_in struct
     let mut addr = sockaddr_in {
@@ -128,9 +132,25 @@ pub extern "C" fn accept_socket(
     execution_context: &mut ProcessContext,
     args: Vec<Object>,
 ) -> Object {
-    let socket = &args[0];
-    println!("accept_socket socket={:?}", socket);
-    return Object::I64(12);
+    unsafe {
+        let socket = args[0].as_i64().unwrap() as c_int;
+        let buffer_size = args[1].as_i64().unwrap() as usize;
+
+        let mut buffer = vec![0u8; buffer_size];
+        let bytes_received = recv(socket, buffer.as_mut_ptr() as *mut c_void, buffer_size, 0);
+        if bytes_received == -1 {
+            let err_code = std::io::Error::last_os_error().raw_os_error().unwrap();
+            panic!("Failed to receive data, errno = {:?}", err_code);
+        }
+
+        println!("Received {} bytes", bytes_received);
+        let received_data = String::from_utf8_lossy(&buffer[..bytes_received as usize]).to_string();
+
+        // Assuming `Object` has a constructor for strings
+        // return Object::String(received_data);
+        println!("got data {}", received_data);
+        return Object::I64(12);
+    }
 }
 
 #[no_mangle]

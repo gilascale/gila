@@ -221,7 +221,10 @@ impl Object {
     pub fn as_i64(&self) -> Result<i64, RuntimeError> {
         match &self {
             Self::I64(i) => Ok(*i),
-            _ => Err(RuntimeError::INVALID_TYP),
+            _ => {
+                println!("tried to unwrap us to i64 {:?}", self);
+                return Err(RuntimeError::INVALID_TYP);
+            }
         }
     }
 

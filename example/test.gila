@@ -12,11 +12,8 @@ dll.initialise()
 
 socket = dll.create_socket()
 
-print(socket)
-
+print("got socket "+socket)
 
 dll.listen_socket(socket, 8080)
-
 data = dll.receive_socket(socket)
-
 dll.deinit()
