@@ -58,6 +58,7 @@ v.display()
 
 ### Bugs
 
+- multiple args is broken... the slots are not in the right order.
 - we are loading DLLs twice
 - cant call returned functions i.e. some_fn()()
 - the prelude is being added into the dumped bytecode file as its the same line

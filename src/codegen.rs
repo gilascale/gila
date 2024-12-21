@@ -107,6 +107,7 @@ pub enum OpInstruction {
     BUILD_FN,
     // INDEX <item> <index> <destination>
     INDEX,
+    // STRUCT_ACCESS <obj> <member> <dest>
     STRUCT_ACCESS,
     // STRUCT_SET <obj> <member> <value>
     // we store the result in arg_1 which is the member string
@@ -249,11 +250,6 @@ impl SlotManager {
         }
     }
 
-    pub fn make_slot_perminant(&mut self, slot: u8) {
-        self.allocated_perm.insert(slot);
-        self.allocated.remove(&slot);
-    }
-
     /// Allocate a temporary slot
     pub fn allocate_slot(&mut self) -> u8 {
         if let Some(slot) = self.free_slots.pop() {
@@ -269,6 +265,13 @@ impl SlotManager {
     /// Allocate a permanent slot
     pub fn allocate_perm_slot(&mut self) -> u8 {
         let new_slot = self.next_available_slot();
+        // todo this is a hack, we need to rewrite this system
+        for i in 0..self.free_slots.len() {
+            if self.free_slots[i] == new_slot {
+                self.free_slots.remove(i);
+                break;
+            }
+        }
         self.allocated_perm.insert(new_slot);
         new_slot
     }
@@ -923,12 +926,12 @@ impl BytecodeGenerator<'_> {
                 let location = self.visit(annotation_context, &v);
 
                 let var_location = alloc_perm_slot!(self);
-                free_slot!(self, location);
 
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
                     .insert(var.typ.clone(), var_location);
 
+                println!("putting var in perm slot {:?}", var_location);
                 self.push_instruction(
                     Instruction {
                         op_instruction: OpInstruction::MOV,
@@ -939,6 +942,7 @@ impl BytecodeGenerator<'_> {
                     pos.line.try_into().unwrap(),
                 );
 
+                free_slot!(self, location);
                 return var_location;
             }
             None => panic!(),
@@ -1606,6 +1610,7 @@ impl BytecodeGenerator<'_> {
             let lhs = self.visit(annotation_context.clone(), &expr);
             let field = self.create_constant_string(i.to_string(), &expr.position);
             let register = alloc_slot!(self);
+            println!("got destination for STRUCT_ACCESS {:?}", register);
             self.push_instruction(
                 Instruction {
                     op_instruction: OpInstruction::STRUCT_ACCESS,
