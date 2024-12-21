@@ -1325,6 +1325,9 @@ impl BytecodeGenerator<'_> {
 
             // todo find a register to put the args into!!!
 
+            let allocated_destination = alloc_slot!(self);
+            arg_registers.push(allocated_destination);
+
             let new_arg_registers = find_contiguous_slots!(self, &arg_registers);
 
             for i in 0..arg_registers.len() {
@@ -1345,12 +1348,14 @@ impl BytecodeGenerator<'_> {
                 }
             }
 
+            let new_allocated_destination = new_arg_registers[new_arg_registers.len() - 1];
+
             let first_arg_register: u8 = {
                 if new_arg_registers.len() > 0 {
                     new_arg_registers[0]
                 } else {
                     // if we have no args, just encode the destination!
-                    alloc_slot!(self)
+                    new_allocated_destination
                 }
             };
 
@@ -1389,7 +1394,8 @@ impl BytecodeGenerator<'_> {
                 for slot in &arg_registers {
                     free_slot!(self, *slot);
                 }
-                for i in first_arg_register + 1..first_arg_register + new_arg_registers.len() as u8
+                for i in
+                    first_arg_register + 1..first_arg_register + new_arg_registers.len() as u8 + 1
                 {
                     free_slot!(self, i);
                 }
@@ -1410,10 +1416,12 @@ impl BytecodeGenerator<'_> {
                 for slot in &arg_registers {
                     free_slot!(self, *slot);
                 }
-                for i in first_arg_register + 1..first_arg_register + arg_registers.len() as u8 {
+                // we -1 because the destination is in here
+                for i in first_arg_register + 1..first_arg_register + arg_registers.len() as u8 - 1
+                {
                     free_slot!(self, i);
                 }
-                return first_arg_register;
+                return new_allocated_destination;
             }
         }
     }

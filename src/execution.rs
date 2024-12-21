@@ -1434,17 +1434,16 @@ impl<'a> ExecutionEngine<'a> {
         let unrwapped = dereferenced_data.unwrap();
         match &unrwapped {
             GCRefData::FN(f) => {
-                let destination = call.arg_1;
+                // pass the args by value
+                let starting_reg = call.arg_1;
+                let num_args = call.arg_2;
+                let destination = starting_reg + num_args;
 
                 // fixme this sucks, we shouldn't clone functions it's so expensive
                 // fixme why is this a Box?
                 self.push_stack_frame(Box::new(f.clone()), destination);
                 self.zero_stack();
                 self.init_constants();
-
-                // pass the args by value
-                let starting_reg = call.arg_1;
-                let num_args = call.arg_2;
 
                 let mut start = 0;
                 if f.bounded_object.is_some() {
@@ -1467,9 +1466,9 @@ impl<'a> ExecutionEngine<'a> {
             }
 
             GCRefData::GILA_ABI_FUNCTION_OBJECT(native_fn) => {
-                let destination = call.arg_1;
                 let starting_reg = call.arg_1;
                 let num_args = call.arg_2;
+                let destination = call.arg_1 + num_args;
 
                 let mut args: Vec<Object> = vec![];
 
@@ -1524,19 +1523,11 @@ impl<'a> ExecutionEngine<'a> {
 
                 let result = native_fn(self.shared_execution_context, self.environment, args);
 
-                let destination = {
-                    if instr.arg_2 > 0 {
-                        instr.arg_1 + instr.arg_2
-                    } else {
-                        instr.arg_1.into()
-                    }
-                };
+                let destination = instr.arg_1 + instr.arg_2;
 
                 stack_set!(self, destination, result.clone());
-                // self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                //     [destination as usize] = result.clone();
 
-                return Ok(instr.arg_2 + instr.arg_2);
+                return Ok(instr.arg_1 + instr.arg_2);
             }
         }
         increment_ip!(self);
