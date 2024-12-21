@@ -5,13 +5,4 @@
 maths = import std.maths
 
 
-
-
-print(maths)
-print(maths)
-print(maths)
-print(maths)
-print(maths)
-print(maths)
-print(maths)
-print(maths)
+print("hi "+maths.Vec.x)
