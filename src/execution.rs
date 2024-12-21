@@ -2103,18 +2103,18 @@ impl<'a> ExecutionEngine<'a> {
                         // paths are the areas that we can find the module
                         let paths = vec!["./".to_string()];
                         for path in paths {
+                            let cloned = path.clone();
+                            let split = cloned.split(".").collect::<Vec<&str>>();
+                            let last_module = split[split.len() - 1];
                             let full_path = path + &s.s.replace(".", "/");
                             let mut full_path_with_extension = full_path.to_string();
                             full_path_with_extension.push_str(".gila");
-                            println!("full path {}", full_path);
 
+                            // todo alot of duplicate code here
                             if fs::metadata(full_path.to_string())
                                 .map(|m| m.is_dir())
                                 .unwrap_or(false)
                             {
-                                println!("1..");
-                                // todo compile!
-
                                 let mut module_objects: HashMap<String, Object> = HashMap::new();
 
                                 for file in fs::read_dir(full_path).unwrap() {
@@ -2194,7 +2194,8 @@ impl<'a> ExecutionEngine<'a> {
 
                                 let mut compiler = Compiler::new();
                                 let compilation_context = compiler.compile_and_exec(
-                                    "maths".to_string(),
+                                    // todo fix this
+                                    last_module.to_string(),
                                     code,
                                     &self.config,
                                     &mut self.shared_execution_context,
