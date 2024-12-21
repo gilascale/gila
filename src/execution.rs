@@ -1552,11 +1552,10 @@ impl<'a> ExecutionEngine<'a> {
             .constant_pool[load_const.arg_0 as usize];
 
         self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-            [load_const.arg_2 as usize] = const_obj.clone();
-        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
-            1;
+            [load_const.arg_1 as usize] = const_obj.clone();
+        increment_ip!(self);
 
-        Ok(load_const.arg_2)
+        Ok(load_const.arg_1)
     }
 
     fn exec_if_jmp_false(&mut self, if_jmp_else: &Instruction) -> Result<u8, RuntimeError> {

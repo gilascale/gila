@@ -93,7 +93,7 @@ pub enum OpInstruction {
 
     // NATIVE_CALL <name of fn string> <args starting register> <num args> <destination is implicitly the register after>
     NATIVE_CALL,
-    // LOAD_CONST <constant index> <> <destination>
+    // LOAD_CONST <constant index> <destination>
     LOAD_CONST,
     // JUMP IF ITS FALSE
     IF_JMP_FALSE, // IF <value> <jump to instruction> <>
@@ -131,6 +131,52 @@ pub struct Instruction {
     pub arg_0: u8,
     pub arg_1: u8,
     pub arg_2: u8,
+}
+
+impl Instruction {
+    pub fn to_string(&self) -> String {
+        match self.op_instruction {
+            OpInstruction::BUILD_FN => format!(
+                "{:>75}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1)
+            ),
+            OpInstruction::MOV => format!(
+                "{:>75}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1)
+            ),
+            OpInstruction::LOAD_CONST => format!(
+                "{:>75}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1)
+            ),
+            OpInstruction::CALL => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("{}", self.arg_2)
+            ),
+            OpInstruction::STRUCT_ACCESS => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            _ => format!(
+                "{:>75}{:5?}{:5?}{:5?}\n",
+                format!("{:?}", self.op_instruction),
+                self.arg_0,
+                self.arg_1,
+                self.arg_2
+            ),
+        }
+    }
 }
 
 // todo custom DeepSizeOf because the other stuff doesn't mattter
@@ -193,16 +239,7 @@ impl Chunk {
             let all_instructions = lines_for_instr.get(&i);
             if all_instructions.is_some() {
                 for instr in all_instructions.unwrap() {
-                    s.push_str(
-                        format!(
-                            "{:>75}{:5?}{:5?}{:5?}\n",
-                            format!("{:?}", instr.op_instruction),
-                            instr.arg_0,
-                            instr.arg_1,
-                            instr.arg_2
-                        )
-                        .as_str(),
-                    );
+                    s.push_str(&instr.to_string().as_str());
                 }
             }
             i += 1;
@@ -652,8 +689,8 @@ impl BytecodeGenerator<'_> {
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
                 arg_0: constant_idx,
-                arg_1: 0,
-                arg_2: const_reg,
+                arg_1: const_reg,
+                arg_2: 0,
             },
             position.line as usize,
         );
@@ -738,8 +775,8 @@ impl BytecodeGenerator<'_> {
                     Instruction {
                         op_instruction: OpInstruction::LOAD_CONST,
                         arg_0: constant_idx,
-                        arg_1: 0,
-                        arg_2: dest,
+                        arg_1: dest,
+                        arg_2: 0,
                     },
                     pos.line as usize,
                 );
@@ -764,8 +801,8 @@ impl BytecodeGenerator<'_> {
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
                 arg_0: const_index,
-                arg_1: 0,
-                arg_2: reg,
+                arg_1: reg,
+                arg_2: 0,
             },
             pos.line.try_into().unwrap(),
         );
@@ -787,8 +824,8 @@ impl BytecodeGenerator<'_> {
                 Instruction {
                     op_instruction: OpInstruction::LOAD_CONST,
                     arg_0: const_index,
-                    arg_1: 0,
-                    arg_2: reg,
+                    arg_1: reg,
+                    arg_2: 0,
                 },
                 pos.line.try_into().unwrap(),
             );
@@ -830,8 +867,8 @@ impl BytecodeGenerator<'_> {
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
                 arg_0: constant,
-                arg_1: 0,
-                arg_2: dest,
+                arg_1: dest,
+                arg_2: 0,
             },
             position.line as usize,
         );
@@ -1030,8 +1067,8 @@ impl BytecodeGenerator<'_> {
                         Instruction {
                             op_instruction: OpInstruction::LOAD_CONST,
                             arg_0: const_index,
-                            arg_1: 0,
-                            arg_2: name_reg,
+                            arg_1: name_reg,
+                            arg_2: 0,
                         },
                         pos.line as usize,
                     );
@@ -1141,8 +1178,8 @@ impl BytecodeGenerator<'_> {
                     Instruction {
                         op_instruction: OpInstruction::LOAD_CONST,
                         arg_0: constant_idx,
-                        arg_1: 0,
-                        arg_2: const_reg,
+                        arg_1: const_reg,
+                        arg_2: 0,
                     },
                     pos.line as usize,
                 );
@@ -1378,8 +1415,8 @@ impl BytecodeGenerator<'_> {
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
                 arg_0: constant,
-                arg_1: 0,
-                arg_2: location,
+                arg_1: location,
+                arg_2: 0,
             },
             token.pos.line.try_into().unwrap(),
         );
@@ -1476,8 +1513,8 @@ impl BytecodeGenerator<'_> {
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
                 arg_0: index,
-                arg_1: 0,
-                arg_2: reg,
+                arg_1: reg,
+                arg_2: 0,
             },
             token.pos.line.try_into().unwrap(),
         );
