@@ -440,6 +440,9 @@ impl SlotManager {
     // [5,6,8] -> [9,10,11]
     // [8,10,11] -> [12,13,14]
     pub fn find_contiguous_slots(&mut self, existing_slots: &Vec<u8>) -> Vec<u8> {
+        if existing_slots.len() == 0 {
+            return existing_slots.clone();
+        }
         // Find the next unused slot (incrementally grow slot numbers)
 
         // start at the current first slot, we want to check this first which

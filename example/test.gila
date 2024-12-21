@@ -1,11 +1,9 @@
 
 
-example fn(x:u32,y:u32) do
-    return x+y
+
+
+foo fn() do
+    return "hi"
 end
 
-
-
-result=example(44,55)
-print(result)
-
+foo()
