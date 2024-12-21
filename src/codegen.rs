@@ -1125,6 +1125,10 @@ impl BytecodeGenerator<'_> {
             let mut kwarg_strings: Vec<Object> = vec![];
             let mut num_kwargs = 0;
 
+            // todo args are currently not in successive registers.
+            // tod fix this we have a few options.
+            // 1. pass args by a tuple for every call
+            // 2. find a successive block of registers, and do MOV to put args there
             let mut arg_registers: Vec<u8> = vec![];
             for arg in args {
                 match &arg.statement {
