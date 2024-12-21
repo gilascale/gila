@@ -456,7 +456,7 @@ impl SlotManager {
             }
             if found {
                 let mut slots: Vec<u8> = vec![];
-                for k in i..existing_slots.len() as u8 {
+                for k in i..i + existing_slots.len() as u8 {
                     self.take_slot(k);
                     slots.push(k);
                 }
@@ -1322,28 +1322,24 @@ impl BytecodeGenerator<'_> {
 
             // todo find a register to put the args into!!!
 
-            let contiguous_slot = find_contiguous_slots!(self, &arg_registers);
+            let new_arg_registers = find_contiguous_slots!(self, &arg_registers);
 
-            let mut new_arg_registers: Vec<u8> = vec![];
             for i in 0..arg_registers.len() {
                 let current_arg_reg = arg_registers[i];
-                let new_reg = contiguous_slot + i as u8;
+                let new_reg = new_arg_registers[i];
 
                 if current_arg_reg != new_reg {
-                    take_slot!(self, new_reg);
                     // allocate the slot and do a MOV
                     self.push_instruction(
                         Instruction {
                             op_instruction: OpInstruction::MOV,
                             arg_0: current_arg_reg,
-                            arg_1: contiguous_slot + i as u8,
+                            arg_1: new_reg,
                             arg_2: 0,
                         },
                         pos.line as usize,
                     );
                 }
-
-                new_arg_registers.push(new_reg);
             }
 
             let first_arg_register: u8 = {

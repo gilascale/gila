@@ -1,13 +1,11 @@
 
 
-foo fn(x:u32,y:u32) do
-    print(x)
-    print(y)
-    return y
+example fn(x:u32,y:u32) do
+    return x+y
 end
 
-foo(55,44)
-foo(66,77)
-foo(88,99)
 
+
+result=example(44,55)
+print(result)
 
