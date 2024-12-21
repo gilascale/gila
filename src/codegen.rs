@@ -434,15 +434,15 @@ impl SlotManager {
         }
     }
 
-    pub fn find_contiguous_slots(&mut self, num: u8) -> u8 {
+    pub fn find_contiguous_slots(&mut self, existing_slots: &Vec<u8>) -> u8 {
         // Find the next unused slot (incrementally grow slot numbers)
 
         for i in 0..255 {
             let mut counter = 0;
-            while !self.is_allocated(i + counter) && counter < num {
+            while !self.is_allocated(i + counter) && counter < existing_slots.len() as u8 {
                 counter += 1;
             }
-            if counter == num {
+            if counter == existing_slots.len() as u8 {
                 return i;
             }
         }
@@ -1294,7 +1294,7 @@ impl BytecodeGenerator<'_> {
 
             // todo find a register to put the args into!!!
 
-            let contiguous_slot = find_contiguous_slots!(self, arg_registers.len() as u8);
+            let contiguous_slot = find_contiguous_slots!(self, &arg_registers);
 
             let mut new_arg_registers: Vec<u8> = vec![];
             for i in 0..arg_registers.len() {

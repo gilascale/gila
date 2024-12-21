@@ -1,8 +1,10 @@
 
 
 foo fn(x:u32,y:u32) do
+    print(x)
     return y
 end
 
-a=foo(55,44)
-b=foo(66,77)
+foo(55,44)
+foo(66,77)
+foo(88,99)
