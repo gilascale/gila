@@ -53,11 +53,19 @@ macro_rules! alloc_perm_slot {
     };
 }
 
-macro_rules! make_slot_perminant {
-    ($self:expr,$slot:expr) => {
+macro_rules! find_contiguous_slots {
+    ($self:expr,$num:expr) => {
         $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer]
             .slot_manager
-            .make_slot_perminant($slot)
+            .find_contiguous_slots($num)
+    };
+}
+
+macro_rules! take_slot {
+    ($self:expr,$num:expr) => {
+        $self.codegen_context.chunks[$self.codegen_context.current_chunk_pointer]
+            .slot_manager
+            .take_slot($num)
     };
 }
 
@@ -144,10 +152,9 @@ impl Instruction {
                 format!("r{}", self.arg_2)
             ),
             OpInstruction::BUILD_FN => format!(
-                "{:>75}{:>5}{:>5}\n",
+                "{:>75}{:>5}\n",
                 format!("{:?}", self.op_instruction),
                 format!("r{}", self.arg_0),
-                format!("r{}", self.arg_1)
             ),
             OpInstruction::MOV => format!(
                 "{:>75}{:>5}{:>5}\n",
@@ -325,6 +332,31 @@ impl SlotManager {
         // Do not free permanent slots
         if self.allocated.remove(&slot) {
             self.free_slots.push(slot);
+        }
+    }
+
+    pub fn find_contiguous_slots(&mut self, num: u8) -> u8 {
+        // Find the next unused slot (incrementally grow slot numbers)
+
+        for i in 0..255 {
+            let mut counter = 0;
+            while !self.is_allocated(i + counter) && counter < num {
+                counter += 1;
+            }
+            if counter == num {
+                return i;
+            }
+        }
+        panic!();
+    }
+
+    pub fn take_slot(&mut self, slot: u8) {
+        self.allocated.insert(slot);
+        for i in 0..self.free_slots.len() {
+            if self.free_slots[i] == slot {
+                self.free_slots.remove(i);
+                break;
+            }
         }
     }
 
@@ -1164,9 +1196,35 @@ impl BytecodeGenerator<'_> {
             }
             num_kwargs = kwarg_strings.len();
 
+            // todo find a register to put the args into!!!
+
+            let contiguous_slot = find_contiguous_slots!(self, arg_registers.len() as u8);
+
+            let mut new_arg_registers: Vec<u8> = vec![];
+            for i in 0..arg_registers.len() {
+                let current_arg_reg = arg_registers[i];
+                let new_reg = contiguous_slot + i as u8;
+
+                if current_arg_reg != new_reg {
+                    take_slot!(self, new_reg);
+                    // allocate the slot and do a MOV
+                    self.push_instruction(
+                        Instruction {
+                            op_instruction: OpInstruction::MOV,
+                            arg_0: current_arg_reg,
+                            arg_1: contiguous_slot + i as u8,
+                            arg_2: 0,
+                        },
+                        pos.line as usize,
+                    );
+                }
+
+                new_arg_registers.push(new_reg);
+            }
+
             let first_arg_register: u8 = {
-                if arg_registers.len() > 0 {
-                    arg_registers[0]
+                if new_arg_registers.len() > 0 {
+                    new_arg_registers[0]
                 } else {
                     // if we have no args, just encode the destination!
                     alloc_slot!(self)
@@ -1204,9 +1262,10 @@ impl BytecodeGenerator<'_> {
                     pos.line as usize,
                 );
 
-                // todo free slots
+                // todo free the original moved-slots
                 free_slot!(self, callee_register);
-                for i in first_arg_register + 1..first_arg_register + arg_registers.len() as u8 {
+                for i in first_arg_register + 1..first_arg_register + new_arg_registers.len() as u8
+                {
                     free_slot!(self, i);
                 }
 

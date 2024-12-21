@@ -96,6 +96,8 @@ pub extern "C" fn listen_socket(
     let socket = args[0].as_i64().unwrap() as c_int;
     let port = args[1].as_i64().unwrap() as c_int;
 
+    println!("listening on socket {:?} on port {:?}", socket, port);
+
     // Create and populate the sockaddr_in struct
     let mut addr = sockaddr_in {
         sin_family: AF_INET as u16,
