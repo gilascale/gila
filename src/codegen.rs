@@ -1407,7 +1407,7 @@ impl BytecodeGenerator<'_> {
                         op_instruction: OpInstruction::CALL,
                         arg_0: callee_register,
                         arg_1: first_arg_register,
-                        arg_2: arg_registers.len() as u8,
+                        arg_2: arg_registers.len() as u8 - 1,
                     },
                     pos.line as usize,
                 );
