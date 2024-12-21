@@ -1,6 +1,6 @@
 use deepsize::DeepSizeOf;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     rc::Rc,
     vec,
 };
@@ -278,11 +278,110 @@ pub struct AnnotationContext {
     pub annotations: Vec<Annotation>,
 }
 
+// #[derive(Debug, Clone)]
+// pub struct SlotManager {
+//     allocated: HashSet<u8>,      // Tracks currently allocated temporary slots
+//     allocated_perm: HashSet<u8>, // Tracks currently allocated permanent slots
+//     free_slots: Vec<u8>,         // Reusable slots (stack for LIFO reuse)
+// }
+
+// impl DeepSizeOf for SlotManager {
+//     // todo
+//     fn deep_size_of_children(&self, context: &mut deepsize::Context) -> usize {
+//         0
+//     }
+// }
+
+// impl SlotManager {
+//     pub fn new() -> Self {
+//         SlotManager {
+//             allocated: HashSet::new(),
+//             allocated_perm: HashSet::new(),
+//             free_slots: Vec::new(),
+//         }
+//     }
+
+//     /// Allocate a temporary slot
+//     pub fn allocate_slot(&mut self) -> u8 {
+//         if let Some(slot) = self.free_slots.pop() {
+//             self.allocated.insert(slot);
+//             slot
+//         } else {
+//             let new_slot = self.next_available_slot();
+//             self.allocated.insert(new_slot);
+//             new_slot
+//         }
+//     }
+
+//     /// Allocate a permanent slot
+//     pub fn allocate_perm_slot(&mut self) -> u8 {
+//         let new_slot = self.next_available_slot();
+//         // todo this is a hack, we need to rewrite this system
+//         for i in 0..self.free_slots.len() {
+//             if self.free_slots[i] == new_slot {
+//                 self.free_slots.remove(i);
+//                 break;
+//             }
+//         }
+//         self.allocated_perm.insert(new_slot);
+//         new_slot
+//     }
+
+//     /// Free a temporary slot
+//     pub fn free_slot(&mut self, slot: u8) {
+//         // Do not free permanent slots
+//         if self.allocated.remove(&slot) {
+//             self.free_slots.push(slot);
+//         }
+//     }
+
+//     pub fn find_contiguous_slots(&mut self, num: u8) -> u8 {
+//         // Find the next unused slot (incrementally grow slot numbers)
+
+//         for i in 0..255 {
+//             let mut counter = 0;
+//             while !self.is_allocated(i + counter) && counter < num {
+//                 counter += 1;
+//             }
+//             if counter == num {
+//                 return i;
+//             }
+//         }
+//         panic!();
+//     }
+
+//     pub fn take_slot(&mut self, slot: u8) {
+//         self.allocated.insert(slot);
+//         for i in 0..self.free_slots.len() {
+//             if self.free_slots[i] == slot {
+//                 self.free_slots.remove(i);
+//                 break;
+//             }
+//         }
+//     }
+
+//     /// Check if a slot is allocated (temporary or permanent)
+//     pub fn is_allocated(&self, slot: u8) -> bool {
+//         self.allocated.contains(&slot) || self.allocated_perm.contains(&slot)
+//     }
+
+//     /// Determine the next available slot
+//     fn next_available_slot(&self) -> u8 {
+//         // Find the next unused slot (incrementally grow slot numbers)
+//         let mut new_slot = 0;
+//         while self.is_allocated(new_slot) {
+//             // println!("checking new slot {}", new_slot);
+//             new_slot += 1;
+//         }
+//         new_slot
+//     }
+// }
+
 #[derive(Debug, Clone)]
 pub struct SlotManager {
     allocated: HashSet<u8>,      // Tracks currently allocated temporary slots
     allocated_perm: HashSet<u8>, // Tracks currently allocated permanent slots
-    free_slots: Vec<u8>,         // Reusable slots (stack for LIFO reuse)
+    free_slots: VecDeque<u8>,    // Reusable slots (stack for LIFO reuse)
 }
 
 impl DeepSizeOf for SlotManager {
@@ -297,13 +396,13 @@ impl SlotManager {
         SlotManager {
             allocated: HashSet::new(),
             allocated_perm: HashSet::new(),
-            free_slots: Vec::new(),
+            free_slots: VecDeque::new(),
         }
     }
 
     /// Allocate a temporary slot
     pub fn allocate_slot(&mut self) -> u8 {
-        if let Some(slot) = self.free_slots.pop() {
+        if let Some(slot) = self.free_slots.pop_front() {
             self.allocated.insert(slot);
             slot
         } else {
@@ -331,7 +430,7 @@ impl SlotManager {
     pub fn free_slot(&mut self, slot: u8) {
         // Do not free permanent slots
         if self.allocated.remove(&slot) {
-            self.free_slots.push(slot);
+            self.free_slots.push_back(slot);
         }
     }
 
@@ -573,7 +672,6 @@ impl BytecodeGenerator<'_> {
     fn gen_program(&mut self, annotation_context: AnnotationContext, p: &Vec<ASTNode>) -> u8 {
         for instruction in p {
             let result_slot = self.visit(annotation_context.clone(), instruction);
-            println!("program freeing slot {}", result_slot);
             free_slot!(self, result_slot);
         }
         alloc_slot!(self)
@@ -1282,7 +1380,6 @@ impl BytecodeGenerator<'_> {
                 );
 
                 free_slot!(self, callee_register);
-                println!("freeing call... {}", arg_registers.len());
                 for slot in &arg_registers {
                     free_slot!(self, *slot);
                 }
