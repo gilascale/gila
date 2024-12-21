@@ -434,18 +434,46 @@ impl SlotManager {
         }
     }
 
-    pub fn find_contiguous_slots(&mut self, existing_slots: &Vec<u8>) -> u8 {
+    // given an array of existing slots i.e. [5,6,7],
+    // return an array of contiguous slots that best match it.
+    // [5,6,7] -> [5,6,7]
+    // [5,6,8] -> [9,10,11]
+    // [8,10,11] -> [12,13,14]
+    pub fn find_contiguous_slots(&mut self, existing_slots: &Vec<u8>) -> Vec<u8> {
         // Find the next unused slot (incrementally grow slot numbers)
 
-        for i in 0..255 {
-            let mut counter = 0;
-            while !self.is_allocated(i + counter) && counter < existing_slots.len() as u8 {
-                counter += 1;
+        // start at the current first slot, we want to check this first which
+        // will allow us to optimise. this does mean if we don't find a match at first
+        // then we will always use subsequently bigger slots
+        for i in existing_slots[0]..255 {
+            let mut found = true;
+            for j in 0..existing_slots.len() {
+                let slot = i + j as u8;
+                // if the slot isn't free and were not already using it then its not valid
+                if self.is_allocated(slot) && slot != existing_slots[j] {
+                    found = false;
+                }
             }
-            if counter == existing_slots.len() as u8 {
-                return i;
+            if found {
+                let mut slots: Vec<u8> = vec![];
+                for k in i..existing_slots.len() as u8 {
+                    self.take_slot(k);
+                    slots.push(k);
+                }
+
+                return slots;
             }
         }
+
+        // for i in 0..255 {
+        //     let mut counter = 0;
+        //     while !self.is_allocated(i + counter) && counter < existing_slots.len() as u8 {
+        //         counter += 1;
+        //     }
+        //     if counter == existing_slots.len() as u8 {
+        //         return i;
+        //     }
+        // }
         panic!();
     }
 

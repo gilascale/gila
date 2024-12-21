@@ -2,9 +2,12 @@
 
 foo fn(x:u32,y:u32) do
     print(x)
+    print(y)
     return y
 end
 
 foo(55,44)
 foo(66,77)
 foo(88,99)
+
+
