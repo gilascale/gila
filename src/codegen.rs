@@ -572,10 +572,8 @@ impl BytecodeGenerator<'_> {
 
     fn gen_program(&mut self, annotation_context: AnnotationContext, p: &Vec<ASTNode>) -> u8 {
         for instruction in p {
-            // todo
-            //
-            // so... we WANT to do this, we just need to make sure defines/assigns are PERMINANT slots
             let result_slot = self.visit(annotation_context.clone(), instruction);
+            println!("program freeing slot {}", result_slot);
             free_slot!(self, result_slot);
         }
         alloc_slot!(self)
@@ -1262,8 +1260,10 @@ impl BytecodeGenerator<'_> {
                     pos.line as usize,
                 );
 
-                // todo free the original moved-slots
                 free_slot!(self, callee_register);
+                for slot in &arg_registers {
+                    free_slot!(self, *slot);
+                }
                 for i in first_arg_register + 1..first_arg_register + new_arg_registers.len() as u8
                 {
                     free_slot!(self, i);
@@ -1282,6 +1282,10 @@ impl BytecodeGenerator<'_> {
                 );
 
                 free_slot!(self, callee_register);
+                println!("freeing call... {}", arg_registers.len());
+                for slot in &arg_registers {
+                    free_slot!(self, *slot);
+                }
                 for i in first_arg_register + 1..first_arg_register + arg_registers.len() as u8 {
                     free_slot!(self, i);
                 }
