@@ -1400,7 +1400,7 @@ impl BytecodeGenerator<'_> {
                     free_slot!(self, i);
                 }
 
-                return const_reg;
+                return new_allocated_destination;
             } else {
                 self.push_instruction(
                     Instruction {
