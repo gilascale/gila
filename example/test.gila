@@ -2,7 +2,16 @@
 
 
 
+maths = import std.maths
 
 
 
-print(import std.maths)
+
+print(maths)
+print(maths)
+print(maths)
+print(maths)
+print(maths)
+print(maths)
+print(maths)
+print(maths)
