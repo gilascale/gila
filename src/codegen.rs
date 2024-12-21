@@ -975,7 +975,6 @@ impl BytecodeGenerator<'_> {
                     .variable_map
                     .insert(var.typ.clone(), var_location);
 
-                println!("putting var in perm slot {:?}", var_location);
                 self.push_instruction(
                     Instruction {
                         op_instruction: OpInstruction::MOV,
