@@ -4,10 +4,15 @@
 
 
 
-foo fn() -> string do
-    return "hi"
+
+
+Result type
+    data: any
 end
 
-x=foo()
+foo fn(x:string) -> Result do
+    return Result(data=x)
+end
 
-print(x)
+x = !foo("hi")
+

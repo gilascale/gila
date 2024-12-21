@@ -706,6 +706,7 @@ impl<'a> Parser<'a> {
                     _ => panic!(),
                 };
             }
+            Type::ANY => t = DataType::ANY,
             Type::STRING => t = DataType::STRING,
             Type::BOOL => t = DataType::BOOL,
             Type::U32 => t = DataType::U32,

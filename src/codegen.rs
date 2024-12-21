@@ -1676,6 +1676,7 @@ impl BytecodeGenerator<'_> {
     fn atom_from_type(&self, data_type: DataType) -> Object {
         match data_type {
             // todo use object "types" rather than atoms
+            DataType::ANY => Object::ATOM(Rc::new("any".to_string())),
             DataType::U32 => Object::ATOM(Rc::new("u32".to_string())),
             DataType::SLICE(t) => Object::ATOM(Rc::new("slice".to_string())),
             DataType::NAMED_REFERENCE(d) => Object::ATOM(Rc::new(d.to_string())),
@@ -1893,6 +1894,8 @@ impl BytecodeGenerator<'_> {
     fn gen_try(&mut self, mut annotation_context: AnnotationContext, rhs: &ASTNode) -> u8 {
         // first generate the rhs
         let rhs_reg = self.visit(annotation_context, rhs);
+
+        // rhs_reg will be a result, so we want to struct access
 
         // todo we need to now insert some code that checks the result
 

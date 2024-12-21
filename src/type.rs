@@ -9,6 +9,7 @@ use std::rc::Rc;
 #[derive(Debug, Clone, PartialEq)]
 pub enum DataType {
     VOID,
+    ANY,
     U32,
     BOOL,
     STRING,

@@ -87,7 +87,7 @@ v.display()
 
 ### Language Features
 
-- import supports . in it
+- capturing in closures
 - easy way to add builtin modules/files (i.e. socket library)
 - groups i.e. 3 + (4+3)
 - garbage collection

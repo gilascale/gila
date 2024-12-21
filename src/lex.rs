@@ -41,6 +41,7 @@ pub enum Type {
     LESS_EQ,
     OR,
     AND,
+    ANY,
     COMMA,
     ASSIGN,
     EQUALS,
@@ -517,6 +518,20 @@ impl Lexer {
                         });
                         self.counter += 5;
                         self.index += 5;
+                    } else if chars[self.counter as usize + 1] == 'n'
+                        && chars[self.counter as usize + 2] == 'y'
+                    {
+                        v.push(Token {
+                            typ: Type::ANY,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 3,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 2;
+                        self.index += 2;
                     } else {
                         self.identifier(&chars, &mut v);
                         continue;
