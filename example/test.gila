@@ -14,21 +14,5 @@ end
 
 Result = Error | Data
 
+print(Result)
 
-
-u = Union(types=[Error,Data])
-
-
-print(u)
-
-
-// foo fn(x:string) -> Result do
-//     return Result(data=x)
-// end
-
-// x = !foo("hi")
-
-
-// e = Error(msg="there has been an error")
-
-// print(e)

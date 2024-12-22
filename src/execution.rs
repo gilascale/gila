@@ -188,6 +188,20 @@ pub enum Object {
 }
 
 impl Object {
+    pub fn create_slice(
+        shared_execution_context: &mut SharedExecutionContext,
+        config: &Config,
+        objects: Vec<Object>,
+    ) -> Result<Object, RuntimeError> {
+        let gc_ref_data = GCRefData::SLICE(SliceObject { s: objects });
+        let alloc_res = shared_execution_context.heap.alloc(gc_ref_data, config);
+
+        if alloc_res.is_err() {
+            return Err(alloc_res.err().unwrap());
+        }
+
+        Ok(Object::GC_REF(alloc_res.unwrap()))
+    }
     // pub fn create_heap_obj(heap_obj_data: HeapObjectData) -> Self {
     //     Object::HEAP_OBJECT(Box::new(HeapObject {
     //         data: heap_obj_data,
@@ -1262,14 +1276,50 @@ impl<'a> ExecutionEngine<'a> {
         Ok(greater.arg_2)
     }
 
-    fn exec_bitwise_or(&mut self, greater: &Instruction) -> Result<u8, RuntimeError> {
-        let lhs = stack_access!(self, greater.arg_0);
-        let rhs = stack_access!(self, greater.arg_1);
+    fn create_dynamic_object(
+        &mut self,
+        fields: HashMap<String, Object>,
+    ) -> Result<Object, RuntimeError> {
+        let gc_ref_data = GCRefData::DYNAMIC_OBJECT(DynamicObject { fields });
+        let gc_ref_result = self
+            .shared_execution_context
+            .heap
+            .alloc(gc_ref_data, &self.config);
+        match gc_ref_result {
+            Ok(gc_ref) => Ok(Object::GC_REF(gc_ref)),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn exec_bitwise_or(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let lhs = stack_access!(self, instr.arg_0);
+        let rhs = stack_access!(self, instr.arg_1);
 
         if lhs.is_type_definition(self.shared_execution_context)
             && rhs.is_type_definition(self.shared_execution_context)
         {
             println!("whooo doing union type");
+
+            let mut fields: HashMap<String, Object> = HashMap::new();
+
+            let slicee = Object::create_slice(
+                &mut self.shared_execution_context,
+                &self.config,
+                vec![lhs.clone(), rhs.clone()],
+            );
+
+            if slicee.is_err() {
+                return Err(slicee.err().unwrap());
+            }
+
+            fields.insert("types".to_string(), slicee.unwrap());
+
+            let obj = self.create_dynamic_object(fields);
+
+            if obj.is_err() {
+                return Err(obj.err().unwrap());
+            }
+            stack_set!(self, instr.arg_2, obj.unwrap());
         }
         // todo we need to check if the lhs and rhs are types?
 
@@ -1278,7 +1328,7 @@ impl<'a> ExecutionEngine<'a> {
         // stack_set!(self, greater.arg_2, Object::BOOL(result));
         increment_ip!(self);
 
-        Ok(greater.arg_2)
+        Ok(instr.arg_2)
     }
 
     fn exec_addi(&mut self, addi: &Instruction) -> Result<u8, RuntimeError> {
