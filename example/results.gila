@@ -1,13 +1,3 @@
-Error type
-    msg: string
-end
-
-Data type
-    data: any
-end
-
-Result = Error | Data
-
 foo fn(x: bool) -> Result do
     if x == true do
         return Result(Data=Data(data="[some data]"))
