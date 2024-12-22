@@ -1546,6 +1546,7 @@ impl BytecodeGenerator<'_> {
                         Op::LE => OpInstruction::LESS_EQUAL,
                         Op::LOGICAL_OR => OpInstruction::LOGICAL_OR,
                         Op::MUL => OpInstruction::MUL,
+                        Op::BITWISE_OR => todo!("todo bitwise or"),
                         _ => panic!(),
                     },
                     arg_0: lhs,

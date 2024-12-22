@@ -5,6 +5,7 @@ use crate::{
 
 #[derive(Debug, PartialEq)]
 pub enum Op {
+    BITWISE_OR,
     ADD,
     SUB,
     MUL,

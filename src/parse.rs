@@ -432,7 +432,7 @@ impl<'a> Parser<'a> {
     }
 
     fn mul_div(&mut self) -> ASTNode {
-        let higher_precedence = self.tryy();
+        let higher_precedence = self.bitwise();
         if !self.end() && self.tokens[self.counter].typ == Type::MUL {
             consume_token!(self, Type::MUL);
             let rhs = self.expression();
@@ -453,6 +453,27 @@ impl<'a> Parser<'a> {
                 .join(rhs.position.clone());
             return ASTNode {
                 statement: Statement::BIN_OP(Box::new(higher_precedence), Box::new(rhs), Op::DIV),
+                position: pos,
+            };
+        }
+        return higher_precedence;
+    }
+
+    fn bitwise(&mut self) -> ASTNode {
+        let higher_precedence = self.tryy();
+        if !self.end() && self.tokens[self.counter].typ == Type::BITWISE_OR {
+            consume_token!(self, Type::BITWISE_OR);
+            let rhs = self.expression();
+            let pos = higher_precedence
+                .position
+                .clone()
+                .join(rhs.position.clone());
+            return ASTNode {
+                statement: Statement::BIN_OP(
+                    Box::new(higher_precedence),
+                    Box::new(rhs),
+                    Op::BITWISE_OR,
+                ),
                 position: pos,
             };
         }

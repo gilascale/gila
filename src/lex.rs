@@ -24,6 +24,7 @@ impl Position {
 
 #[derive(Eq, PartialEq, Debug, Clone, Hash, DeepSizeOf)]
 pub enum Type {
+    BITWISE_OR,
     DOLLAR,
     ASSERT,
     EXCLAIM,
@@ -730,6 +731,15 @@ impl Lexer {
                 }),
                 ')' => v.push(Token {
                     typ: Type::RPAREN,
+                    pos: Position {
+                        index: self.index,
+                        line: self.line,
+                        index_end: self.index + 1,
+                        line_end: self.line,
+                    },
+                }),
+                '|' => v.push(Token {
+                    typ: Type::BITWISE_OR,
                     pos: Position {
                         index: self.index,
                         line: self.line,

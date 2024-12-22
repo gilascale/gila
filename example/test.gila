@@ -2,13 +2,17 @@
 
 
 
+// https://stackoverflow.com/questions/16258553/how-can-i-define-algebraic-data-types-in-python
 
+Error type
+    msg: string
+end
 
-
-
-Result type
+Data type
     data: any
 end
+
+Result = Error | Data
 
 foo fn(x:string) -> Result do
     return Result(data=x)
@@ -16,3 +20,7 @@ end
 
 x = !foo("hi")
 
+
+e = Error(msg="there has been an error")
+
+print(e)
