@@ -352,6 +352,7 @@ impl Lexer {
                         && chars[self.counter as usize + 2] == 't'
                         && chars[self.counter as usize + 3] == 'c'
                         && chars[self.counter as usize + 4] == 'h'
+                        && !chars[self.counter as usize + 5].is_alphabetic()
                     {
                         v.push(Token {
                             typ: Type::MATCH,
