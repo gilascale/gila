@@ -183,6 +183,20 @@ impl Instruction {
                 format!("r{}", self.arg_1),
                 format!("{}", self.arg_2)
             ),
+            OpInstruction::CALL_KW => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::FOR_ITER => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
             OpInstruction::STRUCT_ACCESS => format!(
                 "{:>75}{:>5}{:>5}{:>5}\n",
                 format!("{:?}", self.op_instruction),
