@@ -16,8 +16,10 @@ data = !bar(true)
 
 print(data)
 
-print(len)
 
-dll = load_gila_abi_dll("./gila_socket/target/debug/gila_socket.dll")
+dll = load_gila_abi_dll("./gila_time/target/debug/gila_time.dll")
 
-print(dll)
+dll.sleep(2000)
+
+print("slept!")
+
