@@ -672,6 +672,9 @@ impl BytecodeGenerator<'_> {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(annotation_context, &p),
             Statement::BLOCK(b) => self.gen_block(annotation_context, &b),
+            Statement::MATCH(to_match, patterns) => {
+                self.gen_match(annotation_context, &to_match, &patterns)
+            }
             Statement::TEST(name, body) => {
                 self.gen_test(annotation_context, ast.position.clone(), &name, &body)
             }
@@ -750,6 +753,26 @@ impl BytecodeGenerator<'_> {
             // free_slot!(self, result_slot);
         }
         alloc_slot!(self)
+    }
+
+    fn gen_match(
+        &mut self,
+        annotation_context: AnnotationContext,
+        to_match: &Box<ASTNode>,
+        patterns: &Vec<ASTNode>,
+    ) -> u8 {
+        let to_match_register = self.visit(annotation_context.clone(), &to_match);
+
+        for match_case in patterns {
+            match &match_case.statement {
+                Statement::MATCH_CASE(_, expr) => {
+                    self.visit(annotation_context.clone(), &expr);
+                }
+                _ => panic!(),
+            }
+        }
+
+        0
     }
 
     fn gen_test(

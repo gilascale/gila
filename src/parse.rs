@@ -70,6 +70,7 @@ impl<'a> Parser<'a> {
         let current: &Token = &self.tokens[self.counter];
 
         match current.typ {
+            Type::MATCH => self.matchh(),
             Type::ASSERT => self.assert(),
             Type::DO => self.block(),
             Type::TEST => self.test(),
@@ -478,6 +479,31 @@ impl<'a> Parser<'a> {
             };
         }
         return higher_precedence;
+    }
+
+    fn matchh(&mut self) -> ASTNode {
+        let matchh_pos = get_position!(self);
+        consume_token!(self, Type::MATCH);
+        let match_value = self.expression();
+        consume_token!(self, Type::DO);
+
+        // the cases here
+        let t = get_next!(self);
+        consume_token!(self, Type::ASSIGN);
+        consume_token!(self, Type::GREATER_THAN);
+        let expr = self.statement();
+        let pattern = Statement::MATCH_CASE(t.clone(), Box::new(expr));
+        consume_token!(self, Type::END);
+        ASTNode {
+            statement: Statement::MATCH(
+                Box::new(match_value),
+                vec![ASTNode {
+                    statement: pattern,
+                    position: matchh_pos.clone(),
+                }],
+            ),
+            position: matchh_pos,
+        }
     }
 
     fn assert(&mut self) -> ASTNode {

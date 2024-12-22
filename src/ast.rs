@@ -42,6 +42,8 @@ pub enum Statement {
     RETURN(Option<Box<ASTNode>>),
     PROGRAM(Vec<ASTNode>),
     BLOCK(Vec<ASTNode>),
+    MATCH(Box<ASTNode>, Vec<ASTNode>),
+    MATCH_CASE(Token, Box<ASTNode>),
     // todo should these tokens be references?
     DEFINE(Token, Option<DataType>, Option<Box<ASTNode>>),
     ASSIGN(Box<ASTNode>, Box<ASTNode>),
