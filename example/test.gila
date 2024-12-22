@@ -14,17 +14,18 @@ end
 
 Result = Error | Data
 
-
-
-
 foo fn() -> Result do
-    return Result(Data=Data(data="hi"))
+    return Result(Error=Error(msg="hi i have failed :()"))
+end
+
+bar fn() -> Result do
+    res = !foo()
+    return Result(Data=res)
 end
 
 
-res = !foo()
+data = bar()
 
-
-print(res)
+print(data)
 
 

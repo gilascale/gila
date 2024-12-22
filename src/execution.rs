@@ -1173,12 +1173,9 @@ impl<'a> ExecutionEngine<'a> {
         }
     }
 
-    fn exec_return(&mut self, ret: &Instruction) -> Result<u8, RuntimeError> {
+    fn perform_return(&mut self, data: Option<Object>) -> Result<u8, RuntimeError> {
         let return_register =
             self.environment.stack_frames[self.environment.stack_frame_pointer].return_register;
-        let return_val = self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-            [ret.arg_0 as usize]
-            .clone();
 
         self.environment.stack_frames.pop();
         if self.environment.stack_frames.len() == 0 {
@@ -1188,13 +1185,24 @@ impl<'a> ExecutionEngine<'a> {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer += 1;
 
-            if ret.arg_1 > 0 {
+            if data.is_some() {
                 self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                    [return_register as usize] = return_val;
+                    [return_register as usize] = data.unwrap();
             }
         }
-
         Ok(return_register)
+    }
+
+    fn exec_return(&mut self, ret: &Instruction) -> Result<u8, RuntimeError> {
+        let return_val = self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [ret.arg_0 as usize]
+            .clone();
+
+        if ret.arg_1 > 0 {
+            self.perform_return(Some(return_val))
+        } else {
+            self.perform_return(None)
+        }
     }
 
     fn exec_try(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
@@ -1214,7 +1222,8 @@ impl<'a> ExecutionEngine<'a> {
             increment_ip!(self);
             return Ok(instr.arg_1);
         } else {
-            todo!("return");
+            let the_error = result.clone();
+            self.perform_return(Some(the_error))
         }
     }
 
