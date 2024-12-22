@@ -1,25 +1,7 @@
-foo fn(x: bool) -> Result do
-    if x == true
-        return Result(Data=Data(data="[some data]"))
-    else
-        return Result(Error=Error(msg="hi i have failed :()"))
+
+x = "hi"
+
+
+for _ in 0..10 do 
+    print("hi")
 end
-
-bar fn(x: bool) -> Result do
-    res = !foo(x)
-    print("whoo res is valid data! "+res.data)
-    print("doing some processing...")
-    return Result(Data=res)
-end
-
-data = !bar(true)
-
-print(data)
-
-
-dll = load_gila_abi_dll("./gila_time/target/debug/gila_time.dll")
-
-dll.sleep(2000)
-
-print("slept!")
-
