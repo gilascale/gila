@@ -1,3 +1,8 @@
+Union type
+    types: any[]
+end
+
+
 RangeIterator type
     counter: u32
     limit: u32

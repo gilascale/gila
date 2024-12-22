@@ -630,6 +630,7 @@ impl Lexer {
                     } else if chars[self.counter as usize + 1] == 'y'
                         && chars[self.counter as usize + 2] == 'p'
                         && chars[self.counter as usize + 3] == 'e'
+                        && !chars[self.counter as usize + 4].is_alphabetic()
                     {
                         v.push(Token {
                             typ: Type::TYPE,

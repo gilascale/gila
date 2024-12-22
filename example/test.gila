@@ -14,6 +14,14 @@ end
 
 Result = Error | Data
 
+
+
+u = Union(types=[Error,Data])
+
+
+print(u)
+
+
 // foo fn(x:string) -> Result do
 //     return Result(data=x)
 // end
