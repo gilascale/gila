@@ -1044,6 +1044,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::LESS_THAN => self.exec_less_than(instr),
             OpInstruction::LESS_EQUAL => self.exec_less_equals(instr),
             OpInstruction::LOGICAL_OR => self.exec_logical_or(instr),
+            OpInstruction::BITWISE_OR => self.exec_bitwise_or(instr),
             OpInstruction::ADDI => self.exec_addi(instr),
             OpInstruction::SUBI => self.exec_subi(instr),
             OpInstruction::ADD => self.exec_add(instr),
@@ -1223,6 +1224,18 @@ impl<'a> ExecutionEngine<'a> {
         let result = lhs.truthy(&mut self.shared_execution_context, &self.environment)
             || rhs.truthy(&mut self.shared_execution_context, &self.environment);
         stack_set!(self, greater.arg_2, Object::BOOL(result));
+        increment_ip!(self);
+
+        Ok(greater.arg_2)
+    }
+
+    fn exec_bitwise_or(&mut self, greater: &Instruction) -> Result<u8, RuntimeError> {
+        let lhs = stack_access!(self, greater.arg_0);
+        let rhs = stack_access!(self, greater.arg_1);
+
+        // let result = lhs.truthy(&mut self.shared_execution_context, &self.environment)
+        //     || rhs.truthy(&mut self.shared_execution_context, &self.environment);
+        // stack_set!(self, greater.arg_2, Object::BOOL(result));
         increment_ip!(self);
 
         Ok(greater.arg_2)

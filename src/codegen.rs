@@ -81,6 +81,7 @@ pub enum OpInstruction {
     LESS_THAN,
     LESS_EQUAL,
     LOGICAL_OR,
+    BITWISE_OR,
     LOAD_CLOSURE,
     // MUL <r1> <r2> <desination>
     MUL,
@@ -165,7 +166,7 @@ impl Instruction {
             OpInstruction::LOAD_CONST => format!(
                 "{:>75}{:>5}{:>5}\n",
                 format!("{:?}", self.op_instruction),
-                format!("r{}", self.arg_0),
+                format!("{}", self.arg_0),
                 format!("r{}", self.arg_1)
             ),
             OpInstruction::CALL => format!(
@@ -176,6 +177,20 @@ impl Instruction {
                 format!("{}", self.arg_2)
             ),
             OpInstruction::STRUCT_ACCESS => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::LOGICAL_OR => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::BITWISE_OR => format!(
                 "{:>75}{:>5}{:>5}{:>5}\n",
                 format!("{:?}", self.op_instruction),
                 format!("r{}", self.arg_0),
@@ -1546,7 +1561,7 @@ impl BytecodeGenerator<'_> {
                         Op::LE => OpInstruction::LESS_EQUAL,
                         Op::LOGICAL_OR => OpInstruction::LOGICAL_OR,
                         Op::MUL => OpInstruction::MUL,
-                        Op::BITWISE_OR => todo!("todo bitwise or"),
+                        Op::BITWISE_OR => OpInstruction::BITWISE_OR,
                         _ => panic!(),
                     },
                     arg_0: lhs,

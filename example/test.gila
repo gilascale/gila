@@ -14,13 +14,13 @@ end
 
 Result = Error | Data
 
-foo fn(x:string) -> Result do
-    return Result(data=x)
-end
+// foo fn(x:string) -> Result do
+//     return Result(data=x)
+// end
 
-x = !foo("hi")
+// x = !foo("hi")
 
 
-e = Error(msg="there has been an error")
+// e = Error(msg="there has been an error")
 
-print(e)
+// print(e)
