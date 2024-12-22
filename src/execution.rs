@@ -195,9 +195,42 @@ impl Object {
     //     }))
     // }
 
+    pub fn is_type_definition(&self, shared_execution_context: &SharedExecutionContext) -> bool {
+        match &self {
+            Self::GC_REF(gc_ref) => {
+                let res = shared_execution_context.heap.deref(gc_ref);
+                if res.is_err() {
+                    panic!();
+                }
+
+                match res {
+                    Ok(GCRefData::DYNAMIC_OBJECT(d)) => !d.fields.contains_key("__prototype__"),
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
     pub fn as_gila_abi_dll(&self) -> Result<&usize, RuntimeError> {
         match self {
             Self::GILA_ABI_DLL(dll) => Ok(dll),
+            _ => panic!(),
+        }
+    }
+
+    pub fn as_gc_ref(
+        &self,
+        shared_execution_context: &SharedExecutionContext,
+    ) -> Result<GCRefData, RuntimeError> {
+        match &self {
+            Self::GC_REF(gc_ref) => {
+                let res = shared_execution_context.heap.deref(gc_ref);
+                if res.is_err() {
+                    panic!();
+                }
+                return res;
+            }
             _ => panic!(),
         }
     }
@@ -1232,6 +1265,13 @@ impl<'a> ExecutionEngine<'a> {
     fn exec_bitwise_or(&mut self, greater: &Instruction) -> Result<u8, RuntimeError> {
         let lhs = stack_access!(self, greater.arg_0);
         let rhs = stack_access!(self, greater.arg_1);
+
+        if lhs.is_type_definition(self.shared_execution_context)
+            && rhs.is_type_definition(self.shared_execution_context)
+        {
+            println!("whooo doing union type");
+        }
+        // todo we need to check if the lhs and rhs are types?
 
         // let result = lhs.truthy(&mut self.shared_execution_context, &self.environment)
         //     || rhs.truthy(&mut self.shared_execution_context, &self.environment);
