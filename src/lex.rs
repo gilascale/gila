@@ -69,6 +69,7 @@ pub enum Type {
     U32,
     STRING,
     BOOL,
+    MATCH,
     NUMBER(Rc<String>),
     ATOM(Rc<String>),
     IDENTIFIER(Rc<String>),
@@ -346,7 +347,25 @@ impl Lexer {
                         continue;
                     }
                 }
-
+                'm' => {
+                    if chars[self.counter as usize + 1] == 'a'
+                        && chars[self.counter as usize + 2] == 't'
+                        && chars[self.counter as usize + 3] == 'c'
+                        && chars[self.counter as usize + 4] == 'h'
+                    {
+                        v.push(Token {
+                            typ: Type::MATCH,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 5,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 4;
+                        self.index += 4;
+                    }
+                }
                 'f' => {
                     if chars[self.counter as usize + 1] == 'n' {
                         v.push(Token {
