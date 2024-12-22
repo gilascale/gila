@@ -74,6 +74,7 @@ macro_rules! take_slot {
 pub enum OpInstruction {
     // RETURN <location of values> <num values>
     RETURN = 0,
+    TRY,
     EQUAL,
     NOT_EQUALS,
     GREATER_THAN,
@@ -145,6 +146,12 @@ pub struct Instruction {
 impl Instruction {
     pub fn to_string(&self) -> String {
         match self.op_instruction {
+            OpInstruction::TRY => format!(
+                "{:>75}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+            ),
             OpInstruction::ADDI => format!(
                 "{:>75}{:>5}{:>5}{:>5}\n",
                 format!("{:?}", self.op_instruction),
@@ -1908,25 +1915,20 @@ impl BytecodeGenerator<'_> {
     }
 
     fn gen_try(&mut self, mut annotation_context: AnnotationContext, rhs: &ASTNode) -> u8 {
-        // first generate the rhs
         let rhs_reg = self.visit(annotation_context, rhs);
-
-        let pos = rhs.position.clone();
-        let data_field = self.create_constant_string("Data".to_string(), &pos);
 
         let dest = alloc_slot!(self);
         self.push_instruction(
             Instruction {
-                op_instruction: OpInstruction::STRUCT_ACCESS,
+                op_instruction: OpInstruction::TRY,
                 arg_0: rhs_reg,
-                arg_1: data_field,
-                arg_2: dest,
+                arg_1: dest,
+                arg_2: 0,
             },
-            pos.line.try_into().unwrap(),
+            rhs.position.line.try_into().unwrap(),
         );
 
         free_slot!(self, rhs_reg);
-        free_slot!(self, data_field);
 
         dest
     }

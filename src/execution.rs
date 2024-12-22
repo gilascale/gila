@@ -233,6 +233,20 @@ impl Object {
         }
     }
 
+    fn as_dynamic_object(
+        &self,
+        shared_execution_context: &SharedExecutionContext,
+    ) -> Result<DynamicObject, RuntimeError> {
+        let gc_ref = self.as_gc_ref(shared_execution_context);
+        if gc_ref.is_err() {
+            return Err(gc_ref.err().unwrap());
+        }
+        match gc_ref.unwrap() {
+            GCRefData::DYNAMIC_OBJECT(d) => return Ok(d),
+            _ => panic!(),
+        }
+    }
+
     pub fn as_gc_ref(
         &self,
         shared_execution_context: &SharedExecutionContext,
@@ -1084,6 +1098,7 @@ impl<'a> ExecutionEngine<'a> {
     fn exec_instr(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
         match instr.op_instruction {
             OpInstruction::RETURN => self.exec_return(instr),
+            OpInstruction::TRY => self.exec_try(instr),
             OpInstruction::EQUAL => self.exec_equal(instr),
             OpInstruction::NOT_EQUALS => self.exec_nequal(instr),
             OpInstruction::GREATER_THAN => self.exec_greater(instr),
@@ -1180,6 +1195,27 @@ impl<'a> ExecutionEngine<'a> {
         }
 
         Ok(return_register)
+    }
+
+    fn exec_try(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let result = stack_access!(self, instr.arg_0);
+
+        let gc_ref = result.as_dynamic_object(&self.shared_execution_context);
+
+        if gc_ref.is_err() {
+            return Err(gc_ref.err().unwrap());
+        }
+
+        let data = gc_ref.unwrap();
+
+        if data.fields.contains_key("Data") {
+            let the_data = data.fields.get("Data").unwrap();
+            stack_set!(self, instr.arg_1, the_data.clone());
+            increment_ip!(self);
+            return Ok(instr.arg_1);
+        } else {
+            todo!("return");
+        }
     }
 
     fn exec_equal(&mut self, equal: &Instruction) -> Result<u8, RuntimeError> {
