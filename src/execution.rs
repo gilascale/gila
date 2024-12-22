@@ -143,10 +143,13 @@ impl GCRefData {
             Self::STRING(s) => s.s.to_string(),
             Self::FN(fn_object) => {
                 if fn_object.bounded_object.is_some() {
-                    return format!("bounded fn {}", fn_object.name);
+                    return format!("<bounded fn {}>", fn_object.name);
                 } else {
-                    return format!("fn {}", fn_object.name);
+                    return format!("<fn {}>", fn_object.name);
                 }
+            }
+            Self::GILA_ABI_FUNCTION_OBJECT(fn_object) => {
+                return format!("<gila abi function object {:?}>", fn_object);
             }
             Self::SLICE(slice) => {
                 format!(
@@ -307,7 +310,7 @@ impl Object {
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
             Self::ATOM(a) => format!(":{:?}", a.to_string()),
-            Self::GILA_ABI_DLL(id) => format!("Gila ABI DLL {}", id),
+            Self::GILA_ABI_DLL(id) => format!("<gila abi dll {}>", id),
             Self::GC_REF(gc_ref) => {
                 let res = shared_execution_context.heap.deref(&gc_ref);
                 let obj: String;
@@ -766,27 +769,7 @@ pub fn native_print(
     execution_context: &mut ProcessContext,
     args: Vec<Object>,
 ) -> Object {
-    let s: String = match &args[0] {
-        Object::GC_REF(gc_ref) => {
-            let res = shared_execution_context.heap.deref(&gc_ref);
-            let obj: String;
-            if res.is_ok() {
-                obj = res.unwrap().print(shared_execution_context);
-            } else {
-                execution_context.dump_stack_regs();
-                shared_execution_context.heap.dump_heap();
-                panic!("tried to deref {}", gc_ref.index);
-            }
-            obj
-        }
-        Object::I64(i) => i.to_string(),
-        Object::F64(f) => f.to_string(),
-        Object::BOOL(b) => b.to_string(),
-        Object::ATOM(a) => a.to_string(),
-        Object::GILA_ABI_DLL(id) => format!("Gila ABI DLL {}", id),
-    };
-
-    println!("{}", s);
+    println!("{}", args[0].print(shared_execution_context));
     return Object::I64(0);
 }
 

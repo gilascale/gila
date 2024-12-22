@@ -15,3 +15,9 @@ end
 data = !bar(true)
 
 print(data)
+
+print(len)
+
+dll = load_gila_abi_dll("./gila_socket/target/debug/gila_socket.dll")
+
+print(dll)
