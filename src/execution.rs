@@ -36,6 +36,7 @@ macro_rules! increment_ip {
 
 #[derive(Debug)]
 pub enum RuntimeError {
+    TOP_LEVEL_ERROR(String),
     INVALID_OPERATION(String),
     INVALID_GC_REF,
     INVALID_ACCESS(String),
@@ -1179,6 +1180,7 @@ impl<'a> ExecutionEngine<'a> {
 
         self.environment.stack_frames.pop();
         if self.environment.stack_frames.len() == 0 {
+            println!("performing return and we are at the end!");
             self.running = false;
         } else {
             self.environment.stack_frame_pointer -= 1;
@@ -1223,6 +1225,19 @@ impl<'a> ExecutionEngine<'a> {
             return Ok(instr.arg_1);
         } else {
             let the_error = result.clone();
+            if self.environment.stack_frame_pointer == 0 {
+                return Err(RuntimeError::TOP_LEVEL_ERROR(
+                    data.fields
+                        .get("Error")
+                        .unwrap()
+                        .as_dynamic_object(&self.shared_execution_context)
+                        .unwrap()
+                        .fields
+                        .get("msg")
+                        .unwrap()
+                        .print(&self.shared_execution_context),
+                ));
+            }
             self.perform_return(Some(the_error))
         }
     }

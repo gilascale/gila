@@ -13,6 +13,6 @@ bar fn(x: bool) -> Result do
     return Result(Data=res)
 end
 
-data = bar(true)
+data = !bar(false)
 
 print(data)
