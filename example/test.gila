@@ -1,9 +1,8 @@
 foo fn(x: bool) -> Result do
-    if x == true do
+    if x == true
         return Result(Data=Data(data="[some data]"))
-    end else do 
+    else
         return Result(Error=Error(msg="hi i have failed :()"))
-    end
 end
 
 bar fn(x: bool) -> Result do
@@ -13,6 +12,6 @@ bar fn(x: bool) -> Result do
     return Result(Data=res)
 end
 
-data = !bar(false)
+data = !bar(true)
 
 print(data)
