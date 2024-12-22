@@ -1,7 +1,11 @@
 
 x = "hi"
 
+print("hoooo")
 
+for _ in 0..11 do 
+    print("hi")
+end
 for _ in 0..10 do 
     print("hi")
 end

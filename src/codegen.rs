@@ -846,6 +846,40 @@ impl BytecodeGenerator<'_> {
         let second_arg_register =
             self.gen_literal_num(annotation_context.clone(), position.clone(), range_end);
 
+        let mut arg_registers = vec![first_arg_register, second_arg_register];
+        let allocated_destination = alloc_slot!(self);
+        arg_registers.push(allocated_destination);
+
+        let new_arg_registers = find_contiguous_slots!(self, &arg_registers);
+        for i in 0..arg_registers.len() {
+            let current_arg_reg = arg_registers[i];
+            let new_reg = new_arg_registers[i];
+
+            if current_arg_reg != new_reg {
+                // allocate the slot and do a MOV
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::MOV,
+                        arg_0: current_arg_reg,
+                        arg_1: new_reg,
+                        arg_2: 0,
+                    },
+                    position.line as usize,
+                );
+            }
+        }
+
+        let new_allocated_destination = new_arg_registers[new_arg_registers.len() - 1];
+
+        let first_arg_register: u8 = {
+            if new_arg_registers.len() > 0 {
+                new_arg_registers[0]
+            } else {
+                // if we have no args, just encode the destination!
+                new_allocated_destination
+            }
+        };
+
         // now construct the duple and do the call on the RangeIterator
         let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::TUPLE(kwarg_strings));
         let constant_idx = self.push_constant(Object::GC_REF(GCRef {
@@ -877,7 +911,7 @@ impl BytecodeGenerator<'_> {
             position.line as usize,
         );
 
-        let range_iterator_reg = const_reg;
+        let range_iterator_reg = new_allocated_destination;
 
         let for_iter_instruction_ptr = self.codegen_context.chunks
             [self.codegen_context.current_chunk_pointer]
@@ -912,6 +946,13 @@ impl BytecodeGenerator<'_> {
         // todo also free the kwarg
         free_slot!(self, range_iterator_reg);
         free_slot!(self, iter_result_reg);
+
+        for slot in &arg_registers {
+            free_slot!(self, *slot);
+        }
+        for i in first_arg_register + 1..first_arg_register + new_arg_registers.len() as u8 + 1 {
+            free_slot!(self, i);
+        }
 
         alloc_slot!(self)
     }

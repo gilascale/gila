@@ -1723,7 +1723,8 @@ impl<'a> ExecutionEngine<'a> {
                 if res.is_err() {
                     return Err(res.err().unwrap());
                 }
-                match res.unwrap() {
+                let unwrapped = res.unwrap();
+                match unwrapped {
                     GCRefData::DYNAMIC_OBJECT(iterator_obj) => {
                         let result =
                             self.recursively_access_struct("__iter".to_string(), iterator_obj);
@@ -1809,7 +1810,7 @@ impl<'a> ExecutionEngine<'a> {
                         return Ok(0);
                         //
                     }
-                    _ => panic!(),
+                    _ => panic!("doing for_iter need dynamic obj but found {:?}", unwrapped),
                 }
             }
             _ => panic!(),
