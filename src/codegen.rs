@@ -1911,10 +1911,23 @@ impl BytecodeGenerator<'_> {
         // first generate the rhs
         let rhs_reg = self.visit(annotation_context, rhs);
 
-        // rhs_reg will be a result, so we want to struct access
+        let pos = rhs.position.clone();
+        let data_field = self.create_constant_string("Data".to_string(), &pos);
 
-        // todo we need to now insert some code that checks the result
+        let dest = alloc_slot!(self);
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::STRUCT_ACCESS,
+                arg_0: rhs_reg,
+                arg_1: data_field,
+                arg_2: dest,
+            },
+            pos.line.try_into().unwrap(),
+        );
 
-        rhs_reg
+        free_slot!(self, rhs_reg);
+        free_slot!(self, data_field);
+
+        dest
     }
 }

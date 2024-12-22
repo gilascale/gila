@@ -1298,8 +1298,6 @@ impl<'a> ExecutionEngine<'a> {
         if lhs.is_type_definition(self.shared_execution_context)
             && rhs.is_type_definition(self.shared_execution_context)
         {
-            println!("whooo doing union type");
-
             let mut fields: HashMap<String, Object> = HashMap::new();
 
             let slicee = Object::create_slice(
@@ -1312,6 +1310,7 @@ impl<'a> ExecutionEngine<'a> {
                 return Err(slicee.err().unwrap());
             }
 
+            // todo insert the prototype of Union here
             fields.insert("types".to_string(), slicee.unwrap());
 
             let obj = self.create_dynamic_object(fields);
@@ -1320,12 +1319,9 @@ impl<'a> ExecutionEngine<'a> {
                 return Err(obj.err().unwrap());
             }
             stack_set!(self, instr.arg_2, obj.unwrap());
+        } else {
+            todo!()
         }
-        // todo we need to check if the lhs and rhs are types?
-
-        // let result = lhs.truthy(&mut self.shared_execution_context, &self.environment)
-        //     || rhs.truthy(&mut self.shared_execution_context, &self.environment);
-        // stack_set!(self, greater.arg_2, Object::BOOL(result));
         increment_ip!(self);
 
         Ok(instr.arg_2)
@@ -2004,7 +2000,8 @@ impl<'a> ExecutionEngine<'a> {
                 if result.is_err() {
                     return Err(result.err().unwrap());
                 }
-                match result.unwrap() {
+                let unwrapped = result.unwrap();
+                match &unwrapped {
                     GCRefData::DYNAMIC_OBJECT(o) => {
                         // now we have the object we need to get the string
 
@@ -2019,8 +2016,8 @@ impl<'a> ExecutionEngine<'a> {
                                 let unwrapped = result.unwrap();
                                 match unwrapped {
                                     GCRefData::STRING(s) => {
-                                        let result =
-                                            self.recursively_access_struct(s.s.to_string(), o);
+                                        let result = self
+                                            .recursively_access_struct(s.s.to_string(), o.clone());
 
                                         if result.is_err() {
                                             return Err(result.err().unwrap());
@@ -2087,7 +2084,11 @@ impl<'a> ExecutionEngine<'a> {
                     }
                     _ => {
                         return Err(RuntimeError::INVALID_ACCESS(
-                            "struct access should be accessing object".to_string(),
+                            format!(
+                                "struct access should be accessing object but got {:?}",
+                                unwrapped
+                            )
+                            .to_string(),
                         ))
                     }
                 }

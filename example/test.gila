@@ -14,5 +14,14 @@ end
 
 Result = Error | Data
 
-print(Result)
+
+
+
+foo fn() -> Result do
+    return Result(Data=Data(data="hi"))
+end
+
+
+res = !foo()
+
 
