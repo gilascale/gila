@@ -1,9 +1,1 @@
-
-
-// i think calls need to be re-worked
-x = import std
-
-
-
-
-print(x)
+print("hello, world!")

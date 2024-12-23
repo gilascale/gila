@@ -89,6 +89,8 @@ v.display()
 
 ### Language Features
 
+- tests have multiple asserts in
+- test names can only be one word
 - capturing in closures
 - easy way to add builtin modules/files (i.e. socket library)
 - groups i.e. 3 + (4+3)

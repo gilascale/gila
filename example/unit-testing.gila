@@ -1,5 +1,9 @@
-my_fn fn return 5
+get_data fn -> string return "hello, world!"
 
-test "example test" do
-    assert my_fn()==5, "assert maths works"
+test "hello" do
+    assert get_data()=="hello, world!"
+end
+
+test "addition" do
+    assert 1+2==3
 end
