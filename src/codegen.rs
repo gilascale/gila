@@ -840,6 +840,7 @@ impl BytecodeGenerator<'_> {
         name: &ASTNode,
         body: &ASTNode,
     ) -> u8 {
+        // todo generate a function body here with a name
         self.visit(annotation_context, body);
         0
     }
@@ -2060,21 +2061,17 @@ impl BytecodeGenerator<'_> {
             expr.position.line.try_into().unwrap(),
         );
 
+        // setup the error value
         let mut fields = HashMap::new();
-
         // todo put the prototype and error object in here
         fields.insert("Error".to_string(), Object::I64(123));
-
         let result_object_gc_ref =
             self.push_gc_ref_data(GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }));
-
         let obj = Object::GC_REF(GCRef {
             index: result_object_gc_ref as usize,
             marked: false,
         });
-
         let constant_idx = self.push_constant(obj);
-
         let slot = alloc_slot!(self);
         self.push_instruction(
             Instruction {
@@ -2085,7 +2082,6 @@ impl BytecodeGenerator<'_> {
             },
             expr.position.line.try_into().unwrap(),
         );
-
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::RETURN,
@@ -2104,6 +2100,37 @@ impl BytecodeGenerator<'_> {
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
             [jmp_instr_index]
             .arg_1 = current_instr_index as u8;
+
+        // setup the ok value
+        let mut fields = HashMap::new();
+        // todo put the prototype and error object in here
+        fields.insert("Data".to_string(), Object::I64(123));
+        let result_object_gc_ref =
+            self.push_gc_ref_data(GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }));
+        let obj = Object::GC_REF(GCRef {
+            index: result_object_gc_ref as usize,
+            marked: false,
+        });
+        let constant_idx = self.push_constant(obj);
+        let slot = alloc_slot!(self);
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::LOAD_CONST,
+                arg_0: constant_idx,
+                arg_1: slot,
+                arg_2: 0,
+            },
+            expr.position.line.try_into().unwrap(),
+        );
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::RETURN,
+                arg_0: slot,
+                arg_1: 1,
+                arg_2: 0,
+            },
+            expr.position.line.try_into().unwrap(),
+        );
 
         result_reg
     }

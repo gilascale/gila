@@ -5,6 +5,7 @@
 
 
 
+// todo transform into function
 test "foo" do
     assert true == false
 end
