@@ -840,9 +840,13 @@ impl BytecodeGenerator<'_> {
         name: &ASTNode,
         body: &ASTNode,
     ) -> u8 {
-        // todo generate a function body here with a name
-        self.visit(annotation_context, body);
-        0
+        self.create_function(
+            &position,
+            Rc::new("test_example".to_string()),
+            body,
+            &vec![],
+            &None,
+        )
     }
 
     fn gen_if(
@@ -1688,18 +1692,14 @@ impl BytecodeGenerator<'_> {
         panic!("failing bin op {:?}", op);
     }
 
-    fn gen_named_function(
+    fn create_function(
         &mut self,
-        annotation_context: AnnotationContext,
-        token: &Token,
+        position: &Position,
+        name: Rc<String>,
+        body: &ASTNode,
         params: &Vec<ASTNode>,
         return_type: &Option<DataType>,
-        statement: &ASTNode,
     ) -> u8 {
-        // how do
-
-        // todo check if its a method!
-
         let mut is_method = false;
         let mut method_obj: u8 = 0;
         if params.len() > 0 {
@@ -1721,29 +1721,16 @@ impl BytecodeGenerator<'_> {
             }
         }
 
-        let mut name = "anon".to_string();
-        if let Type::IDENTIFIER(i) = &token.typ {
-            name = i.to_string();
-        }
-
+        // were allocating a spot in the gc ref data slots to later put the function object
         let gc_ref_data_idx = self.push_gc_ref_data(GCRefData::STRING(StringObject {
             s: Rc::new("tmp".to_string()),
         }));
-
+        // and then we get a constant index and load it
         let constant = self.push_constant(Object::GC_REF(GCRef {
             index: gc_ref_data_idx as usize,
             marked: false,
         }));
-
-        // todo set as a local as it is named?
-
         let location = alloc_perm_slot!(self);
-
-        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-            .variable_map
-            .insert(token.typ.clone(), location);
-
-        // fixme do we actually need to load this?...
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::LOAD_CONST,
@@ -1751,9 +1738,13 @@ impl BytecodeGenerator<'_> {
                 arg_1: location,
                 arg_2: 0,
             },
-            token.pos.line.try_into().unwrap(),
+            position.line.try_into().unwrap(),
         );
 
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .variable_map
+            .insert(Type::IDENTIFIER(name.clone()), location);
+        // after loading the function const, we the build it (this is binding self etc)
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::BUILD_FN,
@@ -1761,11 +1752,8 @@ impl BytecodeGenerator<'_> {
                 arg_1: 0,
                 arg_2: 0,
             },
-            token.pos.line as usize,
+            position.line as usize,
         );
-
-        // FIXME
-        // this obviously has+ to be a constant
 
         self.push_chunk();
 
@@ -1785,20 +1773,38 @@ impl BytecodeGenerator<'_> {
         }
 
         // todo enter new block?
-        self.generate(statement);
+        self.generate(body);
 
         let c = self.pop_chunk();
 
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].gc_ref_data
             [gc_ref_data_idx as usize] = GCRefData::FN(FnObject {
             chunk: c,
-            name: name,
+            name: name.clone().to_string(),
             requires_method_binding: is_method,
             method_to_object: Some(method_obj),
             param_slots: param_slots,
             bounded_object: None,
         });
+        // todo do we need this???
         alloc_slot!(self)
+    }
+
+    fn gen_named_function(
+        &mut self,
+        annotation_context: AnnotationContext,
+        token: &Token,
+        params: &Vec<ASTNode>,
+        return_type: &Option<DataType>,
+        statement: &ASTNode,
+    ) -> u8 {
+        self.create_function(
+            &token.pos,
+            token.as_identifier(),
+            statement,
+            params,
+            return_type,
+        )
     }
 
     fn atom_from_type(&self, data_type: DataType) -> Object {

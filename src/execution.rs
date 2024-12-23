@@ -63,6 +63,7 @@ impl DynamicObject {
 #[derive(DeepSizeOf, Debug, Clone)]
 pub struct FnObject {
     pub chunk: Chunk,
+    // todo make this an Rc<String>
     pub name: String,
     // if this function needs to be bound at runtime
     pub requires_method_binding: bool,

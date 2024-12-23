@@ -1,12 +1,12 @@
-
-
-
-
-
-
-
-// todo transform into function
-test "foo" do
-    assert true == false
+something fn -> string do 
+    return "something"
 end
 
+
+x = something()
+
+
+
+test "foo" do
+    assert 1==1
+end
