@@ -10,3 +10,7 @@ x = something()
 test "foo" do
     assert something()=="something"
 end
+
+test "bar" do
+    assert true==true
+end

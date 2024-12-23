@@ -240,7 +240,7 @@ impl Object {
         }
     }
 
-    fn as_dynamic_object(
+    pub fn as_dynamic_object(
         &self,
         shared_execution_context: &SharedExecutionContext,
     ) -> Result<DynamicObject, RuntimeError> {

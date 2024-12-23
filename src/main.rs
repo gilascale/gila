@@ -423,12 +423,20 @@ fn do_test(file_to_test: String) {
         shared_execution_context = res.execution_result.shared_execution_context;
         let res_unwrapped = res.execution_result.result;
         match res_unwrapped {
-            Ok(obj) => println!(
-                "doing {}... got {:?}.",
-                test,
-                obj.print(&shared_execution_context)
-            ),
-            Err(e) => println!("doing {}... failed {:?}.", test, e),
+            Ok(obj) => {
+                let dynamic = obj.as_dynamic_object(&shared_execution_context);
+                match dynamic {
+                    Ok(dynamic_obj) => {
+                        if dynamic_obj.fields.contains_key("Data") {
+                            println!("doing {}... ✅.", test);
+                        } else {
+                            println!("doing {}... ❌.", test);
+                        }
+                    }
+                    _ => println!("doing {}... ❌.", test),
+                }
+            }
+            Err(e) => println!("doing {}... ❌.", test),
         }
     }
 
