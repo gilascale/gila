@@ -600,22 +600,19 @@ impl SlotManager {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct CodegenContext {
     pub current_chunk_pointer: usize,
     pub chunks: Vec<Chunk>,
 }
 
-pub struct BytecodeGenerator<'a> {
-    config: &'a Config,
-    codegen_context: &'a mut CodegenContext,
+pub struct BytecodeGenerator {
+    config: Config,
+    codegen_context: CodegenContext,
 }
 
-impl BytecodeGenerator<'_> {
-    pub fn new<'a>(
-        config: &'a Config,
-        codegen_context: &'a mut CodegenContext,
-    ) -> BytecodeGenerator<'a> {
+impl BytecodeGenerator {
+    pub fn new<'a>(config: Config, codegen_context: CodegenContext) -> BytecodeGenerator {
         return BytecodeGenerator {
             config,
             codegen_context,

@@ -31,13 +31,14 @@ impl Compiler {
         };
     }
 
+    // todo fix this and return the new shared execution context
     pub fn compile_and_exec(
         &mut self,
         compilation_unit: String,
         code: String,
-        config: &Config,
-        shared_execution_context: &mut SharedExecutionContext, // mut codegen_context: &mut CodegenContext,
-                                                               // execution_context: &mut ProcessContext,
+        config: Config,
+        shared_execution_context: SharedExecutionContext, // mut codegen_context: &mut CodegenContext,
+                                                          // execution_context: &mut ProcessContext,
     ) -> Option<CompilationContext> {
         if !self.compilation_units.contains_key(&compilation_unit) {
             let mut codegen_context = CodegenContext {
@@ -58,10 +59,11 @@ impl Compiler {
                 native_fns: HashMap::new(),
             };
             let mut lexer = lex::Lexer::new();
-            let mut bytecode_generator = BytecodeGenerator::new(config, &mut codegen_context);
+            let mut bytecode_generator =
+                BytecodeGenerator::new(config.clone(), codegen_context.clone());
 
             let mut exec_engine =
-                ExecutionEngine::new(config, shared_execution_context, &mut process_context);
+                ExecutionEngine::new(config, shared_execution_context, process_context.clone());
             let tokens = lexer.lex(code);
             let mut parser = parse::Parser {
                 tokens: &tokens,
@@ -71,7 +73,7 @@ impl Compiler {
             let bytecode = bytecode_generator.generate(&ast);
             let result = exec_engine.exec(compilation_unit.to_string(), bytecode, false);
 
-            match result {
+            match result.result {
                 Ok(_) => self
                     .compilation_units
                     .insert(compilation_unit.to_string(), CompilationUnitStatus::DONE),

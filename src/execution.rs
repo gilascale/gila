@@ -3,6 +3,7 @@ use crate::lex::Type;
 use deepsize::DeepSizeOf;
 use libloading::{Library, Symbol};
 use std::hash::Hash;
+use std::sync::Arc;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
 use std::{env, fs, iter, vec};
 
@@ -34,7 +35,7 @@ macro_rules! increment_ip {
     };
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum RuntimeError {
     TOP_LEVEL_ERROR(String),
     INVALID_OPERATION(String),
@@ -83,8 +84,8 @@ pub enum GilaABIFunctionObject {
 impl GilaABIFunctionObject {
     pub unsafe fn invoke(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
-        process_context: &mut ProcessContext,
+        shared_execution_context: SharedExecutionContext,
+        process_context: ProcessContext,
         args: Vec<Object>,
     ) -> Object {
         match self {
@@ -380,7 +381,7 @@ impl Object {
 
     pub fn mul(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
+        shared_execution_context: &SharedExecutionContext,
         config: &Config,
         other: Object,
     ) -> Result<Object, RuntimeError> {
@@ -415,7 +416,7 @@ impl Object {
 
     pub fn div(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
+        shared_execution_context: &SharedExecutionContext,
         config: &Config,
         other: Object,
     ) -> Result<Object, RuntimeError> {
@@ -450,7 +451,7 @@ impl Object {
 
     pub fn equals(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
+        shared_execution_context: &SharedExecutionContext,
         other: Object,
     ) -> Result<bool, RuntimeError> {
         match self {
@@ -504,7 +505,7 @@ impl Object {
 
     pub fn not_equals(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
+        shared_execution_context: &SharedExecutionContext,
         other: Object,
     ) -> Result<bool, RuntimeError> {
         match self {
@@ -530,7 +531,7 @@ impl Object {
 
     pub fn greater_than(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
+        shared_execution_context: &SharedExecutionContext,
         other: Object,
     ) -> Result<bool, RuntimeError> {
         match self {
@@ -560,7 +561,7 @@ impl Object {
 
     pub fn greater_than_equals(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
+        shared_execution_context: &SharedExecutionContext,
         other: Object,
     ) -> Result<bool, RuntimeError> {
         match self {
@@ -589,7 +590,7 @@ impl Object {
 
     pub fn less_than(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
+        shared_execution_context: &SharedExecutionContext,
         other: Object,
     ) -> Result<bool, RuntimeError> {
         match self {
@@ -618,7 +619,7 @@ impl Object {
 
     pub fn less_than_equals(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
+        shared_execution_context: &SharedExecutionContext,
         other: Object,
     ) -> Result<bool, RuntimeError> {
         match self {
@@ -647,7 +648,7 @@ impl Object {
 
     pub fn truthy(
         &self,
-        shared_execution_context: &mut SharedExecutionContext,
+        shared_execution_context: &SharedExecutionContext,
         execution_context: &ProcessContext,
     ) -> bool {
         match self {
@@ -667,7 +668,7 @@ impl Object {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct StackFrame {
     // the register in the previous stack to place return values
     pub return_register: u8,
@@ -677,7 +678,7 @@ pub struct StackFrame {
     pub fn_object: Box<FnObject>,
 }
 
-#[derive(Debug, DeepSizeOf)]
+#[derive(Clone, Debug, DeepSizeOf)]
 pub struct Heap {
     // linked list of objects
     pub live_slots: Vec<GCRefData>,
@@ -731,27 +732,29 @@ impl Heap {
     }
 }
 
-type GilaABINativeFnType =
-    fn(&mut SharedExecutionContext, &mut ProcessContext, Vec<Object>) -> Object;
+// todo return a new context
+type GilaABINativeFnType = fn(SharedExecutionContext, ProcessContext, Vec<Object>) -> Object;
 type CABIGilaABINativeFnType =
-    unsafe extern "C" fn(&mut SharedExecutionContext, &mut ProcessContext, Vec<Object>) -> Object;
+    unsafe extern "C" fn(SharedExecutionContext, ProcessContext, Vec<Object>) -> Object;
 
+#[derive(Clone)]
 pub struct ProcessContext {
     pub stack_frames: std::vec::Vec<StackFrame>,
     pub stack_frame_pointer: usize,
     pub native_fns: HashMap<String, GilaABINativeFnType>,
 }
 
+#[derive(Clone)]
 pub struct SharedExecutionContext {
     pub heap: Heap,
-    pub gila_abis_dlls: Vec<Library>,
+    pub gila_abis_dlls: Vec<Arc<Library>>,
 }
 
 impl SharedExecutionContext {
     pub fn load_gila_abi_dll(&mut self, path: String) -> usize {
         let id = self.gila_abis_dlls.len();
         let lib = unsafe { Library::new(path.to_string()).expect("Failed to load library") };
-        self.gila_abis_dlls.push(lib);
+        self.gila_abis_dlls.push(Arc::new(lib));
         return id;
     }
 }
@@ -767,17 +770,18 @@ impl ProcessContext {
 
 #[no_mangle]
 pub fn native_print(
-    shared_execution_context: &mut SharedExecutionContext,
-    execution_context: &mut ProcessContext,
+    shared_execution_context: SharedExecutionContext,
+    execution_context: ProcessContext,
     args: Vec<Object>,
 ) -> Object {
-    println!("{}", args[0].print(shared_execution_context));
+    println!("{}", args[0].print(&shared_execution_context));
     return Object::I64(0);
 }
 
+// return the new contexts
 fn native_len(
-    shared_execution_context: &mut SharedExecutionContext,
-    execution_context: &mut ProcessContext,
+    shared_execution_context: SharedExecutionContext,
+    execution_context: ProcessContext,
     args: Vec<Object>,
 ) -> Object {
     let s: String = match &args[0] {
@@ -798,19 +802,20 @@ fn native_len(
     };
 }
 
+// return the new contexts
 fn native_load_gila_abi_dll(
-    shared_execution_context: &mut SharedExecutionContext,
-    execution_context: &mut ProcessContext,
+    shared_execution_context: SharedExecutionContext,
+    execution_context: ProcessContext,
     args: Vec<Object>,
 ) -> Object {
-    let path = args[0].as_string(shared_execution_context);
+    let path = args[0].as_string(&shared_execution_context);
     let dll = shared_execution_context.load_gila_abi_dll(path.s.to_string());
     Object::GILA_ABI_DLL(dll)
 }
 
 fn native_open_windows(
-    shared_execution_context: &mut SharedExecutionContext,
-    execution_context: &mut ProcessContext,
+    shared_execution_context: SharedExecutionContext,
+    execution_context: ProcessContext,
     args: Vec<Object>,
 ) -> Object {
     // if let Object::GC_REF(gc_ref) = &args[0] {
@@ -826,29 +831,37 @@ fn native_open_windows(
     return Object::I64(0);
 }
 
+// todo return context
 fn native_load_c_abi_dll(
-    shared_execution_context: &mut SharedExecutionContext,
-    execution_context: &mut ProcessContext,
+    shared_execution_context: SharedExecutionContext,
+    execution_context: ProcessContext,
     args: Vec<Object>,
 ) -> Object {
-    let path = args[0].as_string(shared_execution_context);
+    let path = args[0].as_string(&shared_execution_context);
     let dll = shared_execution_context.load_gila_abi_dll(path.s.to_string());
     Object::GILA_ABI_DLL(dll)
 }
 
-pub struct ExecutionEngine<'a> {
-    pub config: &'a Config,
+pub struct ExecutionEngine {
+    pub config: Config,
     pub running: bool,
-    pub shared_execution_context: &'a mut SharedExecutionContext,
-    pub environment: &'a mut ProcessContext,
+    pub shared_execution_context: SharedExecutionContext,
+    pub environment: ProcessContext,
 }
 
-impl<'a> ExecutionEngine<'a> {
+#[derive(Clone)]
+pub struct ExecutionResult {
+    pub result: Result<Object, RuntimeError>,
+    pub shared_execution_context: SharedExecutionContext,
+    pub process_context: ProcessContext,
+}
+
+impl ExecutionEngine {
     pub fn new(
-        config: &'a Config,
-        shared_execution_context: &'a mut SharedExecutionContext,
-        environment: &'a mut ProcessContext,
-    ) -> ExecutionEngine<'a> {
+        config: Config,
+        shared_execution_context: SharedExecutionContext,
+        environment: ProcessContext,
+    ) -> ExecutionEngine {
         ExecutionEngine {
             config,
             running: true,
@@ -861,12 +874,12 @@ impl<'a> ExecutionEngine<'a> {
         self.environment.native_fns.insert(name, native_fn);
     }
 
-    fn init_builtins(&mut self, config: &'a Config) -> Result<(), RuntimeError> {
+    fn init_builtins(&mut self, config: &Config) -> Result<(), RuntimeError> {
         let alloc_res = self.shared_execution_context.heap.alloc(
             GCRefData::GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject::RUST_CALL_CONVENTION(
                 native_print,
             )),
-            config,
+            &config,
         );
         if alloc_res.is_err() {
             return Err(alloc_res.err().unwrap());
@@ -880,7 +893,7 @@ impl<'a> ExecutionEngine<'a> {
             GCRefData::GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject::RUST_CALL_CONVENTION(
                 native_len,
             )),
-            config,
+            &config,
         );
         if alloc_res.is_err() {
             return Err(alloc_res.err().unwrap());
@@ -895,7 +908,7 @@ impl<'a> ExecutionEngine<'a> {
             GCRefData::GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject::RUST_CALL_CONVENTION(
                 native_load_gila_abi_dll,
             )),
-            config,
+            &config,
         );
         if alloc_res.is_err() {
             return Err(alloc_res.err().unwrap());
@@ -908,7 +921,7 @@ impl<'a> ExecutionEngine<'a> {
             GCRefData::GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject::RUST_CALL_CONVENTION(
                 native_load_c_abi_dll,
             )),
-            config,
+            &config,
         );
         if alloc_res.is_err() {
             return Err(alloc_res.err().unwrap());
@@ -922,7 +935,7 @@ impl<'a> ExecutionEngine<'a> {
             GCRefData::STRING(StringObject {
                 s: Rc::new(env::consts::OS.to_owned()),
             }),
-            config,
+            &config,
         );
         if alloc_res.is_err() {
             return Err(alloc_res.err().unwrap());
@@ -939,7 +952,7 @@ impl<'a> ExecutionEngine<'a> {
         compilation_unit: String,
         bytecode: Chunk,
         is_repl: bool,
-    ) -> Result<Object, RuntimeError> {
+    ) -> ExecutionResult {
         self.register_native_fn("native_print".to_string(), native_print);
         self.register_native_fn("native_open_windows".to_string(), native_open_windows);
 
@@ -987,7 +1000,11 @@ impl<'a> ExecutionEngine<'a> {
             let reg_result = self.exec_instr(instr);
 
             if let Err(e) = reg_result {
-                return Err(e);
+                return ExecutionResult {
+                    result: Err(e),
+                    shared_execution_context: self.shared_execution_context.clone(),
+                    process_context: self.environment.clone(),
+                };
             }
 
             reg = reg_result.unwrap();
@@ -1007,10 +1024,15 @@ impl<'a> ExecutionEngine<'a> {
         }
 
         // todo return reference
-        return Ok(
+        let result = Ok(
             self.environment.stack_frames[self.environment.stack_frame_pointer].stack[reg as usize]
                 .clone(),
         );
+        return ExecutionResult {
+            result,
+            shared_execution_context: self.shared_execution_context.clone(),
+            process_context: self.environment.clone(),
+        };
     }
 
     // todo nested gc refs!
@@ -1314,8 +1336,8 @@ impl<'a> ExecutionEngine<'a> {
         let lhs = stack_access!(self, greater.arg_0);
         let rhs = stack_access!(self, greater.arg_1);
 
-        let result = lhs.truthy(&mut self.shared_execution_context, &self.environment)
-            || rhs.truthy(&mut self.shared_execution_context, &self.environment);
+        let result = lhs.truthy(&self.shared_execution_context, &self.environment)
+            || rhs.truthy(&self.shared_execution_context, &self.environment);
         stack_set!(self, greater.arg_2, Object::BOOL(result));
         increment_ip!(self);
 
@@ -1341,8 +1363,8 @@ impl<'a> ExecutionEngine<'a> {
         let lhs = stack_access!(self, instr.arg_0);
         let rhs = stack_access!(self, instr.arg_1);
 
-        if lhs.is_type_definition(self.shared_execution_context)
-            && rhs.is_type_definition(self.shared_execution_context)
+        if lhs.is_type_definition(&self.shared_execution_context)
+            && rhs.is_type_definition(&self.shared_execution_context)
         {
             let mut fields: HashMap<String, Object> = HashMap::new();
 
@@ -1698,7 +1720,7 @@ impl<'a> ExecutionEngine<'a> {
         let val = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [if_jmp_else.arg_0 as usize];
 
-        if !val.truthy(self.shared_execution_context, &self.environment) {
+        if !val.truthy(&self.shared_execution_context, &self.environment) {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer = if_jmp_else.arg_1 as usize
         } else {
@@ -1714,7 +1736,7 @@ impl<'a> ExecutionEngine<'a> {
         let val = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [if_jmp_else.arg_0 as usize];
 
-        if val.truthy(self.shared_execution_context, &self.environment) {
+        if val.truthy(&self.shared_execution_context, &self.environment) {
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .instruction_pointer = if_jmp_else.arg_1 as usize
         } else {
@@ -2137,7 +2159,7 @@ impl<'a> ExecutionEngine<'a> {
                                         return Err(RuntimeError::INVALID_ACCESS(
                                             format!(
                                                 "struct access field should be string but got {}",
-                                                unwrapped.print(self.shared_execution_context)
+                                                unwrapped.print(&self.shared_execution_context)
                                             )
                                             .to_string(),
                                         ))
@@ -2293,11 +2315,12 @@ impl<'a> ExecutionEngine<'a> {
                                         .expect("Unable to read file");
 
                                     let mut compiler = Compiler::new();
+                                    // todo fix this and set our shared_execution_context t- the result
                                     let compilation_context = compiler.compile_and_exec(
                                         f.file_name().into_string().unwrap(),
                                         code,
-                                        &self.config,
-                                        &mut self.shared_execution_context,
+                                        self.config.clone(),
+                                        self.shared_execution_context.clone(),
                                     );
 
                                     // todo go through all exported variables
@@ -2353,13 +2376,14 @@ impl<'a> ExecutionEngine<'a> {
                                 let code = fs::read_to_string(full_path_with_extension.to_string())
                                     .expect("Unable to read file");
 
+                                // todo get the result context and set it to our context
                                 let mut compiler = Compiler::new();
                                 let compilation_context = compiler.compile_and_exec(
                                     // todo fix this
                                     last_module.to_string(),
                                     code,
-                                    &self.config,
-                                    &mut self.shared_execution_context,
+                                    self.config.clone(),
+                                    self.shared_execution_context.clone(),
                                 );
 
                                 let mut module_objects: HashMap<String, Object> = HashMap::new();

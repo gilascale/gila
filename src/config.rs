@@ -1,6 +1,6 @@
 use deepsize::DeepSizeOf;
 
-#[derive(Debug, DeepSizeOf)]
+#[derive(Clone, Debug, DeepSizeOf)]
 pub struct Config {
     pub max_memory: usize,
 }

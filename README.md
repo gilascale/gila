@@ -68,6 +68,7 @@ v.display()
 
 ### Non functional features
 
+- restructure the contexts, i think we need to start cloning them and returning them as we can't just be passing references and stuff around.
 - reuse registers
 - add implicit returns to functions without them
 - fix nested GCRefs in constant data

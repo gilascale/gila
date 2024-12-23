@@ -19,6 +19,7 @@ use analyse::TypeCheckError;
 use codegen::{BytecodeGenerator, Chunk, CodegenContext, SlotManager};
 use config::Config;
 use deepsize::DeepSizeOf;
+use execution::ExecutionResult;
 use execution::Heap;
 use execution::{ExecutionEngine, SharedExecutionContext};
 use execution::{Object, ProcessContext};
@@ -30,11 +31,11 @@ fn exec_shared_ctx(
     shared_execution_context: &mut SharedExecutionContext,
     codegen_context: &mut CodegenContext,
     execution_context: &mut ProcessContext,
-) -> Result<Object, execution::RuntimeError> {
+) -> ExecutionResult {
     // todo this should work the same way an import works basically
 
     let mut lexer = lex::Lexer::new();
-    let mut bytecode_generator = BytecodeGenerator::new(&config, codegen_context);
+    let mut bytecode_generator = BytecodeGenerator::new(config, codegen_context);
 
     let mut exec_engine = ExecutionEngine::new(config, shared_execution_context, execution_context);
     let tokens = lexer.lex(source);
@@ -56,7 +57,7 @@ fn load_prelude<'a>(
     // todo this should work the same way an import works basically
 
     let mut lexer = lex::Lexer::new();
-    let mut bytecode_generator = BytecodeGenerator::new(&config, codegen_context);
+    let mut bytecode_generator = BytecodeGenerator::new(config, codegen_context);
 
     bytecode_generator.init_builtins();
 
@@ -232,7 +233,7 @@ fn exec(file_to_exec: String) {
     //     return;
     // }
 
-    let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
+    let mut bytecode_generator = BytecodeGenerator::new(config, codegen_context);
 
     let bytecode = bytecode_generator.generate(&ast);
 
@@ -249,7 +250,7 @@ fn exec(file_to_exec: String) {
     let result = execution_engine.exec(file_to_exec.to_string(), bytecode, false);
     let elapsed = start.elapsed();
 
-    match result {
+    match result.result {
         Ok(o) => {}
         Err(e) => {
             println!("encountered runtime exception {:?}", e);
@@ -388,8 +389,8 @@ enum Mode {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let file_to_exec: String = args[3].to_string();
-    let mode = Mode::TEST(file_to_exec);
-    // let mode = Mode::FILE(file_to_exec);
+    // let mode = Mode::TEST(file_to_exec);
+    let mode = Mode::FILE(file_to_exec);
     // let mode = Mode::REPL;
 
     match mode {
