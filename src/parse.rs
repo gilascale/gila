@@ -310,7 +310,7 @@ impl<'a> Parser<'a> {
 
         if !self.end() && self.tokens[self.counter].typ == Type::OR {
             consume_token!(self, Type::OR);
-            let rhs = self.expression();
+            let rhs = self.logical_operators();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -332,7 +332,7 @@ impl<'a> Parser<'a> {
         let higher_precedence = self.add_sub();
         if !self.end() && self.tokens[self.counter].typ == Type::EQUALS {
             consume_token!(self, Type::EQUALS);
-            let rhs = self.expression();
+            let rhs = self.equality();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -343,7 +343,7 @@ impl<'a> Parser<'a> {
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::NOT_EQUALS {
             consume_token!(self, Type::NOT_EQUALS);
-            let rhs = self.expression();
+            let rhs = self.equality();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -354,7 +354,7 @@ impl<'a> Parser<'a> {
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::GREATER_THAN {
             consume_token!(self, Type::GREATER_THAN);
-            let rhs = self.expression();
+            let rhs = self.equality();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -366,7 +366,7 @@ impl<'a> Parser<'a> {
         }
         if !self.end() && self.tokens[self.counter].typ == Type::GREATER_EQ {
             consume_token!(self, Type::GREATER_EQ);
-            let rhs = self.expression();
+            let rhs = self.equality();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -378,7 +378,7 @@ impl<'a> Parser<'a> {
         }
         if !self.end() && self.tokens[self.counter].typ == Type::LESS_THAN {
             consume_token!(self, Type::LESS_THAN);
-            let rhs = self.expression();
+            let rhs = self.equality();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -408,7 +408,7 @@ impl<'a> Parser<'a> {
         let higher_precedence = self.mul_div();
         if !self.end() && self.tokens[self.counter].typ == Type::ADD {
             consume_token!(self, Type::ADD);
-            let rhs: ASTNode = self.expression();
+            let rhs: ASTNode = self.add_sub();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -419,7 +419,7 @@ impl<'a> Parser<'a> {
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::SUB {
             consume_token!(self, Type::SUB);
-            let rhs = self.expression();
+            let rhs = self.add_sub();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -436,7 +436,7 @@ impl<'a> Parser<'a> {
         let higher_precedence = self.bitwise();
         if !self.end() && self.tokens[self.counter].typ == Type::MUL {
             consume_token!(self, Type::MUL);
-            let rhs = self.expression();
+            let rhs = self.mul_div();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -447,7 +447,7 @@ impl<'a> Parser<'a> {
             };
         } else if !self.end() && self.tokens[self.counter].typ == Type::DIV {
             consume_token!(self, Type::DIV);
-            let rhs = self.expression();
+            let rhs = self.mul_div();
             let pos = higher_precedence
                 .position
                 .clone()
@@ -464,7 +464,7 @@ impl<'a> Parser<'a> {
         let higher_precedence = self.tryy();
         if !self.end() && self.tokens[self.counter].typ == Type::BITWISE_OR {
             consume_token!(self, Type::BITWISE_OR);
-            let rhs = self.expression();
+            let rhs = self.bitwise();
             let pos = higher_precedence
                 .position
                 .clone()

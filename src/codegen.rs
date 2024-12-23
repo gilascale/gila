@@ -218,6 +218,48 @@ impl Instruction {
                 format!("r{}", self.arg_1),
                 format!("r{}", self.arg_2)
             ),
+            OpInstruction::GREATER_THAN => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::GREATER_EQUAL => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::LESS_THAN => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::LESS_EQUAL => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::EQUAL => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::NOT_EQUALS => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
             _ => format!(
                 "{:>75}{:5?}{:5?}{:5?}\n",
                 format!("{:?}", self.op_instruction),
