@@ -1,6 +1,7 @@
 
 
 
+print("loading maths module...")
 
 Vec type 
     x: u32

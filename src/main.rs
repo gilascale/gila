@@ -361,8 +361,8 @@ enum Mode {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let file_to_exec: String = args[3].to_string();
-    let mode = Mode::TEST(file_to_exec);
-    // let mode = Mode::FILE(file_to_exec);
+    // let mode = Mode::TEST(file_to_exec);
+    let mode = Mode::FILE(file_to_exec);
     // let mode = Mode::REPL;
 
     match mode {

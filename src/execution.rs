@@ -2329,7 +2329,7 @@ impl ExecutionEngine {
                                     let compilation_result = compiler.compile_and_exec(
                                         f.file_name().into_string().unwrap(),
                                         CompilerFlags {
-                                            init_builtins: false,
+                                            init_builtins: true,
                                         },
                                         code,
                                         self.config.clone(),
@@ -2403,7 +2403,7 @@ impl ExecutionEngine {
                                 let compilation_result = compiler.compile_and_exec(
                                     s.s.to_string(),
                                     CompilerFlags {
-                                        init_builtins: false,
+                                        init_builtins: true,
                                     },
                                     code,
                                     self.config.clone(),

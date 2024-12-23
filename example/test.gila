@@ -1,9 +1,10 @@
 get_data fn -> string return "hello, world!"
 
-test "hello" do
-    assert get_data()=="hello, world!"
-end
+print(get_data())
 
-test "addition" do
-    assert 1+2==3
-end
+
+maths = import std.maths
+
+v = maths.Vec(x=3,y=4)
+
+print(v)
