@@ -428,15 +428,15 @@ fn do_test(file_to_test: String) {
                 match dynamic {
                     Ok(dynamic_obj) => {
                         if dynamic_obj.fields.contains_key("Data") {
-                            println!("doing {}... ✅.", test);
+                            println!("doing {:<25}... {}.", test, "✅");
                         } else {
-                            println!("doing {}... ❌.", test);
+                            println!("doing {:<25}... {}.", test, "❌");
                         }
                     }
-                    _ => println!("doing {}... ❌.", test),
+                    _ => println!("doing {:<25}... {}.", test, "❌"),
                 }
             }
-            Err(e) => println!("doing {}... ❌.", test),
+            Err(e) => println!("doing {:<25}... {}.", test, "❌"),
         }
     }
 
