@@ -89,6 +89,13 @@ impl Token {
             _ => panic!(),
         }
     }
+
+    pub fn as_string(&self) -> Rc<String> {
+        match &self.typ {
+            Type::STRING_LITERAL(i) => i.clone(),
+            _ => panic!(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -620,6 +627,7 @@ impl Lexer {
                     } else if chars[self.counter as usize + 1] == 'e'
                         && chars[self.counter as usize + 2] == 's'
                         && chars[self.counter as usize + 3] == 't'
+                        && chars[self.counter as usize + 4].is_whitespace()
                     {
                         v.push(Token {
                             typ: Type::TEST,

@@ -840,13 +840,11 @@ impl BytecodeGenerator<'_> {
         name: &ASTNode,
         body: &ASTNode,
     ) -> u8 {
-        self.create_function(
-            &position,
-            Rc::new("test_example".to_string()),
-            body,
-            &vec![],
-            &None,
-        )
+        let func_name = match &name.statement {
+            Statement::STRING(s) => format!("test_{}", s.as_string().to_string()),
+            _ => panic!("expected string but got {:?}.", name),
+        };
+        self.create_function(&position, Rc::new(func_name), body, &vec![], &None)
     }
 
     fn gen_if(
