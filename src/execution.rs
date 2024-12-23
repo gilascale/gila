@@ -40,6 +40,7 @@ pub enum RuntimeError {
     INVALID_OPERATION(String),
     INVALID_GC_REF,
     INVALID_ACCESS(String),
+    OUT_OF_BOUNDS,
     OUT_OF_MEMORY,
     UNKNOWN_MODULE,
     INVALID_TYP,
@@ -1969,6 +1970,11 @@ impl<'a> ExecutionEngine<'a> {
                     .stack[instr.arg_1 as usize];
                 if let Object::I64(i) = index_obj {
                     let index_val: i64 = *i;
+
+                    if index_val >= s.s.len() as i64 {
+                        return Err(RuntimeError::OUT_OF_BOUNDS);
+                    }
+
                     self.environment.stack_frames[self.environment.stack_frame_pointer].stack
                         [instr.arg_2 as usize] = s.s[index_val as usize].clone();
 
