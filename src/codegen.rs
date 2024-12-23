@@ -107,6 +107,9 @@ pub enum OpInstruction {
     LOAD_CONST,
     // JUMP IF ITS FALSE
     IF_JMP_FALSE, // IF <value> <jump to instruction> <>
+    // JUMP IF TRUE
+    // <value> <to instruction> <>
+    IF_JMP_TRUE,
     // JMP <dest>
     JMP,
     // BUILD_SLICE <starting reg> <num args> <destination>
@@ -146,6 +149,18 @@ pub struct Instruction {
 impl Instruction {
     pub fn to_string(&self) -> String {
         match self.op_instruction {
+            OpInstruction::IF_JMP_FALSE => format!(
+                "{:>75}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("{}", self.arg_1),
+            ),
+            OpInstruction::IF_JMP_TRUE => format!(
+                "{:>75}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("{}", self.arg_1),
+            ),
             OpInstruction::TRY => format!(
                 "{:>75}{:>5}{:>5}\n",
                 format!("{:?}", self.op_instruction),
@@ -777,6 +792,7 @@ impl BytecodeGenerator<'_> {
             }
             Statement::IMPORT(path) => self.gen_import(annotation_context, path),
             Statement::TRY(rhs) => self.gen_try(annotation_context, rhs),
+            Statement::ASSERT(expr, msg) => self.gen_assert(annotation_context, expr, msg),
             _ => panic!(),
         }
     }
@@ -824,6 +840,7 @@ impl BytecodeGenerator<'_> {
         name: &ASTNode,
         body: &ASTNode,
     ) -> u8 {
+        self.visit(annotation_context, body);
         0
     }
 
@@ -2018,5 +2035,52 @@ impl BytecodeGenerator<'_> {
         free_slot!(self, rhs_reg);
 
         dest
+    }
+
+    fn gen_assert(
+        &mut self,
+        mut annotation_context: AnnotationContext,
+        expr: &Box<ASTNode>,
+        msg: &Option<Token>,
+    ) -> u8 {
+        let result_reg = self.visit(annotation_context, expr);
+
+        let result_object_gc_ref =
+            self.push_gc_ref_data(GCRefData::DYNAMIC_OBJECT(DynamicObject {
+                fields: HashMap::new(),
+            }));
+
+        let obj = Object::GC_REF(GCRef {
+            index: result_object_gc_ref as usize,
+            marked: false,
+        });
+
+        let constant_idx = self.push_constant(obj);
+
+        let slot = alloc_slot!(self);
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::LOAD_CONST,
+                arg_0: constant_idx,
+                arg_1: slot,
+                arg_2: 0,
+            },
+            expr.position.line.try_into().unwrap(),
+        );
+
+        // todo if result_reg is false, then raise an error
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::IF_JMP_TRUE,
+                arg_0: result_reg,
+                arg_1: self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+                    .instructions
+                    .len() as u8,
+                arg_2: 0,
+            },
+            expr.position.line.try_into().unwrap(),
+        );
+
+        result_reg
     }
 }

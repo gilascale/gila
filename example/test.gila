@@ -4,8 +4,8 @@
 
 
 
-x = 1_000
 
-foo = x+1>3-2
+test "foo" do
+    assert true == false
+end
 
-print(foo)
