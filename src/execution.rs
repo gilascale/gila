@@ -1,4 +1,4 @@
-use crate::compiler::Compiler;
+use crate::compiler::{Compiler, CompilerFlags};
 use crate::lex::Type;
 use deepsize::DeepSizeOf;
 use libloading::{Library, Symbol};
@@ -2328,9 +2328,14 @@ impl ExecutionEngine {
                                     // todo fix this and set our shared_execution_context t- the result
                                     let compilation_result = compiler.compile_and_exec(
                                         f.file_name().into_string().unwrap(),
+                                        CompilerFlags {
+                                            init_builtins: false,
+                                        },
                                         code,
                                         self.config.clone(),
-                                        self.shared_execution_context.clone(),
+                                        None,
+                                        Some(self.environment.clone()),
+                                        Some(self.shared_execution_context.clone()),
                                     );
                                     let imported_process_context =
                                         compilation_result.execution_result.process_context;
@@ -2396,11 +2401,15 @@ impl ExecutionEngine {
                                 // todo get the result context and set it to our context
                                 let mut compiler = Compiler::new();
                                 let compilation_result = compiler.compile_and_exec(
-                                    // todo fix this
-                                    last_module.to_string(),
+                                    s.s.to_string(),
+                                    CompilerFlags {
+                                        init_builtins: false,
+                                    },
                                     code,
                                     self.config.clone(),
-                                    self.shared_execution_context.clone(),
+                                    None,
+                                    Some(self.environment.clone()),
+                                    Some(self.shared_execution_context.clone()),
                                 );
 
                                 self.shared_execution_context =
