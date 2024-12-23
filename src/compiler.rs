@@ -45,7 +45,6 @@ impl Compiler {
         shared_execution_context: SharedExecutionContext, // mut codegen_context: &mut CodegenContext,
                                                           // execution_context: &mut ProcessContext,
     ) -> CompilationResult {
-        println!("doing compile and exec...");
         let mut codegen_context = CodegenContext {
             current_chunk_pointer: 0,
             chunks: vec![Chunk {

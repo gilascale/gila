@@ -1,1 +1,8 @@
-print("hello, world!")
+
+
+
+m = import std.maths
+
+v = m.Vec(x=12,y=13)
+
+print(v)

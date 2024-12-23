@@ -2306,7 +2306,6 @@ impl ExecutionEngine {
                             let full_path = path + &s.s.replace(".", "/");
                             let mut full_path_with_extension = full_path.to_string();
                             full_path_with_extension.push_str(".gila");
-                            println!("ummm {:?}=", full_path_with_extension);
                             // todo alot of duplicate code here
                             if fs::metadata(full_path.to_string())
                                 .map(|m| m.is_dir())
