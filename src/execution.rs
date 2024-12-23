@@ -1590,7 +1590,6 @@ impl ExecutionEngine {
     }
 
     fn exec_call(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
-        println!("doing call...");
         let fn_object = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [call.arg_0 as usize];
         let gc_ref_object: &GCRef = match &fn_object {
@@ -2307,7 +2306,7 @@ impl ExecutionEngine {
                             let full_path = path + &s.s.replace(".", "/");
                             let mut full_path_with_extension = full_path.to_string();
                             full_path_with_extension.push_str(".gila");
-
+                            println!("ummm {:?}=", full_path_with_extension);
                             // todo alot of duplicate code here
                             if fs::metadata(full_path.to_string())
                                 .map(|m| m.is_dir())
@@ -2357,11 +2356,6 @@ impl ExecutionEngine {
                                         let val = imported_process_context.stack_frames[0].stack
                                             [val as usize]
                                             .clone();
-                                        println!(
-                                            "importing exported val... {}={:?}",
-                                            key,
-                                            val.print(&self.shared_execution_context)
-                                        );
                                         exported.insert(key.to_string(), val.clone());
                                     }
                                     let module_dynamic_object = DynamicObject { fields: exported };
@@ -2397,7 +2391,6 @@ impl ExecutionEngine {
                                 .unwrap_or(false)
                             {
                                 //todo
-
                                 let code = fs::read_to_string(full_path_with_extension.to_string())
                                     .expect("Unable to read file");
 
@@ -2410,6 +2403,9 @@ impl ExecutionEngine {
                                     self.config.clone(),
                                     self.shared_execution_context.clone(),
                                 );
+
+                                self.shared_execution_context =
+                                    compilation_result.execution_result.shared_execution_context;
 
                                 let mut module_objects: HashMap<String, Object> = HashMap::new();
 

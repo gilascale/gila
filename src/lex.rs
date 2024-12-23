@@ -372,6 +372,9 @@ impl Lexer {
                         });
                         self.counter += 4;
                         self.index += 4;
+                    } else {
+                        self.identifier(&chars, &mut v);
+                        continue;
                     }
                 }
                 'f' => {
