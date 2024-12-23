@@ -2045,10 +2045,28 @@ impl BytecodeGenerator<'_> {
     ) -> u8 {
         let result_reg = self.visit(annotation_context, expr);
 
+        let jmp_instr_index = self.codegen_context.chunks
+            [self.codegen_context.current_chunk_pointer]
+            .instructions
+            .len();
+        // todo if result_reg is false, then raise an error
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::IF_JMP_TRUE,
+                arg_0: result_reg,
+                arg_1: 0,
+                arg_2: 0,
+            },
+            expr.position.line.try_into().unwrap(),
+        );
+
+        let mut fields = HashMap::new();
+
+        // todo put the prototype and error object in here
+        fields.insert("Error".to_string(), Object::I64(123));
+
         let result_object_gc_ref =
-            self.push_gc_ref_data(GCRefData::DYNAMIC_OBJECT(DynamicObject {
-                fields: HashMap::new(),
-            }));
+            self.push_gc_ref_data(GCRefData::DYNAMIC_OBJECT(DynamicObject { fields }));
 
         let obj = Object::GC_REF(GCRef {
             index: result_object_gc_ref as usize,
@@ -2068,18 +2086,24 @@ impl BytecodeGenerator<'_> {
             expr.position.line.try_into().unwrap(),
         );
 
-        // todo if result_reg is false, then raise an error
         self.push_instruction(
             Instruction {
-                op_instruction: OpInstruction::IF_JMP_TRUE,
-                arg_0: result_reg,
-                arg_1: self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
-                    .instructions
-                    .len() as u8,
+                op_instruction: OpInstruction::RETURN,
+                arg_0: slot,
+                arg_1: 1,
                 arg_2: 0,
             },
             expr.position.line.try_into().unwrap(),
         );
+
+        let current_instr_index = self.codegen_context.chunks
+            [self.codegen_context.current_chunk_pointer]
+            .instructions
+            .len();
+
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].instructions
+            [jmp_instr_index]
+            .arg_1 = current_instr_index as u8;
 
         result_reg
     }

@@ -1102,6 +1102,7 @@ impl<'a> ExecutionEngine<'a> {
             OpInstruction::NATIVE_CALL => self.exec_native_call(instr),
             OpInstruction::LOAD_CONST => self.exec_load_const(instr),
             OpInstruction::IF_JMP_FALSE => self.exec_if_jmp_false(instr),
+            OpInstruction::IF_JMP_TRUE => self.exec_if_jmp_true(instr),
             OpInstruction::JMP => self.exec_jmp(instr),
             OpInstruction::FOR_ITER => self.exec_for_iter(instr),
             OpInstruction::BUILD_SLICE => self.exec_build_slice(instr),
@@ -1707,6 +1708,23 @@ impl<'a> ExecutionEngine<'a> {
         // fixme
         Ok(0)
     }
+
+    fn exec_if_jmp_true(&mut self, if_jmp_else: &Instruction) -> Result<u8, RuntimeError> {
+        let val = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [if_jmp_else.arg_0 as usize];
+
+        if val.truthy(self.shared_execution_context, &self.environment) {
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer = if_jmp_else.arg_1 as usize
+        } else {
+            self.environment.stack_frames[self.environment.stack_frame_pointer]
+                .instruction_pointer += 1;
+        }
+
+        // fixme
+        Ok(0)
+    }
+
     fn exec_jmp(&mut self, jmp: &Instruction) -> Result<u8, RuntimeError> {
         self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer =
             jmp.arg_0 as usize;
