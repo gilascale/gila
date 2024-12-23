@@ -1,8 +1,8 @@
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
 
 use crate::{
-    codegen::{BytecodeGenerator, Chunk, CodegenContext, SlotManager},
-    execution::{ExecutionEngine, Heap, ProcessContext, SharedExecutionContext},
+    codegen::{BytecodeGenerator, Chunk, CodegenContext, CodegenResult, SlotManager},
+    execution::{ExecutionEngine, ExecutionResult, ProcessContext, SharedExecutionContext},
     lex, parse,
 };
 
@@ -14,6 +14,11 @@ pub enum CompilationUnitStatus {
     ERROR,
 }
 
+#[derive(Clone)]
+pub struct CompilationResult {
+    pub codegen_result: CodegenResult,
+    pub execution_result: ExecutionResult,
+}
 pub struct CompilationContext {
     pub codegen_context: CodegenContext,
     pub process_context: ProcessContext,
@@ -39,58 +44,57 @@ impl Compiler {
         config: Config,
         shared_execution_context: SharedExecutionContext, // mut codegen_context: &mut CodegenContext,
                                                           // execution_context: &mut ProcessContext,
-    ) -> Option<CompilationContext> {
-        if !self.compilation_units.contains_key(&compilation_unit) {
-            let mut codegen_context = CodegenContext {
-                current_chunk_pointer: 0,
-                chunks: vec![Chunk {
-                    slot_manager: SlotManager::new(),
-                    debug_line_info: vec![],
-                    constant_pool: vec![],
-                    gc_ref_data: vec![],
-                    instructions: vec![],
-                    variable_map: HashMap::new(),
-                    string_interns: HashMap::new(),
-                }],
-            };
-            let mut process_context = ProcessContext {
-                stack_frame_pointer: 0,
-                stack_frames: vec![],
-                native_fns: HashMap::new(),
-            };
-            let mut lexer = lex::Lexer::new();
-            let mut bytecode_generator =
-                BytecodeGenerator::new(config.clone(), codegen_context.clone());
+    ) -> CompilationResult {
+        println!("doing compile and exec...");
+        let mut codegen_context = CodegenContext {
+            current_chunk_pointer: 0,
+            chunks: vec![Chunk {
+                slot_manager: SlotManager::new(),
+                debug_line_info: vec![],
+                constant_pool: vec![],
+                gc_ref_data: vec![],
+                instructions: vec![],
+                variable_map: HashMap::new(),
+                string_interns: HashMap::new(),
+            }],
+        };
+        let mut process_context = ProcessContext {
+            stack_frame_pointer: 0,
+            stack_frames: vec![],
+            native_fns: HashMap::new(),
+        };
+        let mut lexer = lex::Lexer::new();
+        let mut bytecode_generator =
+            BytecodeGenerator::new(config.clone(), codegen_context.clone());
 
-            let mut exec_engine =
-                ExecutionEngine::new(config, shared_execution_context, process_context.clone());
-            let tokens = lexer.lex(code);
-            let mut parser = parse::Parser {
-                tokens: &tokens,
-                counter: 0,
-            };
-            let ast = parser.parse();
-            let codegen_result = bytecode_generator.generate(&ast);
-            let result = exec_engine.exec(
-                compilation_unit.to_string(),
-                codegen_result.codegen_context.chunks[0].clone(),
-                false,
-            );
+        let mut exec_engine =
+            ExecutionEngine::new(config, shared_execution_context, process_context.clone());
+        let tokens = lexer.lex(code);
+        let mut parser = parse::Parser {
+            tokens: &tokens,
+            counter: 0,
+        };
+        let ast = parser.parse();
+        let codegen_result = bytecode_generator.generate(&ast);
+        let execution_result = exec_engine.exec(
+            compilation_unit.to_string(),
+            codegen_result.codegen_context.chunks[0].clone(),
+            false,
+        );
 
-            match result.result {
-                Ok(_) => self
-                    .compilation_units
-                    .insert(compilation_unit.to_string(), CompilationUnitStatus::DONE),
-                Err(e) => self
-                    .compilation_units
-                    .insert(compilation_unit.to_string(), CompilationUnitStatus::ERROR),
-            };
+        let cloned_exec_result = execution_result.clone();
+        match cloned_exec_result.clone().result {
+            Ok(_) => self
+                .compilation_units
+                .insert(compilation_unit.to_string(), CompilationUnitStatus::DONE),
+            Err(e) => self
+                .compilation_units
+                .insert(compilation_unit.to_string(), CompilationUnitStatus::ERROR),
+        };
 
-            return Some(CompilationContext {
-                codegen_context,
-                process_context,
-            });
-        }
-        None
+        return CompilationResult {
+            codegen_result: codegen_result,
+            execution_result: cloned_exec_result.clone(),
+        };
     }
 }

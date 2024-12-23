@@ -108,7 +108,7 @@ impl<'a> Parser<'a> {
             loop {
                 let t = get_next!(self);
                 tokens.push(t.clone());
-                if self.tokens[self.counter].typ == Type::DOT {
+                if !self.end() && self.tokens[self.counter].typ == Type::DOT {
                     consume_token!(self, Type::DOT);
                 } else {
                     break;

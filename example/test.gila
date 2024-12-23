@@ -1,20 +1,9 @@
-something fn -> string do 
-    return "something"
-end
 
 
-x = something()
+// i think calls need to be re-worked
+x = import std
 
 
 
-test "foo" do
-    assert something()=="something"
-end
 
-test "bar" do
-    assert true==true
-end
-
-test_example fn do
-    assert 123==123
-end
+print(x)

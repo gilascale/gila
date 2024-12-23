@@ -17,18 +17,13 @@ use std::{fs, io::Write};
 
 use analyse::TypeCheckError;
 use codegen::{BytecodeGenerator, Chunk, CodegenContext, CodegenResult, SlotManager};
+use compiler::CompilationResult;
 use config::Config;
 use deepsize::DeepSizeOf;
 use execution::ExecutionResult;
 use execution::Heap;
 use execution::ProcessContext;
 use execution::{ExecutionEngine, SharedExecutionContext};
-
-#[derive(Clone)]
-pub struct CompilationResult {
-    pub codegen_result: CodegenResult,
-    pub execution_result: ExecutionResult,
-}
 
 fn exec_shared_ctx(
     source: String,
@@ -463,8 +458,8 @@ enum Mode {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let file_to_exec: String = args[3].to_string();
-    let mode = Mode::TEST(file_to_exec);
-    // let mode = Mode::FILE(file_to_exec);
+    // let mode = Mode::TEST(file_to_exec);
+    let mode = Mode::FILE(file_to_exec);
     // let mode = Mode::REPL;
 
     match mode {

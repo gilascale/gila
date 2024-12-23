@@ -324,7 +324,7 @@ impl Object {
                     panic!("tried to deref {}", gc_ref.index);
                 }
                 obj
-            } // Self::HEAP_OBJECT(h) => h.print(),
+            }
         }
     }
 
@@ -744,7 +744,7 @@ pub struct ProcessContext {
     pub native_fns: HashMap<String, GilaABINativeFnType>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SharedExecutionContext {
     pub heap: Heap,
     pub gila_abis_dlls: Vec<Arc<Library>>,
@@ -1590,6 +1590,7 @@ impl ExecutionEngine {
     }
 
     fn exec_call(&mut self, call: &Instruction) -> Result<u8, RuntimeError> {
+        println!("doing call...");
         let fn_object = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [call.arg_0 as usize];
         let gc_ref_object: &GCRef = match &fn_object {
@@ -2143,7 +2144,6 @@ impl ExecutionEngine {
                                                         if f.requires_method_binding {
                                                             f.bounded_object =
                                                                 Some(obj_gc_ref.clone());
-
                                                             // todo we should probably not set the actual object? and instead return another?
                                                             // because now its forever bound?
                                                             let res = self
@@ -2328,40 +2328,52 @@ impl ExecutionEngine {
 
                                     let mut compiler = Compiler::new();
                                     // todo fix this and set our shared_execution_context t- the result
-                                    let compilation_context = compiler.compile_and_exec(
+                                    let compilation_result = compiler.compile_and_exec(
                                         f.file_name().into_string().unwrap(),
                                         code,
                                         self.config.clone(),
                                         self.shared_execution_context.clone(),
                                     );
+                                    let imported_process_context =
+                                        compilation_result.execution_result.process_context;
+                                    let imported_codegen_context =
+                                        compilation_result.codegen_result.codegen_context;
+                                    let imported_shared_execution_context = compilation_result
+                                        .execution_result
+                                        .shared_execution_context;
+
+                                    // todo we need to append the shared_execution_context to our current context
+                                    self.shared_execution_context =
+                                        imported_shared_execution_context;
 
                                     // todo go through all exported variables
 
-                                    if let Some(ctx) = compilation_context {
-                                        let mut exported: HashMap<String, Object> = HashMap::new();
-                                        for (key, val) in
-                                            ctx.codegen_context.chunks[0].variable_map.clone()
-                                        {
-                                            // lets put the variables in this module
-                                            let val = ctx.process_context.stack_frames[0].stack
-                                                [val as usize]
-                                                .clone();
-                                            // println!("exported val {:?}={:?}", key, val);
-                                            exported.insert(key.to_string(), val);
-                                            continue;
-                                        }
-                                        let module_dynamic_object =
-                                            DynamicObject { fields: exported };
-                                        let module = self.shared_execution_context.heap.alloc(
-                                            GCRefData::DYNAMIC_OBJECT(module_dynamic_object),
-                                            &self.config,
+                                    let mut exported: HashMap<String, Object> = HashMap::new();
+
+                                    for (key, val) in
+                                        imported_codegen_context.chunks[0].variable_map.clone()
+                                    {
+                                        // lets put the variables in this module
+                                        let val = imported_process_context.stack_frames[0].stack
+                                            [val as usize]
+                                            .clone();
+                                        println!(
+                                            "importing exported val... {}={:?}",
+                                            key,
+                                            val.print(&self.shared_execution_context)
                                         );
-                                        if module.is_err() {
-                                            return Err(module.err().unwrap());
-                                        }
-                                        module_objects
-                                            .insert(module_name, Object::GC_REF(module.unwrap()));
+                                        exported.insert(key.to_string(), val.clone());
                                     }
+                                    let module_dynamic_object = DynamicObject { fields: exported };
+                                    let module = self.shared_execution_context.heap.alloc(
+                                        GCRefData::DYNAMIC_OBJECT(module_dynamic_object),
+                                        &self.config,
+                                    );
+                                    if module.is_err() {
+                                        return Err(module.err().unwrap());
+                                    }
+                                    module_objects
+                                        .insert(module_name, Object::GC_REF(module.unwrap()));
                                 }
 
                                 let module_dynamic_object = DynamicObject {
@@ -2378,6 +2390,7 @@ impl ExecutionEngine {
 
                                 stack_set!(self, instr.arg_1, Object::GC_REF(module.unwrap()));
                                 increment_ip!(self);
+
                                 return Ok(instr.arg_1);
                             } else if fs::metadata(full_path_with_extension.to_string())
                                 .map(|m| m.is_file())
@@ -2390,7 +2403,7 @@ impl ExecutionEngine {
 
                                 // todo get the result context and set it to our context
                                 let mut compiler = Compiler::new();
-                                let compilation_context = compiler.compile_and_exec(
+                                let compilation_result = compiler.compile_and_exec(
                                     // todo fix this
                                     last_module.to_string(),
                                     code,
@@ -2400,18 +2413,21 @@ impl ExecutionEngine {
 
                                 let mut module_objects: HashMap<String, Object> = HashMap::new();
 
-                                if let Some(ctx) = compilation_context {
-                                    for (key, val) in
-                                        ctx.codegen_context.chunks[0].variable_map.clone()
-                                    {
-                                        // lets put the variables in this module
-                                        let val = ctx.process_context.stack_frames[0].stack
-                                            [val as usize]
-                                            .clone();
-                                        // println!("exported val {:?}={:?}", key, val);
-                                        module_objects.insert(key.to_string(), val);
-                                        continue;
-                                    }
+                                for (key, val) in
+                                    compilation_result.codegen_result.codegen_context.chunks[0]
+                                        .variable_map
+                                        .clone()
+                                {
+                                    // lets put the variables in this module
+                                    let val = compilation_result
+                                        .execution_result
+                                        .process_context
+                                        .stack_frames[0]
+                                        .stack[val as usize]
+                                        .clone();
+                                    // println!("exported val {:?}={:?}", key, val);
+                                    module_objects.insert(key.to_string(), val);
+                                    continue;
                                 }
 
                                 let module_dynamic_object = DynamicObject {
