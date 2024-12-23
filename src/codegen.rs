@@ -287,7 +287,7 @@ impl Instruction {
 }
 
 // todo custom DeepSizeOf because the other stuff doesn't mattter
-#[derive(DeepSizeOf, Debug, Clone)]
+#[derive(Clone, DeepSizeOf, Debug)]
 pub struct Chunk {
     // pub current_register: u8,
     pub slot_manager: SlotManager,
@@ -606,6 +606,11 @@ pub struct CodegenContext {
     pub chunks: Vec<Chunk>,
 }
 
+#[derive(Clone)]
+pub struct CodegenResult {
+    pub codegen_context: CodegenContext,
+}
+
 pub struct BytecodeGenerator {
     config: Config,
     codegen_context: CodegenContext,
@@ -619,13 +624,15 @@ impl BytecodeGenerator {
         };
     }
 
-    pub fn generate(&mut self, ast: &ASTNode) -> Chunk {
+    pub fn generate(&mut self, ast: &ASTNode) -> CodegenResult {
         let annotation_context = AnnotationContext {
             annotations: vec![],
         };
         self.visit(annotation_context, ast);
 
-        return self.codegen_context.chunks[self.codegen_context.current_chunk_pointer].clone();
+        return CodegenResult {
+            codegen_context: self.codegen_context.clone(),
+        };
     }
 
     pub fn init_builtins(&mut self) {
@@ -835,7 +842,14 @@ impl BytecodeGenerator {
             Statement::STRING(s) => format!("test_{}", s.as_string().to_string()),
             _ => panic!("expected string but got {:?}.", name),
         };
-        self.create_function(&position, Rc::new(func_name), body, &vec![], &None)
+        self.create_function(
+            annotation_context,
+            &position,
+            Rc::new(func_name),
+            body,
+            &vec![],
+            &None,
+        )
     }
 
     fn gen_if(
@@ -1683,6 +1697,7 @@ impl BytecodeGenerator {
 
     fn create_function(
         &mut self,
+        annotation_context: AnnotationContext,
         position: &Position,
         name: Rc<String>,
         body: &ASTNode,
@@ -1762,7 +1777,7 @@ impl BytecodeGenerator {
         }
 
         // todo enter new block?
-        self.generate(body);
+        self.visit(annotation_context, body);
 
         let c = self.pop_chunk();
 
@@ -1788,6 +1803,7 @@ impl BytecodeGenerator {
         statement: &ASTNode,
     ) -> u8 {
         self.create_function(
+            annotation_context,
             &token.pos,
             token.as_identifier(),
             statement,

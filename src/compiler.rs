@@ -70,8 +70,12 @@ impl Compiler {
                 counter: 0,
             };
             let ast = parser.parse();
-            let bytecode = bytecode_generator.generate(&ast);
-            let result = exec_engine.exec(compilation_unit.to_string(), bytecode, false);
+            let codegen_result = bytecode_generator.generate(&ast);
+            let result = exec_engine.exec(
+                compilation_unit.to_string(),
+                codegen_result.codegen_context.chunks[0].clone(),
+                false,
+            );
 
             match result.result {
                 Ok(_) => self

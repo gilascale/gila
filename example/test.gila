@@ -10,6 +10,3 @@ x = something()
 test "foo" do
     assert something()=="something"
 end
-
-
-print("lol")

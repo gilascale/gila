@@ -16,52 +16,70 @@ use std::vec;
 use std::{fs, io::Write};
 
 use analyse::TypeCheckError;
-use codegen::{BytecodeGenerator, Chunk, CodegenContext, SlotManager};
+use codegen::{BytecodeGenerator, Chunk, CodegenContext, CodegenResult, SlotManager};
 use config::Config;
 use deepsize::DeepSizeOf;
 use execution::ExecutionResult;
 use execution::Heap;
+use execution::ProcessContext;
 use execution::{ExecutionEngine, SharedExecutionContext};
-use execution::{Object, ProcessContext};
-use lex::Lexer;
+
+#[derive(Clone)]
+pub struct CompilationResult {
+    pub codegen_result: CodegenResult,
+    pub execution_result: ExecutionResult,
+}
 
 fn exec_shared_ctx(
-    config: &Config,
     source: String,
-    shared_execution_context: &mut SharedExecutionContext,
-    codegen_context: &mut CodegenContext,
-    execution_context: &mut ProcessContext,
-) -> ExecutionResult {
+    config: Config,
+    shared_execution_context: SharedExecutionContext,
+    codegen_context: CodegenContext,
+    execution_context: ProcessContext,
+) -> CompilationResult {
     // todo this should work the same way an import works basically
 
     let mut lexer = lex::Lexer::new();
-    let mut bytecode_generator = BytecodeGenerator::new(config, codegen_context);
+    let mut bytecode_generator = BytecodeGenerator::new(config.clone(), codegen_context.clone());
 
-    let mut exec_engine = ExecutionEngine::new(config, shared_execution_context, execution_context);
+    bytecode_generator.init_builtins();
+
+    let mut exec_engine =
+        ExecutionEngine::new(config.clone(), shared_execution_context, execution_context);
     let tokens = lexer.lex(source);
     let mut parser = parse::Parser {
         tokens: &tokens,
         counter: 0,
     };
     let ast = parser.parse();
-    let bytecode = bytecode_generator.generate(&ast);
-    return exec_engine.exec("prelude".to_string(), bytecode, false);
+    let codegen_result = bytecode_generator.generate(&ast);
+    let execution_result = exec_engine.exec(
+        "tmp".to_string(),
+        codegen_result.codegen_context.chunks[0].clone(),
+        false,
+    );
+
+    return CompilationResult {
+        codegen_result: codegen_result.clone(),
+        execution_result: execution_result,
+    };
 }
 
 fn load_prelude<'a>(
-    config: &'a Config,
-    shared_execution_context: &mut SharedExecutionContext,
-    codegen_context: &mut CodegenContext,
-    execution_context: &'a mut ProcessContext,
-) {
+    config: Config,
+    shared_execution_context: SharedExecutionContext,
+    codegen_context: CodegenContext,
+    execution_context: ProcessContext,
+) -> CompilationResult {
     // todo this should work the same way an import works basically
 
     let mut lexer = lex::Lexer::new();
-    let mut bytecode_generator = BytecodeGenerator::new(config, codegen_context);
+    let mut bytecode_generator = BytecodeGenerator::new(config.clone(), codegen_context.clone());
 
     bytecode_generator.init_builtins();
 
-    let mut exec_engine = ExecutionEngine::new(config, shared_execution_context, execution_context);
+    let mut exec_engine =
+        ExecutionEngine::new(config.clone(), shared_execution_context, execution_context);
     let source = fs::read_to_string("./prelude/prelude.gila").expect("Unable to read file");
     let tokens = lexer.lex(source);
     let mut parser = parse::Parser {
@@ -69,8 +87,17 @@ fn load_prelude<'a>(
         counter: 0,
     };
     let ast = parser.parse();
-    let bytecode = bytecode_generator.generate(&ast);
-    exec_engine.exec("prelude".to_string(), bytecode, false);
+    let codegen_result = bytecode_generator.generate(&ast);
+    let execution_result = exec_engine.exec(
+        "prelude".to_string(),
+        codegen_result.codegen_context.chunks[0].clone(),
+        false,
+    );
+
+    return CompilationResult {
+        codegen_result: codegen_result.clone(),
+        execution_result: execution_result,
+    };
 }
 
 fn repl() {
@@ -207,12 +234,18 @@ fn exec(file_to_exec: String) {
         native_fns: HashMap::new(),
     };
 
-    load_prelude(
-        &config,
-        &mut shared_execution_context,
-        &mut codegen_context,
-        &mut environment,
+    let prelude_compile_result = load_prelude(
+        config.clone(),
+        shared_execution_context.clone(),
+        codegen_context.clone(),
+        environment.clone(),
     );
+
+    shared_execution_context = prelude_compile_result
+        .execution_result
+        .shared_execution_context;
+    environment = prelude_compile_result.execution_result.process_context;
+    codegen_context = prelude_compile_result.codegen_result.codegen_context;
 
     let source = fs::read_to_string(file_to_exec.to_string()).expect("Unable to read file");
     let mut lexer = lex::Lexer::new();
@@ -233,21 +266,31 @@ fn exec(file_to_exec: String) {
     //     return;
     // }
 
-    let mut bytecode_generator = BytecodeGenerator::new(config, codegen_context);
+    let mut bytecode_generator = BytecodeGenerator::new(config.clone(), codegen_context.clone());
 
-    let bytecode = bytecode_generator.generate(&ast);
+    let codegen_result = bytecode_generator.generate(&ast);
 
     let compilation_elapsed = start.elapsed();
     // println!("{:#?}", bytecode);
 
     let mut file = File::create("./gila-build/bytecode.giladbg");
-    file.unwrap()
-        .write_all(bytecode.dump_to_file_format(&source).as_bytes());
+    file.unwrap().write_all(
+        codegen_result.codegen_context.chunks[0]
+            .dump_to_file_format(&source)
+            .as_bytes(),
+    );
 
-    let mut execution_engine =
-        ExecutionEngine::new(&config, &mut shared_execution_context, &mut environment);
+    let mut execution_engine = ExecutionEngine::new(
+        config.clone(),
+        shared_execution_context.clone(),
+        environment.clone(),
+    );
 
-    let result = execution_engine.exec(file_to_exec.to_string(), bytecode, false);
+    let result = execution_engine.exec(
+        file_to_exec.to_string(),
+        codegen_result.codegen_context.chunks[0].clone(),
+        false,
+    );
     let elapsed = start.elapsed();
 
     match result.result {
@@ -306,12 +349,16 @@ fn do_test(file_to_test: String) {
         native_fns: HashMap::new(),
     };
 
-    load_prelude(
-        &config,
-        &mut shared_execution_context,
-        &mut codegen_context,
-        &mut environment,
+    let prelude_result = load_prelude(
+        config.clone(),
+        shared_execution_context.clone(),
+        codegen_context.clone(),
+        environment.clone(),
     );
+
+    codegen_context = prelude_result.codegen_result.codegen_context;
+    environment = prelude_result.execution_result.process_context;
+    shared_execution_context = prelude_result.execution_result.shared_execution_context;
 
     let source = fs::read_to_string(file_to_test.to_string()).expect("Unable to read file");
     let mut lexer = lex::Lexer::new();
@@ -331,23 +378,33 @@ fn do_test(file_to_test: String) {
     //     return;
     // }
 
-    let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
+    let mut bytecode_generator = BytecodeGenerator::new(config.clone(), codegen_context.clone());
 
-    let bytecode = bytecode_generator.generate(&ast);
+    let codegen_result = bytecode_generator.generate(&ast);
+
+    codegen_context = codegen_result.codegen_context;
 
     let compilation_elapsed = start.elapsed();
 
-    let mut file = File::create("./gila-build/bytecode.giladbg");
-    file.unwrap()
-        .write_all(bytecode.dump_to_file_format(&source).as_bytes());
+    let mut execution_engine = ExecutionEngine::new(
+        config.clone(),
+        shared_execution_context.clone(),
+        environment.clone(),
+    );
 
-    let mut execution_engine =
-        ExecutionEngine::new(&config, &mut shared_execution_context, &mut environment);
+    let exec_result = execution_engine.exec(
+        file_to_test.to_string(),
+        codegen_context.chunks[0].clone(),
+        false,
+    );
 
-    execution_engine.exec(file_to_test.to_string(), bytecode, false);
+    environment = exec_result.process_context;
+    shared_execution_context = exec_result.shared_execution_context;
+
     let elapsed = start.elapsed();
 
     let mut tests: Vec<Rc<String>> = vec![];
+    // println!("variable map {:?}", codegen_context.chunks[0].variable_map);
     for (var, _) in &codegen_context.chunks[0].variable_map {
         if var.starts_with("test_") {
             println!("collected test {}...", var);
@@ -356,14 +413,23 @@ fn do_test(file_to_test: String) {
     }
 
     for test in tests {
-        // let res = exec_shared_ctx(
-        //     &config,
-        //     format!("{}()", test.to_string()),
-        //     &mut shared_execution_context,
-        //     &mut codegen_context,
-        //     &mut environment,
-        // );
-        println!("doing {}...", test);
+        let res = exec_shared_ctx(
+            format!("{}()", test.to_string()),
+            config.clone(),
+            shared_execution_context.clone(),
+            codegen_context.clone(),
+            environment.clone(),
+        );
+        shared_execution_context = res.execution_result.shared_execution_context;
+        let res_unwrapped = res.execution_result.result;
+        match res_unwrapped {
+            Ok(obj) => println!(
+                "doing {}... got {:?}.",
+                test,
+                obj.print(&shared_execution_context)
+            ),
+            Err(e) => println!("doing {}... failed {:?}.", test, e),
+        }
     }
 
     let denominator = 1000_000;
@@ -389,8 +455,8 @@ enum Mode {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let file_to_exec: String = args[3].to_string();
-    // let mode = Mode::TEST(file_to_exec);
-    let mode = Mode::FILE(file_to_exec);
+    let mode = Mode::TEST(file_to_exec);
+    // let mode = Mode::FILE(file_to_exec);
     // let mode = Mode::REPL;
 
     match mode {

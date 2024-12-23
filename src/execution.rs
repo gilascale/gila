@@ -808,9 +808,11 @@ fn native_load_gila_abi_dll(
     execution_context: ProcessContext,
     args: Vec<Object>,
 ) -> Object {
-    let path = args[0].as_string(&shared_execution_context);
-    let dll = shared_execution_context.load_gila_abi_dll(path.s.to_string());
-    Object::GILA_ABI_DLL(dll)
+    // let path = args[0].as_string(&shared_execution_context);
+    // let dll = shared_execution_context.load_gila_abi_dll(path.s.to_string());
+    // Object::GILA_ABI_DLL(dll)
+    // TODO
+    return Object::I64(0);
 }
 
 fn native_open_windows(
@@ -837,9 +839,11 @@ fn native_load_c_abi_dll(
     execution_context: ProcessContext,
     args: Vec<Object>,
 ) -> Object {
-    let path = args[0].as_string(&shared_execution_context);
-    let dll = shared_execution_context.load_gila_abi_dll(path.s.to_string());
-    Object::GILA_ABI_DLL(dll)
+    // let path = args[0].as_string(&shared_execution_context);
+    // let dll = shared_execution_context.load_gila_abi_dll(path.s.to_string());
+    // Object::GILA_ABI_DLL(dll)
+    // todo
+    return Object::I64(0);
 }
 
 pub struct ExecutionEngine {
@@ -874,7 +878,7 @@ impl ExecutionEngine {
         self.environment.native_fns.insert(name, native_fn);
     }
 
-    fn init_builtins(&mut self, config: &Config) -> Result<(), RuntimeError> {
+    fn init_builtins(&mut self, config: Config) -> Result<(), RuntimeError> {
         let alloc_res = self.shared_execution_context.heap.alloc(
             GCRefData::GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject::RUST_CALL_CONVENTION(
                 native_print,
@@ -984,7 +988,7 @@ impl ExecutionEngine {
             self.init_constants();
         }
 
-        self.init_builtins(&self.config);
+        self.init_builtins(self.config.clone());
 
         // println!("{:#?}", self.environment.stack_frames);
 
@@ -1647,7 +1651,11 @@ impl ExecutionEngine {
                 }
 
                 let result = unsafe {
-                    native_fn.invoke(self.shared_execution_context, self.environment, args)
+                    native_fn.invoke(
+                        self.shared_execution_context.clone(),
+                        self.environment.clone(),
+                        args,
+                    )
                 };
                 stack_set!(self, destination, result);
                 increment_ip!(self);
@@ -1688,7 +1696,11 @@ impl ExecutionEngine {
                     );
                 }
 
-                let result = native_fn(self.shared_execution_context, self.environment, args);
+                let result = native_fn(
+                    self.shared_execution_context.clone(),
+                    self.environment.clone(),
+                    args,
+                );
 
                 let destination = instr.arg_1 + instr.arg_2;
 
