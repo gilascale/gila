@@ -10,6 +10,7 @@ mod r#type;
 
 use std::collections::HashMap;
 use std::fs::File;
+use std::rc::Rc;
 use std::time::Instant;
 use std::vec;
 use std::{fs, io::Write};
@@ -22,6 +23,29 @@ use execution::Heap;
 use execution::{ExecutionEngine, SharedExecutionContext};
 use execution::{Object, ProcessContext};
 use lex::Lexer;
+
+fn exec_shared_ctx(
+    config: &Config,
+    source: String,
+    shared_execution_context: &mut SharedExecutionContext,
+    codegen_context: &mut CodegenContext,
+    execution_context: &mut ProcessContext,
+) -> Result<Object, execution::RuntimeError> {
+    // todo this should work the same way an import works basically
+
+    let mut lexer = lex::Lexer::new();
+    let mut bytecode_generator = BytecodeGenerator::new(&config, codegen_context);
+
+    let mut exec_engine = ExecutionEngine::new(config, shared_execution_context, execution_context);
+    let tokens = lexer.lex(source);
+    let mut parser = parse::Parser {
+        tokens: &tokens,
+        counter: 0,
+    };
+    let ast = parser.parse();
+    let bytecode = bytecode_generator.generate(&ast);
+    return exec_engine.exec("prelude".to_string(), bytecode, false);
+}
 
 fn load_prelude<'a>(
     config: &'a Config,
@@ -246,7 +270,114 @@ fn exec(file_to_exec: String) {
     );
 }
 
-fn do_test(file_to_test: String) {}
+fn do_test(file_to_test: String) {
+    let start = Instant::now();
+    println!("testing {}...", file_to_test);
+
+    fs::create_dir_all("./gila-build");
+
+    let config = Config {
+        max_memory: 100_000,
+    };
+    let mut shared_execution_context = SharedExecutionContext {
+        heap: Heap {
+            live_slots: vec![],
+            dead_objects: vec![],
+        },
+        gila_abis_dlls: vec![],
+    };
+
+    let mut codegen_context = CodegenContext {
+        current_chunk_pointer: 0,
+        chunks: vec![Chunk {
+            slot_manager: SlotManager::new(),
+            debug_line_info: vec![],
+            constant_pool: vec![],
+            gc_ref_data: vec![],
+            instructions: vec![],
+            variable_map: HashMap::new(),
+            string_interns: HashMap::new(),
+        }],
+    };
+    let mut environment = ProcessContext {
+        stack_frame_pointer: 0,
+        stack_frames: vec![],
+        native_fns: HashMap::new(),
+    };
+
+    load_prelude(
+        &config,
+        &mut shared_execution_context,
+        &mut codegen_context,
+        &mut environment,
+    );
+
+    let source = fs::read_to_string(file_to_test.to_string()).expect("Unable to read file");
+    let mut lexer = lex::Lexer::new();
+    let tokens = lexer.lex(source.clone());
+    let mut parser = parse::Parser {
+        tokens: &tokens,
+        counter: 0,
+    };
+    let ast = parser.parse();
+    let mut file = File::create("./gila-build/parsed.gilaast");
+    file.unwrap().write_all(format!("{:#?}", ast).as_bytes());
+
+    // let mut analyser = analyse::Analyser::new();
+    // let typecheck_res = analyser.analyse(&ast);
+    // if typecheck_res.is_err() {
+    //     print_typecheck_error(source.clone(), typecheck_res.err().unwrap());
+    //     return;
+    // }
+
+    let mut bytecode_generator = BytecodeGenerator::new(&config, &mut codegen_context);
+
+    let bytecode = bytecode_generator.generate(&ast);
+
+    let compilation_elapsed = start.elapsed();
+
+    let mut file = File::create("./gila-build/bytecode.giladbg");
+    file.unwrap()
+        .write_all(bytecode.dump_to_file_format(&source).as_bytes());
+
+    let mut execution_engine =
+        ExecutionEngine::new(&config, &mut shared_execution_context, &mut environment);
+
+    execution_engine.exec(file_to_test.to_string(), bytecode, false);
+    let elapsed = start.elapsed();
+
+    let mut tests: Vec<Rc<String>> = vec![];
+    for (var, _) in &codegen_context.chunks[0].variable_map {
+        if var.starts_with("test_") {
+            println!("collected test {}...", var);
+            tests.push(var.clone());
+        }
+    }
+
+    for test in tests {
+        // let res = exec_shared_ctx(
+        //     &config,
+        //     format!("{}()", test.to_string()),
+        //     &mut shared_execution_context,
+        //     &mut codegen_context,
+        //     &mut environment,
+        // );
+        println!("doing {}...", test);
+    }
+
+    let denominator = 1000_000;
+    println!(
+        "compiled in {:.9?}s finished in {:.9?}s & used {:.9?}MB",
+        compilation_elapsed.as_secs_f64(),
+        elapsed.as_secs_f64(),
+        execution_engine
+            .shared_execution_context
+            .heap
+            .live_slots
+            .deep_size_of()
+            / denominator
+    );
+}
 
 enum Mode {
     FILE(String),
@@ -257,7 +388,8 @@ enum Mode {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let file_to_exec: String = args[3].to_string();
-    let mode = Mode::FILE(file_to_exec);
+    let mode = Mode::TEST(file_to_exec);
+    // let mode = Mode::FILE(file_to_exec);
     // let mode = Mode::REPL;
 
     match mode {

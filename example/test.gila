@@ -8,9 +8,5 @@ x = something()
 
 
 test "foo" do
-    assert 1==1
+    assert something()=="something"
 end
-
-
-res = test_foo()
-print(res)

@@ -298,7 +298,7 @@ pub struct Chunk {
     pub constant_pool: std::vec::Vec<Object>,
     pub gc_ref_data: std::vec::Vec<GCRefData>,
     // todo make this a hashmap of Rc<String>
-    pub variable_map: HashMap<Type, u8>,
+    pub variable_map: HashMap<Rc<String>, u8>,
     pub string_interns: HashMap<String, u8>,
 }
 
@@ -635,17 +635,17 @@ impl BytecodeGenerator<'_> {
         let print_reg = alloc_perm_slot!(self);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
-            .insert(Type::IDENTIFIER(Rc::new("print".to_string())), print_reg);
+            .insert(Rc::new("print".to_string()), print_reg);
         let len_reg = alloc_perm_slot!(self);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
-            .insert(Type::IDENTIFIER(Rc::new("len".to_string())), len_reg);
+            .insert(Rc::new("len".to_string()), len_reg);
 
         let load_gila_abi_dll_perm_slot = alloc_perm_slot!(self);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(
-                Type::IDENTIFIER(Rc::new("load_gila_abi_dll".to_string())),
+                Rc::new("load_gila_abi_dll".to_string()),
                 load_gila_abi_dll_perm_slot,
             );
 
@@ -653,24 +653,18 @@ impl BytecodeGenerator<'_> {
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(
-                Type::IDENTIFIER(Rc::new("load_c_abi_dll".to_string())),
+                Rc::new("load_c_abi_dll".to_string()),
                 load_c_abi_dll_perm_slot,
             );
 
         let __platform___reg = alloc_perm_slot!(self);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
-            .insert(
-                Type::IDENTIFIER(Rc::new("__platform__".to_string())),
-                __platform___reg,
-            );
+            .insert(Rc::new("__platform__".to_string()), __platform___reg);
         let gila_socket_reg = alloc_perm_slot!(self);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
-            .insert(
-                Type::IDENTIFIER(Rc::new("gila_socket".to_string())),
-                gila_socket_reg,
-            );
+            .insert(Rc::new("gila_socket".to_string()), gila_socket_reg);
     }
 
     fn push_instruction(&mut self, instruction: Instruction, line: usize) {
@@ -897,7 +891,7 @@ impl BytecodeGenerator<'_> {
     fn lookup_var(&self, var: String) -> Option<&u8> {
         return self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
-            .get(&Type::IDENTIFIER(Rc::new(var)));
+            .get(&Rc::new(var));
     }
 
     fn generate_for(
@@ -985,7 +979,7 @@ impl BytecodeGenerator<'_> {
         let range_iterator_type = &self.codegen_context.chunks
             [self.codegen_context.current_chunk_pointer]
             .variable_map
-            .get(&Type::IDENTIFIER(Rc::new("RangeIterator".to_string())));
+            .get(&Rc::new("RangeIterator".to_string()));
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::CALL_KW,
@@ -1193,7 +1187,7 @@ impl BytecodeGenerator<'_> {
         // todo we assume it exists so return the map
         let result = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
-            .get(&t.typ);
+            .get(&t.as_identifier());
 
         if let Some(v) = result {
             return *v;
@@ -1203,7 +1197,7 @@ impl BytecodeGenerator<'_> {
             loop {
                 let result = self.codegen_context.chunks[counter]
                     .variable_map
-                    .get(&t.typ);
+                    .get(&t.as_identifier());
                 if let Some(v) = result {
                     self.push_instruction(
                         Instruction {
@@ -1234,7 +1228,7 @@ impl BytecodeGenerator<'_> {
     ) -> u8 {
         let result = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
-            .get(&t.typ);
+            .get(&t.as_identifier());
         if let Some(v) = result {
             return *v;
         }
@@ -1261,7 +1255,7 @@ impl BytecodeGenerator<'_> {
 
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
-                    .insert(var.typ.clone(), var_location);
+                    .insert(var.as_identifier(), var_location);
 
                 self.push_instruction(
                     Instruction {
@@ -1711,7 +1705,7 @@ impl BytecodeGenerator<'_> {
                             method_obj = *self.codegen_context.chunks
                                 [self.codegen_context.current_chunk_pointer]
                                 .variable_map
-                                .get(&Type::IDENTIFIER(d))
+                                .get(&d)
                                 .unwrap();
                         }
                     }
@@ -1741,7 +1735,7 @@ impl BytecodeGenerator<'_> {
 
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
-            .insert(Type::IDENTIFIER(name.clone()), location);
+            .insert(name.clone(), location);
         // after loading the function const, we the build it (this is binding self etc)
         self.push_instruction(
             Instruction {
@@ -1763,7 +1757,7 @@ impl BytecodeGenerator<'_> {
                 // todo what happened here
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
-                    .insert(v.typ.clone(), loc);
+                    .insert(v.as_identifier(), loc);
                 param_slots.push(loc);
             } else {
                 panic!();
@@ -1858,7 +1852,7 @@ impl BytecodeGenerator<'_> {
         );
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
-            .insert(token.typ.clone(), reg);
+            .insert(token.as_identifier(), reg);
         // this is TERRIBLE, we need to somehow reference constants as variables
         reg
     }
