@@ -1634,18 +1634,24 @@ impl BytecodeGenerator {
             } else if let Statement::LITERAL_NUM(i1) = &e1.statement {
                 // store the number in register 0
 
-                let rhs_register = self.visit(annotation_context, &e2);
-                let register = alloc_slot!(self);
+                let rhs_register = self.visit(annotation_context.clone(), &e2);
+                let register: u8;
 
-                self.push_instruction(
-                    Instruction {
-                        op_instruction: OpInstruction::ADDI,
-                        arg_0: 0,
-                        arg_1: self.parse_embedding_instruction_number(&i1.typ).unwrap(),
-                        arg_2: register,
-                    },
-                    pos.line as usize,
-                );
+                let embeddable = self.parse_embedding_instruction_number(&i1.typ);
+                if embeddable.is_some() {
+                    register = alloc_slot!(self);
+                    self.push_instruction(
+                        Instruction {
+                            op_instruction: OpInstruction::ADDI,
+                            arg_0: 0,
+                            arg_1: embeddable.unwrap(),
+                            arg_2: register,
+                        },
+                        pos.line as usize,
+                    );
+                } else {
+                    register = self.visit(annotation_context.clone(), &e1);
+                }
 
                 self.push_instruction(
                     Instruction {
