@@ -1595,10 +1595,16 @@ impl BytecodeGenerator {
                     self.push_instruction(
                         Instruction {
                             op_instruction: match op {
-                                Op::ADD => OpInstruction::ADDI,
-                                Op::SUB => OpInstruction::SUBI,
-                                Op::MUL => todo!(),
-                                Op::DIV => todo!(),
+                                Op::ADD => OpInstruction::ADD,
+                                Op::EQ => OpInstruction::EQUAL,
+                                Op::NEQ => OpInstruction::NOT_EQUALS,
+                                Op::GT => OpInstruction::GREATER_THAN,
+                                Op::GE => OpInstruction::GREATER_EQUAL,
+                                Op::LT => OpInstruction::LESS_THAN,
+                                Op::LE => OpInstruction::LESS_EQUAL,
+                                Op::LOGICAL_OR => OpInstruction::LOGICAL_OR,
+                                Op::MUL => OpInstruction::MUL,
+                                Op::BITWISE_OR => OpInstruction::BITWISE_OR,
                                 _ => panic!(),
                             },
                             arg_0: n1,
@@ -1618,9 +1624,15 @@ impl BytecodeGenerator {
                         Instruction {
                             op_instruction: match op {
                                 Op::ADD => OpInstruction::ADD,
-                                Op::SUB => todo!(),
-                                Op::MUL => todo!(),
-                                Op::DIV => todo!(),
+                                Op::EQ => OpInstruction::EQUAL,
+                                Op::NEQ => OpInstruction::NOT_EQUALS,
+                                Op::GT => OpInstruction::GREATER_THAN,
+                                Op::GE => OpInstruction::GREATER_EQUAL,
+                                Op::LT => OpInstruction::LESS_THAN,
+                                Op::LE => OpInstruction::LESS_EQUAL,
+                                Op::LOGICAL_OR => OpInstruction::LOGICAL_OR,
+                                Op::MUL => OpInstruction::MUL,
+                                Op::BITWISE_OR => OpInstruction::BITWISE_OR,
                                 _ => panic!(),
                             },
                             arg_0: lhs,
@@ -1655,7 +1667,19 @@ impl BytecodeGenerator {
 
                 self.push_instruction(
                     Instruction {
-                        op_instruction: OpInstruction::ADD,
+                        op_instruction: match op {
+                            Op::ADD => OpInstruction::ADD,
+                            Op::EQ => OpInstruction::EQUAL,
+                            Op::NEQ => OpInstruction::NOT_EQUALS,
+                            Op::GT => OpInstruction::GREATER_THAN,
+                            Op::GE => OpInstruction::GREATER_EQUAL,
+                            Op::LT => OpInstruction::LESS_THAN,
+                            Op::LE => OpInstruction::LESS_EQUAL,
+                            Op::LOGICAL_OR => OpInstruction::LOGICAL_OR,
+                            Op::MUL => OpInstruction::MUL,
+                            Op::BITWISE_OR => OpInstruction::BITWISE_OR,
+                            _ => panic!(),
+                        },
                         arg_0: register,
                         arg_1: rhs_register,
                         arg_2: register,
@@ -1675,7 +1699,19 @@ impl BytecodeGenerator {
 
                 self.push_instruction(
                     Instruction {
-                        op_instruction: OpInstruction::ADD,
+                        op_instruction: match op {
+                            Op::ADD => OpInstruction::ADD,
+                            Op::EQ => OpInstruction::EQUAL,
+                            Op::NEQ => OpInstruction::NOT_EQUALS,
+                            Op::GT => OpInstruction::GREATER_THAN,
+                            Op::GE => OpInstruction::GREATER_EQUAL,
+                            Op::LT => OpInstruction::LESS_THAN,
+                            Op::LE => OpInstruction::LESS_EQUAL,
+                            Op::LOGICAL_OR => OpInstruction::LOGICAL_OR,
+                            Op::MUL => OpInstruction::MUL,
+                            Op::BITWISE_OR => OpInstruction::BITWISE_OR,
+                            _ => panic!(),
+                        },
                         arg_0: variable_register,
                         arg_1: rhs_register,
                         arg_2: register,
@@ -1691,7 +1727,19 @@ impl BytecodeGenerator {
                 let register = alloc_slot!(self);
                 self.push_instruction(
                     Instruction {
-                        op_instruction: OpInstruction::ADD,
+                        op_instruction: match op {
+                            Op::ADD => OpInstruction::ADD,
+                            Op::EQ => OpInstruction::EQUAL,
+                            Op::NEQ => OpInstruction::NOT_EQUALS,
+                            Op::GT => OpInstruction::GREATER_THAN,
+                            Op::GE => OpInstruction::GREATER_EQUAL,
+                            Op::LT => OpInstruction::LESS_THAN,
+                            Op::LE => OpInstruction::LESS_EQUAL,
+                            Op::LOGICAL_OR => OpInstruction::LOGICAL_OR,
+                            Op::MUL => OpInstruction::MUL,
+                            Op::BITWISE_OR => OpInstruction::BITWISE_OR,
+                            _ => panic!(),
+                        },
                         arg_0: lhs_register,
                         arg_1: rhs_register,
                         arg_2: register,
