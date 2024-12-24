@@ -757,6 +757,10 @@ impl<'a> Parser<'a> {
             Type::STRING => t = DataType::STRING,
             Type::BOOL => t = DataType::BOOL,
             Type::U32 => t = DataType::U32,
+            Type::I32 => t = DataType::I32,
+            Type::I64 => t = DataType::I64,
+            Type::F32 => t = DataType::F32,
+            Type::F64 => t = DataType::F64,
             Type::IDENTIFIER(i) => t = DataType::NAMED_REFERENCE(i.clone()),
             _ => panic!(),
         }

@@ -67,6 +67,10 @@ pub enum Type {
     DIV,
     COLON,
     U32,
+    I32,
+    I64,
+    F32,
+    F64,
     STRING,
     BOOL,
     MATCH,
@@ -93,6 +97,12 @@ impl Token {
     pub fn as_string(&self) -> Rc<String> {
         match &self.typ {
             Type::STRING_LITERAL(i) => i.clone(),
+            _ => panic!(),
+        }
+    }
+    pub fn as_number(&self) -> Rc<String> {
+        match &self.typ {
+            Type::NUMBER(i) => i.clone(),
             _ => panic!(),
         }
     }
@@ -390,6 +400,21 @@ impl Lexer {
                         });
                         self.counter += 1;
                         self.index += 1;
+                    } else if chars[self.counter as usize + 1] == '6'
+                        && chars[self.counter as usize + 2] == '4'
+                        && chars[self.counter as usize + 3].is_whitespace()
+                    {
+                        v.push(Token {
+                            typ: Type::F64,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 3,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 2;
+                        self.index += 2;
                     } else if chars[self.counter as usize + 1] == 'a'
                         && chars[self.counter as usize + 2] == 'l'
                         && chars[self.counter as usize + 3] == 's'
@@ -894,8 +919,16 @@ impl Lexer {
                         let mut identifier = "".to_string();
                         let tmp_index = self.index;
                         while self.counter < chars.len().try_into().unwrap() {
+                            if chars[self.counter as usize] == '.' {
+                                let next = chars[self.counter as usize];
+                                identifier.push(next);
+                                self.counter += 1;
+                                self.index += 1;
+                                continue;
+                            }
                             if chars[self.counter as usize] == '_' {
                                 self.counter += 1;
+                                self.index += 1;
                                 continue;
                             }
                             if chars[self.counter as usize].is_whitespace()

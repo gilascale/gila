@@ -1067,23 +1067,24 @@ impl BytecodeGenerator {
             );
             return reg;
         } else {
-            if let Some(n) = self.parse_i64(&t.typ) {
-                // create constant
-                let constant_idx = self.push_constant(Object::I64(n));
-                let dest = alloc_slot!(self);
-                self.push_instruction(
-                    Instruction {
-                        op_instruction: OpInstruction::LOAD_CONST,
-                        arg_0: constant_idx,
-                        arg_1: dest,
-                        arg_2: 0,
-                    },
-                    pos.line as usize,
-                );
-                return dest;
-            }
+            let constant_idx = match self.parse_literal_num_string(t.as_number()) {
+                DataType::I64 => self.push_constant(Object::I64(self.parse_i64(t.as_number()))),
+                DataType::F64 => self.push_constant(Object::F64(self.parse_f64(t.as_number()))),
+                _ => panic!(),
+            };
+
+            let dest = alloc_slot!(self);
+            self.push_instruction(
+                Instruction {
+                    op_instruction: OpInstruction::LOAD_CONST,
+                    arg_0: constant_idx,
+                    arg_1: dest,
+                    arg_2: 0,
+                },
+                pos.line as usize,
+            );
+            return dest;
         }
-        panic!();
     }
 
     fn gen_literal_bool(
@@ -1329,11 +1330,19 @@ impl BytecodeGenerator {
         }
     }
 
-    fn parse_i64(&self, typ: &Type) -> Option<i64> {
-        if let Type::NUMBER(n) = typ {
-            n.to_string().parse::<i64>().ok()
+    fn parse_i64(&self, num: Rc<String>) -> i64 {
+        num.parse::<i64>().ok().unwrap()
+    }
+
+    fn parse_f64(&self, s: Rc<String>) -> f64 {
+        s.parse::<f64>().ok().unwrap()
+    }
+
+    fn parse_literal_num_string(&self, num: Rc<String>) -> DataType {
+        if num.contains(".") {
+            return DataType::F64;
         } else {
-            None
+            return DataType::I64;
         }
     }
 
@@ -1594,6 +1603,28 @@ impl BytecodeGenerator {
                             },
                             arg_0: n1,
                             arg_1: n2,
+                            arg_2: register,
+                        },
+                        pos.line.try_into().unwrap(),
+                    );
+                    return register;
+                } else {
+                    let lhs = self.visit(annotation_context.clone(), &e1);
+                    let rhs = self.visit(annotation_context.clone(), &e2);
+                    let register = alloc_slot!(self);
+
+                    // todo check instruction type
+                    self.push_instruction(
+                        Instruction {
+                            op_instruction: match op {
+                                Op::ADD => OpInstruction::ADD,
+                                Op::SUB => todo!(),
+                                Op::MUL => todo!(),
+                                Op::DIV => todo!(),
+                                _ => panic!(),
+                            },
+                            arg_0: lhs,
+                            arg_1: rhs,
                             arg_2: register,
                         },
                         pos.line.try_into().unwrap(),

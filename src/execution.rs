@@ -370,6 +370,22 @@ impl Object {
                     }
                 }
             }
+            Self::F64(i1) => {
+                // integer addition
+                match other {
+                    Object::I64(i2) => return Ok(Object::F64(i1 + i2 as f64)),
+                    Object::F64(i2) => return Ok(Object::F64(i1 + i2)),
+                    _ => {
+                        return Err(RuntimeError::INVALID_OPERATION(
+                            format!(
+                                "only support i64+i64 but got {}",
+                                other.print(shared_execution_context)
+                            )
+                            .to_string(),
+                        ))
+                    }
+                }
+            }
             // Self::HEAP_OBJECT(h1) => h1.data.add(other),
             _ => {
                 return Err(RuntimeError::INVALID_OPERATION(

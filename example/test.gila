@@ -1,10 +1,5 @@
-get_data fn -> string return "hello, world!"
-
-print(get_data())
 
 
-maths = import std.maths
+x = 3.4 + 4
 
-v = maths.Vec(x=3,y=4)
-
-print(v)
+print(x)
