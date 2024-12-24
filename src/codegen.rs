@@ -1902,6 +1902,10 @@ impl BytecodeGenerator {
             // todo use object "types" rather than atoms
             DataType::ANY => Object::ATOM(Rc::new("any".to_string())),
             DataType::U32 => Object::ATOM(Rc::new("u32".to_string())),
+            DataType::I32 => Object::ATOM(Rc::new("i32".to_string())),
+            DataType::I64 => Object::ATOM(Rc::new("i64".to_string())),
+            DataType::F32 => Object::ATOM(Rc::new("f32".to_string())),
+            DataType::F64 => Object::ATOM(Rc::new("f64".to_string())),
             DataType::SLICE(t) => Object::ATOM(Rc::new("slice".to_string())),
             DataType::NAMED_REFERENCE(d) => Object::ATOM(Rc::new(d.to_string())),
             DataType::GENERIC(g) => Object::ATOM(Rc::new(format!("${}", g).to_string())),

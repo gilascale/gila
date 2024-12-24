@@ -1,5 +1,8 @@
+m = import std.maths
 
 
-x = 1_003 + 4 > 3000000
 
-print(x)
+v = m.Vec(x=1.442323, y=235.24623)
+
+
+print(v)
