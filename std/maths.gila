@@ -5,9 +5,4 @@ Vec type
 end
 
 
-add fn(self:Vec,other:Vec)->Vec do
-
-    print(other.x)
-
-    return self
-end
+add fn(self:Vec,other:Vec)->Vec return Vec(x=self.x+other.x,y=self.y+other.y)
