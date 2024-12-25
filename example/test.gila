@@ -1,1 +1,12 @@
-print("foo "+4)
+
+
+
+m = import std.maths
+
+v1 = m.Vec(x=1,y=2)
+v2 = m.Vec(x=3,y=4)
+
+// todo this doesn't work because if you look at the dissassembly
+// the call only has 1 arg length, so i think we don't allocate one for the add?
+v3 = v1.add(v2)
+print(v3)

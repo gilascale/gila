@@ -2238,9 +2238,10 @@ impl ExecutionEngine {
                 increment_ip!(self)
             }
             _ => {
+                println!("ummm {:?}", obj);
                 return Err(RuntimeError::INVALID_ACCESS(
                     "struct access should be accessing object".to_string(),
-                ))
+                ));
             }
         }
 
