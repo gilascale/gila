@@ -58,7 +58,8 @@ v.display()
 
 ### Bugs
 
-- for loops don't work if there is code above them
+- methods with self and an arg don't work due to calling convention
+  - i suspect its because were not allocating space for the extra self at compile time
 - we are loading DLLs twice
 - cant call returned functions i.e. some_fn()()
 - the prelude is being added into the dumped bytecode file as its the same line
