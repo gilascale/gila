@@ -334,7 +334,6 @@ impl Object {
         config: &Config,
         other: Object,
     ) -> Result<Object, RuntimeError> {
-        println!("adding us {:?}", self);
         match self {
             Self::GC_REF(gc_ref) => {
                 let res = shared_execution_context.heap.deref(gc_ref);

@@ -1,4 +1,4 @@
 set RUSTFLAGS=-Awarnings
 set RUST_BACKTRACE=1
-cargo build
-"./target/debug/gila.exe" --file "./example/test.gila" --mode "run"
+cargo build --release
+"./target/release/gila.exe" --mode %1 --file %2
