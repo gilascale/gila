@@ -1,5 +1,7 @@
 use std::{
     collections::HashMap,
+    fs::{self, OpenOptions},
+    io::Write,
     time::{Duration, Instant},
 };
 
@@ -31,6 +33,7 @@ pub struct CompilationContext {
 
 pub struct CompilerFlags {
     pub init_builtins: bool,
+    pub dump_bytecode: bool,
 }
 
 pub struct Compiler {
@@ -103,13 +106,29 @@ impl Compiler {
 
         let mut exec_engine =
             ExecutionEngine::new(config, shared_execution_context, process_context.clone());
-        let tokens = lexer.lex(code);
+        let tokens = lexer.lex(code.clone());
         let mut parser = parse::Parser {
             tokens: &tokens,
             counter: 0,
         };
         let ast = parser.parse();
         let codegen_result = bytecode_generator.generate(&ast);
+
+        if compiler_flags.dump_bytecode {
+            let mut file = OpenOptions::new()
+                .write(true) // Open for writing
+                .create(true) // Create the file if it doesn't exist
+                .append(false) // Append to the file if it exists
+                // todo extract the filename from here
+                .open(format!("./gila-build/{}.gilab", "main"))
+                .unwrap();
+            file.write(
+                codegen_result.codegen_context.chunks[0]
+                    .dump_to_file_format(&code.clone())
+                    .as_bytes(),
+            )
+            .expect("Unable to write file");
+        }
 
         let compilation_elapsed = start.elapsed();
         let execution_start = Instant::now();

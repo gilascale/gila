@@ -1,8 +1,5 @@
-m = import std.maths
 
 
 
-v = m.Vec(x=1.442323, y=235.24623)
 
-
-print(v)
+x = 3+4

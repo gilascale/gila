@@ -1,7 +1,7 @@
 set RUSTFLAGS=-Awarnings
 set RUST_BACKTRACE=1
-cargo build
+cargo build --release
 cd gila_socket
-cargo build
+cargo build --release
 cd ../gila_time
-cargo build
+cargo build --release

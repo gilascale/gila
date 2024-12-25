@@ -8,6 +8,8 @@ mod lex;
 mod parse;
 mod r#type;
 
+use clap::{arg, command, Parser};
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::rc::Rc;
@@ -25,7 +27,22 @@ use execution::Heap;
 use execution::ProcessContext;
 use execution::{ExecutionEngine, SharedExecutionContext};
 
-fn repl() {
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    verbose: bool,
+    extra: Vec<String>,
+    #[arg(short, long)]
+    file: String,
+    #[arg(short, long, default_value_t = ("exec".to_string()))]
+    mode: String,
+    #[arg(short, long, default_value_t = true)]
+    dump_bytecode: bool,
+}
+
+fn repl(args: Args) {
     // let config = Config { max_memory: 1000 };
     // let mut shared_execution_context = SharedExecutionContext {
     //     heap: Heap {
@@ -125,7 +142,7 @@ fn print_typecheck_error(source: String, typecheck_err: TypeCheckError) {
     }
 }
 
-fn exec(file_to_exec: String) {
+fn exec(args: Args) {
     let mut compiler = Compiler::new();
 
     fs::create_dir_all("./gila-build");
@@ -164,6 +181,7 @@ fn exec(file_to_exec: String) {
         "prelude".to_string(),
         CompilerFlags {
             init_builtins: true,
+            dump_bytecode: false,
         },
         prelude_source,
         config.clone(),
@@ -178,12 +196,14 @@ fn exec(file_to_exec: String) {
     environment = prelude_compile_result.execution_result.process_context;
     codegen_context = prelude_compile_result.codegen_result.codegen_context;
 
+    let file_to_exec = args.file;
     let source = fs::read_to_string(file_to_exec.to_string()).expect("Unable to read file");
 
     let result = compiler.compile_and_exec(
         file_to_exec.to_string(),
         CompilerFlags {
             init_builtins: false,
+            dump_bytecode: args.dump_bytecode,
         },
         source,
         config,
@@ -214,9 +234,9 @@ fn exec(file_to_exec: String) {
     );
 }
 
-fn do_test(file_to_test: String) {
+fn do_test(args: Args) {
     let start = Instant::now();
-    println!("testing {}...", file_to_test);
+    println!("testing {}...", args.file);
 
     fs::create_dir_all("./gila-build");
 
@@ -256,6 +276,7 @@ fn do_test(file_to_test: String) {
         "prelude".to_string(),
         CompilerFlags {
             init_builtins: true,
+            dump_bytecode: false,
         },
         prelude_source,
         config.clone(),
@@ -270,12 +291,15 @@ fn do_test(file_to_test: String) {
         .execution_result
         .shared_execution_context;
 
+    let file_to_test = args.file;
+
     let source = fs::read_to_string(file_to_test.to_string()).expect("Unable to read file");
 
     let result = compiler.compile_and_exec(
         file_to_test.to_string(),
         CompilerFlags {
             init_builtins: false,
+            dump_bytecode: args.dump_bytecode,
         },
         source,
         config.clone(),
@@ -302,6 +326,7 @@ fn do_test(file_to_test: String) {
             test.to_string(),
             CompilerFlags {
                 init_builtins: false,
+                dump_bytecode: false,
             },
             format!("{}()", test.to_string()),
             config.clone(),
@@ -359,15 +384,28 @@ enum Mode {
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let file_to_exec: String = args[3].to_string();
+    // let args: Vec<String> = std::env::args().collect();
+    // let file_to_exec: String = args[3].to_string();
+    // println!("args={:?}", args);
+
+    // // Handle both `cargo run` and direct execution
+    // let start_index = if args.len() > 1 && args[1] == "run" {
+    //     // Adjust for `cargo run`
+    //     2 // Skip "cargo" and "run"
+    // } else {
+    //     1 // Skip the executable name
+    // };
+
+    let args = Args::parse();
+
     // let mode = Mode::TEST(file_to_exec);
-    let mode = Mode::FILE(file_to_exec);
+    // let mode = Mode::FILE(args.file);
     // let mode = Mode::REPL;
 
-    match mode {
-        Mode::FILE(path) => exec(path),
-        Mode::REPL => repl(),
-        Mode::TEST(path) => do_test(path),
+    match args.mode.as_str() {
+        "run" => exec(args),
+        "repl" => repl(args),
+        "test" => do_test(args),
+        _ => panic!(),
     }
 }

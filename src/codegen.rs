@@ -174,6 +174,20 @@ impl Instruction {
                 format!("{}", self.arg_1),
                 format!("r{}", self.arg_2)
             ),
+            OpInstruction::ADD => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::SUBI => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("{}", self.arg_0),
+                format!("{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
             OpInstruction::BUILD_FN => format!(
                 "{:>75}{:>5}\n",
                 format!("{:?}", self.op_instruction),

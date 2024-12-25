@@ -3,3 +3,9 @@ Vec type
     x: f64
     y: f64
 end
+
+
+add fn(self:Vec,other:Vec)->Vec do
+    print(other.x)
+    return self
+end

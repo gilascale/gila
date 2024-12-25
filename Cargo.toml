@@ -8,5 +8,6 @@ name = "gila"
 path = "src/lib.rs"
 
 [dependencies]
+clap = { version = "4.5.23", features = ["derive"] }
 deepsize = "0.2.0"
 libloading = "0.8"

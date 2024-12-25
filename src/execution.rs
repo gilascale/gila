@@ -334,6 +334,7 @@ impl Object {
         config: &Config,
         other: Object,
     ) -> Result<Object, RuntimeError> {
+        println!("adding us {:?}", self);
         match self {
             Self::GC_REF(gc_ref) => {
                 let res = shared_execution_context.heap.deref(gc_ref);
@@ -341,7 +342,8 @@ impl Object {
                     return Err(res.err().unwrap());
                 }
 
-                match res.unwrap() {
+                let unwrapped = res.unwrap();
+                match unwrapped {
                     GCRefData::STRING(s) => {
                         let mut dup = s.s.to_string();
                         dup.push_str(&other.print(shared_execution_context));
@@ -352,7 +354,7 @@ impl Object {
                         }
                         return Ok(Object::GC_REF(new_obj.unwrap()));
                     }
-                    _ => todo!(),
+                    _ => todo!("umm adding {:?} to {:?}", self, unwrapped),
                 }
             }
             Self::I64(i1) => {
@@ -2346,6 +2348,7 @@ impl ExecutionEngine {
                                         f.file_name().into_string().unwrap(),
                                         CompilerFlags {
                                             init_builtins: true,
+                                            dump_bytecode: false,
                                         },
                                         code,
                                         self.config.clone(),
@@ -2420,6 +2423,7 @@ impl ExecutionEngine {
                                     s.s.to_string(),
                                     CompilerFlags {
                                         init_builtins: true,
+                                        dump_bytecode: false,
                                     },
                                     code,
                                     self.config.clone(),
