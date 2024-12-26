@@ -31,6 +31,7 @@ pub enum Statement {
     ASSERT(Box<ASTNode>, Option<Token>),
     NAMED_ARG(Token, Box<ASTNode>),
     TRY(Box<ASTNode>),
+    TUPLE(Vec<ASTNode>),
     SLICE(Vec<ASTNode>),
     CALL(Box<ASTNode>, Vec<ASTNode>),
     ATOM(Token),
