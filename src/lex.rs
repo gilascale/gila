@@ -346,7 +346,7 @@ impl Lexer {
                 'd' => {
                     if chars[self.counter as usize + 1] == 'o'
                     // todo implement this end check
-                        && !chars[self.counter as usize + 2].is_alphabetic()
+                        && chars[self.counter as usize + 2].is_whitespace()
                     {
                         v.push(Token {
                             typ: Type::DO,
