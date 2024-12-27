@@ -190,7 +190,7 @@ impl<'a> Parser<'a> {
     fn struct_access(&mut self) -> ASTNode {
         // Parse the leftmost expression first (e.g., x in x.y.z)
         let lhs_pos = get_position!(self);
-        let mut lhs = self.single();
+        let mut lhs = self.tuple();
         // Keep parsing as long as there's a DOT token followed by an identifier
         while !self.end() && self.tokens[self.counter].typ == Type::DOT {
             consume_token!(self, Type::DOT);
@@ -203,6 +203,25 @@ impl<'a> Parser<'a> {
             };
         }
         lhs
+    }
+
+    fn tuple(&mut self) -> ASTNode {
+        let higher_expression = self.single();
+        if !self.end() && self.tokens[self.counter].typ == Type::COMMA {
+            let lhs_pos = higher_expression.position;
+            let mut exprs: Vec<ASTNode> = vec![higher_expression];
+
+            while !self.end() && self.tokens[self.counter].typ == Type::COMMA {
+                consume_token!(self, Type::COMMA);
+                exprs.push(self.expression());
+            }
+
+            return ASTNode {
+                statement: Statement::TUPLE(exprs),
+                position: lhs_pos,
+            };
+        }
+        higher_expression
     }
 
     fn single(&mut self) -> ASTNode {
@@ -238,27 +257,28 @@ impl<'a> Parser<'a> {
                     position: next.pos.clone(),
                 };
             }
-            Type::LPAREN => {
-                // tuple
-                let lhs_pos = get_position!(self);
-                consume_token!(self, Type::LPAREN);
-                let mut items: Vec<ASTNode> = vec![];
-                if self.tokens[self.counter].typ != Type::RPAREN {
-                    loop {
-                        items.push(self.expression());
-                        if self.tokens[self.counter].typ == Type::RPAREN {
-                            break;
-                        }
-                        consume_token!(self, Type::COMMA);
-                    }
-                }
-                let rhs_pos = get_position!(self);
-                consume_token!(self, Type::RPAREN);
-                return ASTNode {
-                    statement: Statement::TUPLE(items),
-                    position: lhs_pos.join(rhs_pos),
-                };
-            }
+            // Type::LPAREN => {
+            //     // tuple
+            //     // todo a tuple should just be x,y,z without parens
+            //     let lhs_pos = get_position!(self);
+            //     consume_token!(self, Type::LPAREN);
+            //     let mut items: Vec<ASTNode> = vec![];
+            //     if self.tokens[self.counter].typ != Type::RPAREN {
+            //         loop {
+            //             items.push(self.expression());
+            //             if self.tokens[self.counter].typ == Type::RPAREN {
+            //                 break;
+            //             }
+            //             consume_token!(self, Type::COMMA);
+            //         }
+            //     }
+            //     let rhs_pos = get_position!(self);
+            //     consume_token!(self, Type::RPAREN);
+            //     return ASTNode {
+            //         statement: Statement::TUPLE(items),
+            //         position: lhs_pos.join(rhs_pos),
+            //     };
+            // }
             Type::LSQUARE => {
                 let lhs_pos = get_position!(self);
                 consume_token!(self, Type::LSQUARE);

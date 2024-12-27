@@ -741,6 +741,7 @@ impl BytecodeGenerator {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(annotation_context, &p),
             Statement::BLOCK(b) => self.gen_block(annotation_context, &b),
+            Statement::TUPLE(t) => self.gen_tuple(annotation_context, &t),
             Statement::MATCH(to_match, patterns) => {
                 self.gen_match(annotation_context, &to_match, &patterns)
             }
@@ -823,6 +824,10 @@ impl BytecodeGenerator {
             // free_slot!(self, result_slot);
         }
         alloc_slot!(self)
+    }
+
+    fn gen_tuple(&mut self, annotation_context: AnnotationContext, t: &Vec<ASTNode>) -> u8 {
+        0
     }
 
     fn gen_match(

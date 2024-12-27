@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use deepsize::DeepSizeOf;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Position {
     pub index: u32, // 0-based
     pub line: u32,  // 0-based
