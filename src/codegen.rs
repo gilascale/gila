@@ -114,6 +114,8 @@ pub enum OpInstruction {
     JMP,
     // BUILD_SLICE <starting reg> <num args> <destination>
     BUILD_SLICE,
+    // BUILD_TUPLE <staring reg> <num args> <destination>
+    BUILD_TUPLE,
     // BUILD_FN <code obj> <destination>
     // the purpose of this is so function specifications can be evaluated at runtime, i.e. is it static, is it a method etc.
     // it also processes default arguments etc
@@ -149,6 +151,20 @@ pub struct Instruction {
 impl Instruction {
     pub fn to_string(&self) -> String {
         match self.op_instruction {
+            OpInstruction::BUILD_SLICE => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("{}", self.arg_1),
+                format!("r{}", self.arg_2),
+            ),
+            OpInstruction::BUILD_TUPLE => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("{}", self.arg_1),
+                format!("r{}", self.arg_2),
+            ),
             OpInstruction::IF_JMP_FALSE => format!(
                 "{:>75}{:>5}{:>5}\n",
                 format!("{:?}", self.op_instruction),
@@ -741,7 +757,7 @@ impl BytecodeGenerator {
         match &ast.statement {
             Statement::PROGRAM(p) => self.gen_program(annotation_context, &p),
             Statement::BLOCK(b) => self.gen_block(annotation_context, &b),
-            Statement::TUPLE(t) => self.gen_tuple(annotation_context, &t),
+            Statement::TUPLE(t) => self.gen_tuple(annotation_context, &ast.position.clone(), &t),
             Statement::MATCH(to_match, patterns) => {
                 self.gen_match(annotation_context, &to_match, &patterns)
             }
@@ -826,8 +842,28 @@ impl BytecodeGenerator {
         alloc_slot!(self)
     }
 
-    fn gen_tuple(&mut self, annotation_context: AnnotationContext, t: &Vec<ASTNode>) -> u8 {
-        0
+    fn gen_tuple(
+        &mut self,
+        annotation_context: AnnotationContext,
+        position: &Position,
+        t: &Vec<ASTNode>,
+    ) -> u8 {
+        let mut registers: Vec<u8> = vec![];
+        for item in t {
+            registers.push(self.visit(annotation_context.clone(), item));
+        }
+
+        let dest = alloc_slot!(self);
+        self.push_instruction(
+            Instruction {
+                op_instruction: OpInstruction::BUILD_TUPLE,
+                arg_0: registers[0],
+                arg_1: registers.len() as u8,
+                arg_2: dest,
+            },
+            position.line as usize,
+        );
+        dest
     }
 
     fn gen_match(
@@ -1975,8 +2011,6 @@ impl BytecodeGenerator {
         pos: Position,
         items: &Vec<ASTNode>,
     ) -> u8 {
-        // todo we should probably do what python does and do a BUILD_SLICE command
-
         let mut registers: Vec<u8> = vec![];
         for item in items {
             registers.push(self.visit(annotation_context.clone(), item));

@@ -3,6 +3,7 @@ use crate::lex::Type;
 use deepsize::DeepSizeOf;
 use libloading::{Library, Symbol};
 use std::hash::Hash;
+use std::os::windows::thread;
 use std::sync::Arc;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
 use std::{env, fs, iter, vec};
@@ -160,6 +161,15 @@ impl GCRefData {
                     slice
                         .s
                         .iter()
+                        .map(|item| item.print(shared_execution_context))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
+            Self::TUPLE(t) => {
+                format!(
+                    "({})",
+                    t.iter()
                         .map(|item| item.print(shared_execution_context))
                         .collect::<Vec<String>>()
                         .join(", ")
@@ -1150,6 +1160,7 @@ impl ExecutionEngine {
             OpInstruction::JMP => self.exec_jmp(instr),
             OpInstruction::FOR_ITER => self.exec_for_iter(instr),
             OpInstruction::BUILD_SLICE => self.exec_build_slice(instr),
+            OpInstruction::BUILD_TUPLE => self.exec_build_tuple(instr),
             OpInstruction::BUILD_FN => self.exec_build_fn(instr),
             OpInstruction::INDEX => self.exec_index(instr),
             OpInstruction::LOAD_CLOSURE => self.exec_load_closure(instr),
@@ -1963,6 +1974,34 @@ impl ExecutionEngine {
 
         self.environment.stack_frames[self.environment.stack_frame_pointer].stack
             [instr.arg_2 as usize] = Object::GC_REF(slice_obj.unwrap());
+
+        self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
+            1;
+        Ok(instr.arg_2)
+    }
+
+    fn exec_build_tuple(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let mut tuple_objects: Vec<Object> = vec![];
+        for i in 0..instr.arg_1 {
+            tuple_objects.push(
+                self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+                    [instr.arg_0 as usize + i as usize]
+                    .clone(),
+            );
+        }
+
+        let tuple_obj = self
+            .shared_execution_context
+            .heap
+            .alloc(GCRefData::TUPLE(tuple_objects), &self.config);
+
+        if tuple_obj.is_err() {
+            // fixme correct error
+            return Err(RuntimeError::OUT_OF_MEMORY);
+        }
+
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [instr.arg_2 as usize] = Object::GC_REF(tuple_obj.unwrap());
 
         self.environment.stack_frames[self.environment.stack_frame_pointer].instruction_pointer +=
             1;
