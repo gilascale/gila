@@ -59,7 +59,8 @@ v.display()
 ### Bugs
 
 - methods with self and an arg don't work due to calling convention
-  - i suspect its because were not allocating space for the extra self at compile time
+  - i suspect its because were not allocating space for the extra self at
+    compile time
 - we are loading DLLs twice
 - cant call returned functions i.e. some_fn()()
 - the prelude is being added into the dumped bytecode file as its the same line
@@ -69,7 +70,8 @@ v.display()
 
 ### Non functional features
 
-- restructure the contexts, i think we need to start cloning them and returning them as we can't just be passing references and stuff around.
+- restructure the contexts, i think we need to start cloning them and returning
+  them as we can't just be passing references and stuff around.
 - reuse registers
 - add implicit returns to functions without them
 - fix nested GCRefs in constant data
@@ -90,6 +92,7 @@ v.display()
 
 ### Language Features
 
+- tuple unpacking
 - tests have multiple asserts in
 - test names can only be one word
 - capturing in closures
