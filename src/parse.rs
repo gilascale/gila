@@ -261,6 +261,15 @@ impl<'a> Parser<'a> {
                     position: next.pos.clone(),
                 };
             }
+            Type::LPAREN => {
+                let lhs_pos = get_position!(self);
+                consume_token!(self, Type::LPAREN);
+                let mut expr = self.expression();
+                let rhs_pos = get_position!(self);
+                consume_token!(self, Type::RPAREN);
+                expr.position = lhs_pos.join(rhs_pos);
+                return expr;
+            }
             Type::LSQUARE => {
                 let lhs_pos = get_position!(self);
                 consume_token!(self, Type::LSQUARE);
