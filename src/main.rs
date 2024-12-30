@@ -377,12 +377,6 @@ fn do_test(args: Args) {
     );
 }
 
-enum Mode {
-    FILE(String),
-    REPL,
-    TEST(String),
-}
-
 fn main() {
     // let args: Vec<String> = std::env::args().collect();
     // let file_to_exec: String = args[3].to_string();
