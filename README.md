@@ -93,6 +93,7 @@ v.display()
 
 ### Language Features
 
+- ranges can be parsed anywhere
 - implicit returns
 - void types
 - tuple unpacking

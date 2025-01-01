@@ -314,14 +314,6 @@ impl Lexer {
                         });
                     }
                 }
-                '.' => {
-                    if chars[self.counter as usize + 1] == '.'
-                        && chars[self.counter as usize + 2] == '.'
-                    {
-                        self.counter += 2;
-                        self.index += 2;
-                    }
-                }
                 'o' => {
                     if chars[self.counter as usize + 1] == 'r'
                     // todo implement this end check
@@ -918,8 +910,11 @@ impl Lexer {
                     if current.is_numeric() {
                         let mut identifier = "".to_string();
                         let tmp_index = self.index;
+
                         while self.counter < chars.len().try_into().unwrap() {
-                            if chars[self.counter as usize] == '.' {
+                            if chars[self.counter as usize] == '.'
+                                && chars[self.counter as usize + 1] != '.'
+                            {
                                 let next = chars[self.counter as usize];
                                 identifier.push(next);
                                 self.counter += 1;
