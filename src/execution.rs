@@ -322,7 +322,7 @@ impl Object {
             Self::BOOL(b) => b.to_string(),
             Self::F64(f) => f.to_string(),
             Self::I64(i) => i.to_string(),
-            Self::ATOM(a) => format!(":{:?}", a.to_string()),
+            Self::ATOM(a) => format!(":{}", a.to_string()),
             Self::GILA_ABI_DLL(id) => format!("<gila abi dll {}>", id),
             Self::GC_REF(gc_ref) => {
                 let res = shared_execution_context.heap.deref(&gc_ref);

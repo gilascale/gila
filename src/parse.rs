@@ -276,7 +276,7 @@ impl<'a> Parser<'a> {
                 let mut items: Vec<ASTNode> = vec![];
                 if self.tokens[self.counter].typ != Type::RSQUARE {
                     loop {
-                        items.push(self.expression());
+                        items.push(self.single());
                         if self.tokens[self.counter].typ == Type::RSQUARE {
                             break;
                         }
