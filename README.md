@@ -58,6 +58,7 @@ v.display()
 
 ### Bugs
 
+- fix tuple parsing...
 - methods with self and an arg don't work due to calling convention
   - i suspect its because were not allocating space for the extra self at
     compile time

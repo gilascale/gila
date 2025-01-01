@@ -4,6 +4,11 @@
 
 
 
-x = [:hi,2,3]
 
-print(x)
+
+take_tuple fn(x:string) do
+    print(x)
+end
+
+
+take_tuple(1,2,3)

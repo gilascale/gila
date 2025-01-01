@@ -38,6 +38,15 @@ macro_rules! get_current {
     };
 }
 
+// this is used so we can disambiguate certain contexts
+//
+// i.e. foo(1,2,3) may look like a call to 'foo' with a single tuple as the argument,
+// we need to specify that we are in a call, and the arguments take precedence here.
+pub struct ParseContext {
+    pub in_function_call: bool,
+    pub in_group: bool,
+}
+
 pub struct Parser<'a> {
     pub tokens: &'a std::vec::Vec<Token>,
     pub counter: usize,
@@ -156,6 +165,8 @@ impl<'a> Parser<'a> {
                         consume_token!(self, Type::RPAREN);
                         break;
                     }
+                    // todo we need to deal with function call contexts here
+                    // we need to pass a context object down!
                     consume_token!(self, Type::COMMA);
                 }
             } else {
