@@ -6,9 +6,13 @@
 
 
 
-take_tuple fn(x:string) do
+take_tuple fn(x:i64,y:i64,z:i64) do
     print(x)
+    print(y)
+    print(z)
 end
 
 
-take_tuple(1,2,3)
+foo = 4,5,6
+
+print(foo)
