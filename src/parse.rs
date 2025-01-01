@@ -141,7 +141,7 @@ impl<'a> Parser<'a> {
             };
         }
 
-        return self.logical_operators(parse_context);
+        return self.parse_range(parse_context);
     }
 
     fn tryy(&mut self, parse_context: ParseContext) -> ASTNode {
@@ -648,15 +648,18 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_range(&mut self, parse_context: ParseContext) -> ASTNode {
-        let first = self.expression(parse_context);
-        let first_pos = first.position;
-        consume_token!(self, Type::DOT_DOT);
-        let second = self.expression(parse_context);
-        let second_pos = second.position;
-        return ASTNode {
-            statement: Statement::RANGE(Box::new(first), Box::new(second)),
-            position: first_pos.join(second_pos),
-        };
+        let higher_precedence = self.logical_operators(parse_context);
+        let first_pos = higher_precedence.position;
+        if !self.end() && self.tokens[self.counter].typ == Type::DOT_DOT {
+            consume_token!(self, Type::DOT_DOT);
+            let second = self.expression(parse_context);
+            let second_pos = second.position;
+            return ASTNode {
+                statement: Statement::RANGE(Box::new(higher_precedence), Box::new(second)),
+                position: first_pos.join(second_pos),
+            };
+        }
+        higher_precedence
     }
 
     fn ret(&mut self, parse_context: ParseContext) -> ASTNode {
