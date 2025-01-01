@@ -93,6 +93,8 @@ v.display()
 
 ### Language Features
 
+- implicit returns
+- void types
 - tuple unpacking
 - tests have multiple asserts in
 - test names can only be one word
