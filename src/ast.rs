@@ -29,6 +29,7 @@ pub enum Op {
 #[derive(Debug)]
 pub enum Statement {
     ASSERT(Box<ASTNode>, Option<Token>),
+    RANGE(Box<ASTNode>, Box<ASTNode>),
     NAMED_ARG(Token, Box<ASTNode>),
     TRY(Box<ASTNode>),
     TUPLE(Vec<ASTNode>),
@@ -52,7 +53,7 @@ pub enum Statement {
     NAMED_TYPE_DECL(Token, Vec<ASTNode>),
     TEST(Box<ASTNode>, Box<ASTNode>),
     IF(Box<ASTNode>, Box<ASTNode>, Option<Box<ASTNode>>),
-    FOR(Token, Token, Token, Box<ASTNode>),
+    FOR(Token, Box<ASTNode>, Box<ASTNode>),
     INDEX(Box<ASTNode>, Box<ASTNode>),
     ANNOTATION(Token, Vec<Token>, Box<ASTNode>),
     STRUCT_ACCESS(Box<ASTNode>, Token),

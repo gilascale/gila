@@ -31,6 +31,7 @@ pub enum Type {
     TEST,
     AMPERSAND,
     DOT,
+    DOT_DOT,
     RETURN,
     LPAREN,
     RPAREN,
@@ -168,15 +169,29 @@ impl Lexer {
                     });
                 }
                 '.' => {
-                    v.push(Token {
-                        typ: Type::DOT,
-                        pos: Position {
-                            index: self.index,
-                            line: self.line,
-                            index_end: self.index + 1,
-                            line_end: self.line,
-                        },
-                    });
+                    if chars[self.counter as usize + 1] == '.' {
+                        v.push(Token {
+                            typ: Type::DOT_DOT,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
+                            },
+                        });
+                        self.counter += 1;
+                        self.index += 1;
+                    } else {
+                        v.push(Token {
+                            typ: Type::DOT,
+                            pos: Position {
+                                index: self.index,
+                                line: self.line,
+                                index_end: self.index + 1,
+                                line_end: self.line,
+                            },
+                        });
+                    }
                 }
                 '>' => {
                     if chars[self.counter as usize + 1] == '=' {

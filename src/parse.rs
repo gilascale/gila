@@ -638,25 +638,26 @@ impl<'a> Parser<'a> {
         consume_token!(self, Type::FOR);
         let var = get_next!(self);
         consume_token!(self, Type::IN);
-        let range_start = get_next!(self);
-        // consume the ..
-        consume_token!(self, Type::DOT);
-        consume_token!(self, Type::DOT);
-        let range_end = get_next!(self);
+        let iter_obj = self.parse_range(parse_context);
         let body = self.statement(parse_context);
         let body_pos = body.position.clone();
         return ASTNode {
-            statement: Statement::FOR(
-                var.clone(),
-                range_start.clone(),
-                range_end.clone(),
-                Box::new(body),
-            ),
+            statement: Statement::FOR(var.clone(), Box::new(iter_obj), Box::new(body)),
             position: for_pos.join(body_pos.clone()),
         };
     }
 
-    fn parse_range(&mut self) {}
+    fn parse_range(&mut self, parse_context: ParseContext) -> ASTNode {
+        let first = self.expression(parse_context);
+        let first_pos = first.position;
+        consume_token!(self, Type::DOT_DOT);
+        let second = self.expression(parse_context);
+        let second_pos = second.position;
+        return ASTNode {
+            statement: Statement::RANGE(Box::new(first), Box::new(second)),
+            position: first_pos.join(second_pos),
+        };
+    }
 
     fn ret(&mut self, parse_context: ParseContext) -> ASTNode {
         let pos = get_position!(self);

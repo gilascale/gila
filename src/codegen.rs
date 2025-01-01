@@ -771,14 +771,16 @@ impl BytecodeGenerator {
                 &body,
                 &else_body,
             ),
-            Statement::FOR(var, range_start, range_end, body) => self.generate_for(
+            Statement::FOR(var, iter_obj, body) => self.generate_for(
                 annotation_context,
                 ast.position.clone(),
                 &var,
-                &range_start,
-                &range_end,
+                &iter_obj,
                 &body,
             ),
+            Statement::RANGE(first, second) => {
+                self.generate_range(annotation_context, &ast.position.clone(), &first, &second)
+            }
             Statement::VARIABLE(v) => {
                 self.gen_variable(annotation_context, ast.position.clone(), v)
             }
@@ -960,14 +962,12 @@ impl BytecodeGenerator {
             .get(&Rc::new(var));
     }
 
-    fn generate_for(
+    fn generate_range(
         &mut self,
         annotation_context: AnnotationContext,
-        position: Position,
-        var: &Token,
-        range_start: &Token,
-        range_end: &Token,
-        body: &Box<ASTNode>,
+        position: &Position,
+        first: &Box<ASTNode>,
+        second: &Box<ASTNode>,
     ) -> u8 {
         // setup the ("counter", "limit") tuple
         let mut kwarg_strings: Vec<Object> = vec![];
@@ -986,10 +986,8 @@ impl BytecodeGenerator {
             marked: false,
         }));
 
-        let first_arg_register =
-            self.gen_literal_num(annotation_context.clone(), position.clone(), range_start);
-        let second_arg_register =
-            self.gen_literal_num(annotation_context.clone(), position.clone(), range_end);
+        let first_arg_register = self.visit(annotation_context.clone(), &first);
+        let second_arg_register = self.visit(annotation_context.clone(), &second);
 
         let mut arg_registers = vec![first_arg_register, second_arg_register];
         let allocated_destination = alloc_slot!(self);
@@ -1056,7 +1054,18 @@ impl BytecodeGenerator {
             position.line as usize,
         );
 
-        let range_iterator_reg = new_allocated_destination;
+        new_allocated_destination
+    }
+
+    fn generate_for(
+        &mut self,
+        annotation_context: AnnotationContext,
+        position: Position,
+        var: &Token,
+        iter_obj: &Box<ASTNode>,
+        body: &Box<ASTNode>,
+    ) -> u8 {
+        let range_iterator_reg = self.visit(annotation_context.clone(), &iter_obj);
 
         let for_iter_instruction_ptr = self.codegen_context.chunks
             [self.codegen_context.current_chunk_pointer]
@@ -1092,12 +1101,13 @@ impl BytecodeGenerator {
         free_slot!(self, range_iterator_reg);
         free_slot!(self, iter_result_reg);
 
-        for slot in &arg_registers {
-            free_slot!(self, *slot);
-        }
-        for i in first_arg_register + 1..first_arg_register + new_arg_registers.len() as u8 + 1 {
-            free_slot!(self, i);
-        }
+        // todo somehow free the range iterator arg registers!
+        // for slot in &arg_registers {
+        //     free_slot!(self, *slot);
+        // }
+        // for i in first_arg_register + 1..first_arg_register + new_arg_registers.len() as u8 + 1 {
+        //     free_slot!(self, i);
+        // }
 
         alloc_slot!(self)
     }
