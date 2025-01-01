@@ -338,6 +338,36 @@ impl Object {
         }
     }
 
+    pub fn index(
+        &self,
+        shared_execution_context: &SharedExecutionContext,
+        obj_to_index: &Object,
+    ) -> Result<Object, RuntimeError> {
+        let gc_ref_data = self.as_gc_ref(shared_execution_context);
+        if gc_ref_data.is_err() {
+            return Err(gc_ref_data.err().unwrap());
+        }
+        match gc_ref_data.unwrap() {
+            GCRefData::SLICE(s) => {
+                let idx = obj_to_index.as_i64();
+                let unwrapped = idx.unwrap();
+                if unwrapped >= s.s.len() as i64 {
+                    return Err(RuntimeError::OUT_OF_BOUNDS);
+                }
+                return Ok(s.s[unwrapped as usize].clone());
+            }
+            GCRefData::TUPLE(t) => {
+                let idx = obj_to_index.as_i64();
+                let unwrapped = idx.unwrap();
+                if unwrapped >= t.len() as i64 {
+                    return Err(RuntimeError::OUT_OF_BOUNDS);
+                }
+                return Ok(t[unwrapped as usize].clone());
+            }
+            _ => panic!(),
+        }
+    }
+
     pub fn add(
         &self,
         shared_execution_context: &mut SharedExecutionContext,
@@ -2061,40 +2091,15 @@ impl ExecutionEngine {
         let obj_to_index = self.environment.stack_frames[self.environment.stack_frame_pointer]
             .stack[instr.arg_0 as usize]
             .clone();
-
-        if let Object::GC_REF(gc_ref) = obj_to_index {
-            self.environment.stack_frames[self.environment.stack_frame_pointer]
-                .instruction_pointer += 1;
-
-            let obj = self.shared_execution_context.heap.deref(&gc_ref);
-            if obj.is_err() {
-                self.environment.dump_stack_regs();
-                return Err(obj.err().unwrap());
-            }
-
-            if let GCRefData::SLICE(s) = obj.unwrap() {
-                // now lets get the index
-                let index_obj = &self.environment.stack_frames
-                    [self.environment.stack_frame_pointer]
-                    .stack[instr.arg_1 as usize];
-                if let Object::I64(i) = index_obj {
-                    let index_val: i64 = *i;
-
-                    if index_val >= s.s.len() as i64 {
-                        return Err(RuntimeError::OUT_OF_BOUNDS);
-                    }
-
-                    self.environment.stack_frames[self.environment.stack_frame_pointer].stack
-                        [instr.arg_2 as usize] = s.s[index_val as usize].clone();
-
-                    return Ok(instr.arg_2);
-                }
-            }
+        let index_obj = &self.environment.stack_frames[self.environment.stack_frame_pointer].stack
+            [instr.arg_1 as usize];
+        let res = obj_to_index.index(&self.shared_execution_context, index_obj);
+        if res.is_err() {
+            return Err(res.err().unwrap());
         }
-
-        Err(RuntimeError::INVALID_OPERATION(
-            "obj to index must be an obj".to_string(),
-        ))
+        stack_set!(self, instr.arg_2, res.unwrap());
+        increment_ip!(self);
+        return Ok(instr.arg_2);
     }
 
     fn exec_load_closure(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
