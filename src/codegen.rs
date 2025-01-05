@@ -2008,6 +2008,7 @@ impl BytecodeGenerator {
             method_to_object: Some(method_obj),
             param_slots: param_slots,
             bounded_object: None,
+            constants_initialised: false,
         });
         // todo do we need this???
         alloc_slot!(self)

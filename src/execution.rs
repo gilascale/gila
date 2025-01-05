@@ -1,5 +1,6 @@
 use crate::compiler::{Compiler, CompilerFlags};
 use crate::lex::Type;
+use core::panic;
 use deepsize::DeepSizeOf;
 use libloading::{Library, Symbol};
 use std::hash::Hash;
@@ -74,6 +75,7 @@ pub struct FnObject {
     pub param_slots: Vec<u8>,
     // todo maybe make a BoundedFn object?
     pub bounded_object: Option<GCRef>,
+    pub constants_initialised: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -260,6 +262,27 @@ impl Object {
         }
         match gc_ref.unwrap() {
             GCRefData::DYNAMIC_OBJECT(d) => return Ok(d),
+            _ => panic!(),
+        }
+    }
+
+    pub fn as_fn(
+        &self,
+        shared_execution_context: &SharedExecutionContext,
+    ) -> Result<FnObject, RuntimeError> {
+        let gc_ref = self.as_gc_ref(shared_execution_context);
+        if gc_ref.is_err() {
+            return Err(gc_ref.err().unwrap());
+        }
+        match gc_ref.unwrap() {
+            GCRefData::FN(f) => return Ok(f),
+            _ => panic!(),
+        }
+    }
+
+    pub fn as_gc_ref_index(&self) -> Result<GCRef, RuntimeError> {
+        match &self {
+            Self::GC_REF(gc_ref) => return Ok(gc_ref.clone()),
             _ => panic!(),
         }
     }
@@ -756,7 +779,11 @@ impl Heap {
 
         // todo for now just push to end
         let index = self.live_slots.len();
+        if index == 221 {
+            panic!("ffs");
+        }
         self.live_slots.push(gc_ref_dat);
+        println!("allocating stack {}", index);
         Ok(GCRef {
             index,
             marked: false,
@@ -1029,6 +1056,7 @@ impl ExecutionEngine {
                 method_to_object: None,
                 param_slots: vec![],
                 bounded_object: None,
+                constants_initialised: false,
             }));
             self.zero_stack();
             self.init_constants();
@@ -1162,6 +1190,74 @@ impl ExecutionEngine {
         }
 
         return Ok(());
+    }
+
+    fn init_constants_for_fn_object(
+        &mut self,
+        fn_object: &FnObject,
+    ) -> Result<FnObject, RuntimeError> {
+        let mut new_fn_object = fn_object.clone();
+        // for each gc ref data constant on the current chunk, put it in the heap and update the reference
+
+        let constant_pool = &mut new_fn_object.chunk.constant_pool;
+        // todo this is HORRIBLE
+        let stack_gc_ref_data = &mut new_fn_object.chunk.gc_ref_data.clone();
+
+        for i in constant_pool.iter_mut() {
+            if let Object::GC_REF(gc_ref) = i {
+                let mut gc_ref_data = &stack_gc_ref_data[gc_ref.index];
+
+                match gc_ref_data {
+                    GCRefData::TUPLE(t) => {
+                        let mut new_vec: Vec<Object> = vec![];
+                        for item in t {
+                            // todo do the exact same thing here, check if its a Object::GC_REF and alloc it
+                            if let Object::GC_REF(nested_gc_ref) = item {
+                                let nested_gc_ref_data = &stack_gc_ref_data[nested_gc_ref.index];
+
+                                // now lets heap allocate!
+                                let alloc = self
+                                    .shared_execution_context
+                                    .heap
+                                    .alloc(nested_gc_ref_data.clone(), &self.config);
+                                match alloc {
+                                    Ok(_) => {
+                                        new_vec.push(Object::GC_REF(GCRef {
+                                            index: alloc.unwrap().index,
+                                            marked: false,
+                                        }));
+                                    }
+                                    Err(e) => return Err(e),
+                                }
+                            }
+                        }
+                        let new_tuple = &GCRefData::TUPLE(new_vec);
+                        // now lets heap allocate!
+                        let alloc = self
+                            .shared_execution_context
+                            .heap
+                            .alloc(new_tuple.clone(), &self.config);
+                        match alloc {
+                            Ok(_) => gc_ref.index = alloc.unwrap().index,
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    _ => {
+                        // now lets heap allocate!
+                        let alloc = self
+                            .shared_execution_context
+                            .heap
+                            .alloc(gc_ref_data.clone(), &self.config);
+                        match alloc {
+                            Ok(_) => gc_ref.index = alloc.unwrap().index,
+                            Err(e) => return Err(e),
+                        }
+                    }
+                }
+            }
+        }
+
+        return Ok(new_fn_object);
     }
 
     fn exec_instr(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
@@ -1680,7 +1776,7 @@ impl ExecutionEngine {
                 // fixme why is this a Box?
                 self.push_stack_frame(Box::new(f.clone()), destination);
                 self.zero_stack();
-                self.init_constants();
+                // self.init_constants();
 
                 let mut start = 0;
                 if f.bounded_object.is_some() {
@@ -1942,7 +2038,7 @@ impl ExecutionEngine {
     ) -> Result<Option<Object>, RuntimeError> {
         self.push_stack_frame(Box::new(fn_object.clone()), destination);
         self.zero_stack();
-        self.init_constants();
+        // self.init_constants();
 
         if fn_object.bounded_object.is_some() {
             self.environment.stack_frames[self.environment.stack_frame_pointer].stack
@@ -2047,45 +2143,100 @@ impl ExecutionEngine {
         Ok(instr.arg_2)
     }
 
-    fn exec_build_fn(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
-        // todo this is breaking it :(
-        let fn_ref = stack_access!(self, instr.arg_0);
-        if let Object::GC_REF(gc_ref) = fn_ref {
-            let fn_obj = self.shared_execution_context.heap.deref(gc_ref);
-            if fn_obj.is_err() {
-                return Err(fn_obj.err().unwrap());
+    fn init_tuple(
+        &mut self,
+        t: &Vec<Object>,
+        gc_ref_data: &Vec<GCRefData>,
+    ) -> Result<GCRef, RuntimeError> {
+        let mut new_vec: Vec<Object> = vec![];
+        for item in t {
+            // todo do the exact same thing here, check if its a Object::GC_REF and alloc it
+            if let Object::GC_REF(nested_gc_ref) = item {
+                let nested_gc_ref_data = &gc_ref_data[nested_gc_ref.index];
+
+                // now lets heap allocate!
+                let alloc = self
+                    .shared_execution_context
+                    .heap
+                    .alloc(nested_gc_ref_data.clone(), &self.config);
+                match alloc {
+                    Ok(_) => {
+                        new_vec.push(Object::GC_REF(GCRef {
+                            index: alloc.unwrap().index,
+                            marked: false,
+                        }));
+                    }
+                    Err(e) => return Err(e),
+                }
             }
-            let fn_object_data = fn_obj.unwrap();
-            if let GCRefData::FN(f) = fn_object_data.clone() {
-                if f.requires_method_binding {
-                    let obj_to_bind_to = stack_access!(self, f.method_to_object.unwrap());
+        }
+        let new_tuple = &GCRefData::TUPLE(new_vec);
+        // now lets heap allocate!
+        let alloc = self
+            .shared_execution_context
+            .heap
+            .alloc(new_tuple.clone(), &self.config);
+        match alloc {
+            Ok(_) => Ok(alloc.unwrap()),
+            Err(e) => return Err(e),
+        }
+    }
 
-                    if let Object::GC_REF(g) = obj_to_bind_to {
-                        let obj = self.shared_execution_context.heap.deref(g);
-                        if obj.is_err() {
-                            return Err(obj.err().unwrap());
-                        }
-                        if let GCRefData::DYNAMIC_OBJECT(o) = obj.unwrap() {
-                            // // bind the function to the object here
-                            // let mut bounded_fn = f.clone();
-                            // bounded_fn.bounded_object = Some(g.clone());
-                            // // set the function bounded ref
-                            // self.shared_execution_context
-                            //     .heap
-                            //     .set(gc_ref, GCRefData::FN(bounded_fn));
+    fn exec_build_fn(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
+        let fn_ref = stack_access!(self, instr.arg_0).clone();
 
-                            // update the object in the heap
-                            let mut cloned_obj = o.clone();
-                            cloned_obj.fields.insert(f.name, fn_ref.clone());
+        let fn_result = fn_ref.as_fn(&self.shared_execution_context);
 
-                            let res = self
-                                .shared_execution_context
-                                .heap
-                                .set(g, GCRefData::DYNAMIC_OBJECT(cloned_obj.clone()));
-                            if res.is_err() {
-                                return Err(res.err().unwrap());
-                            }
-                        }
+        if fn_result.is_err() {
+            return Err(fn_result.err().unwrap());
+        }
+
+        let f = fn_result.unwrap();
+        // initialise constants
+
+        if !f.constants_initialised {
+            // todo we may have to return a new sharedexecution context rather than have a mutable self...
+            let new_f_result = self.init_constants_for_fn_object(&f);
+
+            if new_f_result.is_err() {
+                return Err(new_f_result.err().unwrap());
+            }
+            let res = self.shared_execution_context.heap.set(
+                &fn_ref.as_gc_ref_index().unwrap(),
+                GCRefData::FN(new_f_result.unwrap()),
+            );
+            if res.is_err() {
+                return Err(res.err().unwrap());
+            }
+        }
+
+        if f.requires_method_binding {
+            let obj_to_bind_to = stack_access!(self, f.method_to_object.unwrap());
+
+            if let Object::GC_REF(g) = obj_to_bind_to {
+                let obj = self.shared_execution_context.heap.deref(g);
+                if obj.is_err() {
+                    return Err(obj.err().unwrap());
+                }
+                if let GCRefData::DYNAMIC_OBJECT(o) = obj.unwrap() {
+                    // // bind the function to the object here
+                    // let mut bounded_fn = f.clone();
+                    // bounded_fn.bounded_object = Some(g.clone());
+                    // // set the function bounded ref
+                    // self.shared_execution_context
+                    //     .heap
+                    //     .set(gc_ref, GCRefData::FN(bounded_fn));
+
+                    // update the object in the heap
+                    let mut cloned_obj = o.clone();
+                    cloned_obj.fields.insert(f.name, fn_ref.clone());
+
+                    let res = self
+                        .shared_execution_context
+                        .heap
+                        .set(g, GCRefData::DYNAMIC_OBJECT(cloned_obj.clone()));
+                    if res.is_err() {
+                        return Err(res.err().unwrap());
                     }
                 }
             }

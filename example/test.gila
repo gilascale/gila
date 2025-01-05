@@ -2,5 +2,5 @@
 
 
 
-for i in 0..100
+for i in 0..1_000
     print("hi")
