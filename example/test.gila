@@ -2,4 +2,5 @@
 
 
 
-for i in 0..100 print("hi")
+for i in 0..100
+    print("hi")

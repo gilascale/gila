@@ -240,7 +240,7 @@ impl Instruction {
                 "{:>75}{:>5}{:>5}{:>5}\n",
                 format!("{:?}", self.op_instruction),
                 format!("r{}", self.arg_0),
-                format!("r{}", self.arg_1),
+                format!("{}", self.arg_1),
                 format!("r{}", self.arg_2)
             ),
             OpInstruction::STRUCT_SET => format!(
@@ -381,12 +381,18 @@ impl Chunk {
                         s.push_str(&ss.s);
                     }
                     GCRefData::DYNAMIC_OBJECT(d) => {
-                        s.push_str("dynamic object: <todo>\n");
+                        s.push_str("dynamic object:\n");
                         for field in &d.fields {
                             s.push_str(&format!("    {}\n", field.0));
                         }
                     }
-                    _ => {}
+                    GCRefData::TUPLE(t) => {
+                        s.push_str("tuple: \n");
+                        for field in t.iter() {
+                            s.push_str(&format!("    {:?}\n", field));
+                        }
+                    }
+                    _ => todo!(),
                 }
             }
             Object::BOOL(b) => {
@@ -395,7 +401,7 @@ impl Chunk {
             Object::I64(i64) => {
                 s.push_str(&format!("i64: {}", i64));
             }
-            _ => panic!(),
+            _ => todo!(),
         }
         return s;
     }

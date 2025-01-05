@@ -1247,10 +1247,8 @@ impl ExecutionEngine {
     fn perform_return(&mut self, data: Option<Object>) -> Result<u8, RuntimeError> {
         let return_register =
             self.environment.stack_frames[self.environment.stack_frame_pointer].return_register;
-
         self.environment.stack_frames.pop();
         if self.environment.stack_frames.len() == 0 {
-            println!("performing return and we are at the end!");
             self.running = false;
         } else {
             self.environment.stack_frame_pointer -= 1;
@@ -1568,6 +1566,7 @@ impl ExecutionEngine {
 
                 match kwargs_tuple {
                     Object::GC_REF(kwargs_gc_ref) => {
+                        println!("!!!!!!!!!!!!!! doing call_kw kwargs...");
                         let res = self.shared_execution_context.heap.deref(kwargs_gc_ref);
                         if res.is_err() {
                             return Err(res.err().unwrap());
@@ -1635,6 +1634,14 @@ impl ExecutionEngine {
                 let gc_ref_res = gc_ref.unwrap();
 
                 stack_set!(self, destination, Object::GC_REF(gc_ref_res.clone()));
+                println!(
+                    "!!!!!!!!!!!!!! put at {} {:?}",
+                    destination,
+                    self.shared_execution_context
+                        .heap
+                        .deref(&gc_ref_res)
+                        .unwrap()
+                );
                 increment_ip!(self);
             }
             _ => {
@@ -1666,6 +1673,7 @@ impl ExecutionEngine {
                 // pass the args by value
                 let starting_reg = call.arg_1;
                 let num_args = call.arg_2;
+                // todo ive just added this +1 and i think... this is the return reg?
                 let destination = starting_reg + num_args;
 
                 // fixme this sucks, we shouldn't clone functions it's so expensive
@@ -1831,7 +1839,6 @@ impl ExecutionEngine {
 
         match iterator_obj {
             Object::GC_REF(gc_ref) => {
-                println!("doing for iter... iter obj {}", gc_ref.index);
                 let res = self.shared_execution_context.heap.deref(gc_ref);
                 if res.is_err() {
                     return Err(res.err().unwrap());
@@ -1851,7 +1858,6 @@ impl ExecutionEngine {
                         // TODO MAKE THIS A FUNCTION
                         match obj.clone() {
                             Object::GC_REF(method_to_bind_gc_ref) => {
-                                println!("__iter fn gc_ref {}", method_to_bind_gc_ref.index);
                                 let deref = self
                                     .shared_execution_context
                                     .heap
@@ -1887,18 +1893,13 @@ impl ExecutionEngine {
                         let mut iter_result: Object;
                         match obj {
                             Object::GC_REF(method_gc_ref) => {
-                                println!("method gc_ref {}", method_gc_ref.index);
                                 let res = self.shared_execution_context.heap.deref(&method_gc_ref);
                                 if res.is_err() {
                                     return Err(res.err().unwrap());
                                 }
                                 match res.unwrap() {
                                     GCRefData::FN(method) => {
-                                        println!(
-                                            "method bound to obj {}",
-                                            method.clone().bounded_object.unwrap().index
-                                        );
-                                        let result = self.execute_fn(&method, instr.arg_1);
+                                        let result = self.execute_fn(&method, instr.arg_2);
                                         if result.is_err() {
                                             return Err(result.err().unwrap());
                                         }
@@ -1949,7 +1950,6 @@ impl ExecutionEngine {
                 Object::GC_REF(fn_object.bounded_object.clone().unwrap());
 
             let v = stack_access!(self, fn_object.param_slots[0]);
-            println!("binding to v {:?}", v);
         }
 
         // todo everything up until this point... self is correct.
@@ -2165,7 +2165,6 @@ impl ExecutionEngine {
     }
 
     fn exec_struct_access(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
-        println!("doing struct acces??? {:?}", instr.to_string());
         let obj = stack_access!(self, instr.arg_0);
         // fixme this is horrible nesting
         match obj {
@@ -2184,7 +2183,6 @@ impl ExecutionEngine {
                         match field {
                             Object::GC_REF(gc_ref) => {
                                 // todo why is the gcref incrementing...?
-                                println!("woooooo... {}", gc_ref.index);
                                 let result = self.shared_execution_context.heap.deref(gc_ref);
                                 if result.is_err() {
                                     return Err(result.err().unwrap());
