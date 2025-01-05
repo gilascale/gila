@@ -214,7 +214,11 @@ impl Object {
     ) -> Result<(), RuntimeError> {
         match self {
             Self::GC_REF(gc_ref) => {
-                // todo mark
+                // println!("marking {}", gc_ref.index);
+                shared_execution_context
+                    .heap
+                    .dead_objects
+                    .remove(&gc_ref.index);
 
                 let derefed = shared_execution_context.heap.deref(&gc_ref);
                 if derefed.is_err() {
@@ -245,7 +249,7 @@ impl Object {
                             }
                         }
                     }
-                    _ => todo!(),
+                    _ => {}
                 }
 
                 return Ok(());
@@ -835,7 +839,7 @@ impl Heap {
 
     pub fn deref(&self, gc_ref: &GCRef) -> Result<GCRefData, RuntimeError> {
         if gc_ref.index >= self.live_slots.len() {
-            self.dump_heap();
+            // self.dump_heap();
             return Err(RuntimeError::INVALID_GC_REF);
         }
         let derefed = self.live_slots.get(&gc_ref.index);
@@ -1108,6 +1112,8 @@ impl ExecutionEngine {
             self.zero_stack();
             self.init_constants();
         } else {
+            // todo this is causing an issue with garbage collection, because we are losing the old
+            // stack frame root
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .fn_object
                 .chunk = bytecode;
@@ -1122,10 +1128,10 @@ impl ExecutionEngine {
 
         self.init_builtins(self.config.clone());
 
-        // println!("{:#?}", self.environment.stack_frames);
-
         let mut reg = 0;
         while self.running {
+            // check if we should mark and sweep
+
             let instr = {
                 let current_frame =
                     &self.environment.stack_frames[self.environment.stack_frame_pointer];
@@ -1157,6 +1163,9 @@ impl ExecutionEngine {
                 self.environment.stack_frames[self.environment.stack_frame_pointer]
                     .instruction_pointer = 0;
             }
+
+            // todo
+            // self.mark_and_sweep();
         }
 
         // todo return reference
@@ -2725,9 +2734,23 @@ impl ExecutionEngine {
     fn mark(&mut self) -> Result<(), RuntimeError> {
         // trace all routes
 
+        self.shared_execution_context.heap.dead_objects.clear();
+        for (slot, data) in &self.shared_execution_context.heap.live_slots {
+            self.shared_execution_context
+                .heap
+                .dead_objects
+                .insert(*slot, data.clone());
+        }
+
         for frame in &self.environment.stack_frames {
             for slot in &frame.stack {
                 let res = slot.clone().mark(&mut self.shared_execution_context);
+                if res.is_err() {
+                    return Err(res.err().unwrap());
+                }
+            }
+            for constant in &frame.fn_object.chunk.constant_pool {
+                let res = constant.clone().mark(&mut self.shared_execution_context);
                 if res.is_err() {
                     return Err(res.err().unwrap());
                 }
@@ -2737,35 +2760,36 @@ impl ExecutionEngine {
         Ok(())
     }
 
-    fn sweep() {}
+    fn sweep(&mut self) -> Result<(), RuntimeError> {
+        // now we have only the dead objects in the dead list
 
-    fn mark_and_sweep(&mut self) {
-        self.mark();
-        // https://ceronman.com/2021/07/22/my-experience-crafting-an-interpreter-with-rust/
+        for (dead_slot, _) in &self.shared_execution_context.heap.dead_objects {
+            let val = self.shared_execution_context.heap.deref(&GCRef {
+                index: *dead_slot,
+                marked: false,
+            });
+            // println!("sweeping {} {:?}", dead_slot, val.unwrap());
+            self.shared_execution_context
+                .heap
+                .live_slots
+                .remove(&dead_slot);
+        }
+        self.shared_execution_context.heap.dead_objects.clear();
 
-        // // todo
-        // // 1. mark every object
-        // // 2. sweep
+        Ok(())
+    }
 
-        // // lets go through the stack first
-        // let current_frame = &self.environment.stack_frames[self.environment.stack_frame_pointer];
-        // for obj in current_frame.stack.iter() {
-        //     match obj {
-        //         _ => continue,
-        //         Object::HEAP_OBJECT(heap_object) => {
-        //             // lets check if its reachable on the heap
-        //             // todo probably have object ids?
-
-        //             if self.environment.heap.objects.is_none() {
-        //                 return;
-        //             }
-        //             let mut next = self.environment.heap.objects.as_ref().unwrap();
-        //             while true {
-        //                 break;
-        //                 // if next == heap_object.data
-        //             }
-        //         }
-        //     }
-        // }
+    fn mark_and_sweep(&mut self) -> Result<(), RuntimeError> {
+        // println!("!!! marking...");
+        let res = self.mark();
+        if res.is_err() {
+            return Err(res.err().unwrap());
+        }
+        // println!("!!! sweeping...");
+        let res = self.sweep();
+        if res.is_err() {
+            return Err(res.err().unwrap());
+        }
+        Ok(())
     }
 }

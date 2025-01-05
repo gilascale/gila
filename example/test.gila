@@ -2,11 +2,6 @@
 
 
 
-max = 5000
+print("hi")
 
 
-for i in 0..max do
-    x = 3
-    y = 4
-    print(x+y)
-end
