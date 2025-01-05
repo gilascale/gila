@@ -18,6 +18,7 @@ RangeIterator type
 end
 
 __iter fn(self: RangeIterator) -> bool do
+    print(self)
     self.counter = self.counter + 1
     return self.counter==self.limit+1
 end

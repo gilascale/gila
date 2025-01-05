@@ -113,6 +113,11 @@ impl Compiler {
         };
         let ast = parser.parse();
         let codegen_result = bytecode_generator.generate(&ast);
+        println!(
+            "code for {}: {:?}",
+            compilation_unit,
+            codegen_result.codegen_context.chunks[0].print()
+        );
 
         if compiler_flags.dump_bytecode {
             let mut file = OpenOptions::new()

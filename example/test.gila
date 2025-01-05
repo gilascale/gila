@@ -2,10 +2,6 @@
 
 
 
-
-x = 0..10
-
-
-for _ in x do
-    print("hi")
+for i in 0..100 do
+    print("foo")
 end

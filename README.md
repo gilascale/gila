@@ -58,6 +58,9 @@ v.display()
 
 ### Bugs
 
+- fix iterations not working
+  - we need to dump all the function code in the chunk dumps
+  - i think the issue is we are re-allocating structs for some reason???
 - fix tuple parsing...
 - methods with self and an arg don't work due to calling convention
   - i suspect its because were not allocating space for the extra self at

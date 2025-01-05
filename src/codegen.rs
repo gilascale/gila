@@ -349,11 +349,39 @@ impl Chunk {
         }
     }
 
+    pub fn dump_instructions(&self) -> String {
+        let mut s = "".to_string();
+        for instr in &self.instructions {
+            s.push_str(&instr.to_string().as_str());
+        }
+        return s;
+    }
     pub fn dump_to_file_format(&self, source: &String) -> String {
         let source_split = source.split('\n');
 
         let mut s = "".to_string();
 
+        s.push_str("constants:\n");
+        for constant in &self.constant_pool {
+            match constant {
+                Object::GC_REF(gc_ref) => {
+                    let data = &self.gc_ref_data[gc_ref.index];
+
+                    match &data {
+                        GCRefData::FN(f) => {
+                            s.push_str("function ");
+                            s.push_str(&f.name);
+                            s.push_str(":\n");
+                            s.push_str(&f.chunk.dump_instructions());
+                        }
+                        _ => {}
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        s.push_str("code:\n");
         let mut lines_for_instr: HashMap<usize, Vec<Instruction>> = HashMap::new();
 
         let mut i = 0;
