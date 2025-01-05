@@ -1185,7 +1185,6 @@ impl ExecutionEngine {
                     .instruction_pointer = 0;
             }
 
-            // todo
             if self
                 .shared_execution_context
                 .heap
