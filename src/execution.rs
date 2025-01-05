@@ -838,6 +838,12 @@ pub struct GCRef {
 }
 
 impl Heap {
+    pub fn should_gc(&self, max_capacity: usize, gc_threshold: f64) -> bool {
+        let capacity = self.deep_size_of();
+        let percentage = capacity as f64 / max_capacity as f64;
+        return percentage > gc_threshold;
+    }
+
     pub fn alloc(&mut self, gc_ref_dat: GCRefData, config: &Config) -> Result<GCRef, RuntimeError> {
         if self.free_space_available_bytes() >= config.max_memory {
             return Err(RuntimeError::OUT_OF_MEMORY);
@@ -1180,7 +1186,13 @@ impl ExecutionEngine {
             }
 
             // todo
-            self.mark_and_sweep();
+            if self
+                .shared_execution_context
+                .heap
+                .should_gc(self.config.max_memory, self.config.gc_threshold)
+            {
+                self.mark_and_sweep();
+            }
         }
 
         // todo return reference

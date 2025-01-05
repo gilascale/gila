@@ -149,6 +149,7 @@ fn exec(args: Args) {
 
     let config = Config {
         max_memory: 100_000,
+        gc_threshold: 0.9,
     };
     let mut shared_execution_context = SharedExecutionContext {
         heap: Heap {
@@ -250,6 +251,7 @@ fn do_test(args: Args) {
 
     let config = Config {
         max_memory: 100_000,
+        gc_threshold: 0.9,
     };
     let mut shared_execution_context = SharedExecutionContext {
         heap: Heap {
