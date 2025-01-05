@@ -779,11 +779,7 @@ impl Heap {
 
         // todo for now just push to end
         let index = self.live_slots.len();
-        if index == 221 {
-            panic!("ffs");
-        }
         self.live_slots.push(gc_ref_dat);
-        println!("allocating stack {}", index);
         Ok(GCRef {
             index,
             marked: false,

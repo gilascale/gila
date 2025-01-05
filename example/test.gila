@@ -2,5 +2,7 @@
 
 
 
-for i in 0..1_000
-    print("hi")
+for i in 0..10_000 do
+    x = 3
+    print("hi"+x)
+end
