@@ -225,6 +225,21 @@ impl Object {
                     return Err(derefed.err().unwrap());
                 }
                 match derefed.unwrap() {
+                    GCRefData::FN(f) => {
+                        if f.bounded_object.is_some() {
+                            shared_execution_context
+                                .heap
+                                .dead_objects
+                                .remove(&f.bounded_object.unwrap().index);
+                        }
+
+                        for constant in f.chunk.constant_pool {
+                            let res = constant.mark(shared_execution_context);
+                            if res.is_err() {
+                                return Err(res.err().unwrap());
+                            }
+                        }
+                    }
                     GCRefData::DYNAMIC_OBJECT(d) => {
                         for (_, value) in d.fields {
                             let res = value.mark(shared_execution_context);
@@ -1165,7 +1180,7 @@ impl ExecutionEngine {
             }
 
             // todo
-            // self.mark_and_sweep();
+            self.mark_and_sweep();
         }
 
         // todo return reference
@@ -2112,7 +2127,6 @@ impl ExecutionEngine {
                 &current_frame.fn_object.chunk.instructions[current_frame.instruction_pointer]
                     .clone()
             };
-            // println!("doing instr {:?}", instr);
 
             let reg_result = self.exec_instr(instr);
 
@@ -2231,7 +2245,6 @@ impl ExecutionEngine {
 
     fn exec_build_fn(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
         let fn_ref = stack_access!(self, instr.arg_0).clone();
-
         let fn_result = fn_ref.as_fn(&self.shared_execution_context);
 
         if fn_result.is_err() {
@@ -2763,12 +2776,15 @@ impl ExecutionEngine {
     fn sweep(&mut self) -> Result<(), RuntimeError> {
         // now we have only the dead objects in the dead list
 
+        // todo the sweeping seems to be somewhat broken
+        // i think we are sweeping a live slot, and then re-allocating and crashing
+
         for (dead_slot, _) in &self.shared_execution_context.heap.dead_objects {
             let val = self.shared_execution_context.heap.deref(&GCRef {
                 index: *dead_slot,
                 marked: false,
             });
-            // println!("sweeping {} {:?}", dead_slot, val.unwrap());
+            println!("sweeping {} {:?}", dead_slot, val.unwrap());
             self.shared_execution_context
                 .heap
                 .live_slots

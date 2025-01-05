@@ -94,8 +94,8 @@ v.display()
 ### Language Features
 
 - garbage collection
-  - currently crashing after prelude is executed, I think we are sweeping the
-    prelude?
+  - bug is with the compilation of prelude included, we are executing the
+    prelude twice
   - i think a fix for this is changing how its loaded up... we need to do an
     'import' of the prelude into the global scope
 - ranges can be parsed anywhere
