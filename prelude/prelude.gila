@@ -1,16 +1,16 @@
-// Union type
-//     types: any[]
-// end
+Union type
+    types: any[]
+end
 
-// Error type
-//     msg: string
-// end
+Error type
+    msg: string
+end
 
-// Data type
-//     data: any
-// end
+Data type
+    data: any
+end
 
-// Result = Error | Data
+Result = Error | Data
 
 RangeIterator type
     counter: u32
