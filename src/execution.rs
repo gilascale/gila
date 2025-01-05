@@ -1658,7 +1658,6 @@ impl ExecutionEngine {
 
                 match kwargs_tuple {
                     Object::GC_REF(kwargs_gc_ref) => {
-                        println!("!!!!!!!!!!!!!! doing call_kw kwargs...");
                         let res = self.shared_execution_context.heap.deref(kwargs_gc_ref);
                         if res.is_err() {
                             return Err(res.err().unwrap());
@@ -1726,14 +1725,6 @@ impl ExecutionEngine {
                 let gc_ref_res = gc_ref.unwrap();
 
                 stack_set!(self, destination, Object::GC_REF(gc_ref_res.clone()));
-                println!(
-                    "!!!!!!!!!!!!!! put at {} {:?}",
-                    destination,
-                    self.shared_execution_context
-                        .heap
-                        .deref(&gc_ref_res)
-                        .unwrap()
-                );
                 increment_ip!(self);
             }
             _ => {

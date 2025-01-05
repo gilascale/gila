@@ -221,9 +221,10 @@ fn exec(args: Args) {
     }
     let denominator = 1000_000;
     println!(
-        "compiled in {:.9?}s executed in {:.9?}s & used {:.9?}MB",
+        "compiled in {:.9?}s executed in {:.9?}s (total {:.9?}s) & used {:.9?}MB",
         result.compilation_time.as_secs_f64(),
         result.execution_time.as_secs_f64(),
+        result.compilation_time.as_secs_f64() + result.execution_time.as_secs_f64(),
         result
             .execution_result
             .shared_execution_context
