@@ -2,6 +2,4 @@
 
 
 
-for i in 0..100 do
-    print("foo")
-end
+for i in 0..100 print("hi")

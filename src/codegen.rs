@@ -1,6 +1,7 @@
 use deepsize::DeepSizeOf;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
+    fmt::format,
     rc::Rc,
     vec,
 };
@@ -242,6 +243,19 @@ impl Instruction {
                 format!("r{}", self.arg_1),
                 format!("r{}", self.arg_2)
             ),
+            OpInstruction::STRUCT_SET => format!(
+                "{:>75}{:>5}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("r{}", self.arg_1),
+                format!("r{}", self.arg_2)
+            ),
+            OpInstruction::RETURN => format!(
+                "{:>75}{:>5}{:>5}\n",
+                format!("{:?}", self.op_instruction),
+                format!("r{}", self.arg_0),
+                format!("{}", self.arg_1),
+            ),
             OpInstruction::STRUCT_ACCESS => format!(
                 "{:>75}{:>5}{:>5}{:>5}\n",
                 format!("{:?}", self.op_instruction),
@@ -349,8 +363,51 @@ impl Chunk {
         }
     }
 
+    pub fn dump_constant(&self, constant: &Object) -> String {
+        let mut s: String = "".to_string();
+        match constant {
+            Object::GC_REF(gc_ref) => {
+                let data = &self.gc_ref_data[gc_ref.index];
+
+                match &data {
+                    GCRefData::FN(f) => {
+                        s.push_str("function ");
+                        s.push_str(&f.name);
+                        s.push_str(":\n");
+                        s.push_str(&f.chunk.dump_instructions());
+                    }
+                    GCRefData::STRING(ss) => {
+                        s.push_str("string: ");
+                        s.push_str(&ss.s);
+                    }
+                    GCRefData::DYNAMIC_OBJECT(d) => {
+                        s.push_str("dynamic object: <todo>\n");
+                        for field in &d.fields {
+                            s.push_str(&format!("    {}\n", field.0));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            Object::BOOL(b) => {
+                s.push_str(&format!("bool: {}", b));
+            }
+            Object::I64(i64) => {
+                s.push_str(&format!("i64: {}", i64));
+            }
+            _ => panic!(),
+        }
+        return s;
+    }
+
     pub fn dump_instructions(&self) -> String {
         let mut s = "".to_string();
+        let mut i = 0;
+        s.push_str("constants:\n");
+        for constant in &self.constant_pool {
+            s.push_str(&format!("{} {}\n", i, self.dump_constant(constant)));
+            i += 1;
+        }
         for instr in &self.instructions {
             s.push_str(&instr.to_string().as_str());
         }
@@ -362,23 +419,10 @@ impl Chunk {
         let mut s = "".to_string();
 
         s.push_str("constants:\n");
+        let mut i = 0;
         for constant in &self.constant_pool {
-            match constant {
-                Object::GC_REF(gc_ref) => {
-                    let data = &self.gc_ref_data[gc_ref.index];
-
-                    match &data {
-                        GCRefData::FN(f) => {
-                            s.push_str("function ");
-                            s.push_str(&f.name);
-                            s.push_str(":\n");
-                            s.push_str(&f.chunk.dump_instructions());
-                        }
-                        _ => {}
-                    }
-                }
-                _ => {}
-            }
+            s.push_str(&format!("{} {}\n", i, self.dump_constant(constant)));
+            i += 1;
         }
 
         s.push_str("code:\n");

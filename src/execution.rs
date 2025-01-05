@@ -1927,7 +1927,10 @@ impl ExecutionEngine {
                     _ => panic!("doing for_iter need dynamic obj but found {:?}", unwrapped),
                 }
             }
-            _ => panic!(),
+            _ => panic!(
+                "expected iter object to be gc_ref but got {:?}",
+                iterator_obj
+            ),
         }
     }
 
