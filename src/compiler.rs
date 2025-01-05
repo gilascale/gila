@@ -90,8 +90,8 @@ impl Compiler {
         } else {
             SharedExecutionContext {
                 heap: Heap {
-                    live_slots: vec![],
-                    dead_objects: vec![],
+                    live_slots: HashMap::new(),
+                    dead_objects: HashMap::new(),
                 },
                 gila_abis_dlls: vec![],
             }

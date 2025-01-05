@@ -152,8 +152,8 @@ fn exec(args: Args) {
     };
     let mut shared_execution_context = SharedExecutionContext {
         heap: Heap {
-            live_slots: vec![],
-            dead_objects: vec![],
+            live_slots: HashMap::new(),
+            dead_objects: HashMap::new(),
         },
         gila_abis_dlls: vec![],
     };
@@ -248,8 +248,8 @@ fn do_test(args: Args) {
     };
     let mut shared_execution_context = SharedExecutionContext {
         heap: Heap {
-            live_slots: vec![],
-            dead_objects: vec![],
+            live_slots: HashMap::new(),
+            dead_objects: HashMap::new(),
         },
         gila_abis_dlls: vec![],
     };
