@@ -58,6 +58,8 @@ v.display()
 
 ### Bugs
 
+- creating 2 long lists causes the first list to be an element of the second
+  list?
 - fix tuple parsing...
 - methods with self and an arg don't work due to calling convention
   - i suspect its because were not allocating space for the extra self at

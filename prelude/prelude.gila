@@ -21,3 +21,14 @@ __iter fn(self: RangeIterator) -> bool do
     self.counter = self.counter + 1
     return self.counter==self.limit+1
 end
+
+
+SliceIterator type
+    counter: u32
+    s: any[]
+end
+
+__iter fn(self: SliceIterator) -> bool do
+    self.counter = self.counter + 1
+    return self.counter == len(self.s)
+end
