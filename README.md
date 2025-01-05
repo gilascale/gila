@@ -93,6 +93,11 @@ v.display()
 
 ### Language Features
 
+- garbage collection
+  - bug is with the compilation of prelude included, we are executing the
+    prelude twice
+  - i think a fix for this is changing how its loaded up... we need to do an
+    'import' of the prelude into the global scope
 - ranges can be parsed anywhere
 - implicit returns
 - void types
@@ -102,7 +107,6 @@ v.display()
 - capturing in closures
 - easy way to add builtin modules/files (i.e. socket library)
 - groups i.e. 3 + (4+3)
-- garbage collection
 - pattern matching
 - tuple unpacking
 - breaks

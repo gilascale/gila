@@ -149,11 +149,12 @@ fn exec(args: Args) {
 
     let config = Config {
         max_memory: 100_000,
+        gc_threshold: 0.9,
     };
     let mut shared_execution_context = SharedExecutionContext {
         heap: Heap {
-            live_slots: vec![],
-            dead_objects: vec![],
+            live_slots: HashMap::new(),
+            dead_objects: HashMap::new(),
         },
         gila_abis_dlls: vec![],
     };
@@ -177,35 +178,40 @@ fn exec(args: Args) {
     };
 
     let prelude_source = fs::read_to_string("./prelude/prelude.gila").expect("Unable to read file");
-    let prelude_compile_result = compiler.compile_and_exec(
-        "prelude".to_string(),
-        CompilerFlags {
-            init_builtins: true,
-            dump_bytecode: false,
-        },
-        prelude_source,
-        config.clone(),
-        Some(codegen_context.clone()),
-        Some(environment.clone()),
-        Some(shared_execution_context.clone()),
-    );
 
-    shared_execution_context = prelude_compile_result
-        .execution_result
-        .shared_execution_context;
-    environment = prelude_compile_result.execution_result.process_context;
-    codegen_context = prelude_compile_result.codegen_result.codegen_context;
+    // println!("doing prelude...");
+    // let prelude_compile_result = compiler.compile_and_exec(
+    //     "prelude".to_string(),
+    //     CompilerFlags {
+    //         init_builtins: true,
+    //         dump_bytecode: false,
+    //     },
+    //     prelude_source,
+    //     config.clone(),
+    //     Some(codegen_context.clone()),
+    //     Some(environment.clone()),
+    //     Some(shared_execution_context.clone()),
+    // );
+
+    // shared_execution_context = prelude_compile_result
+    //     .execution_result
+    //     .shared_execution_context;
+    // environment = prelude_compile_result.execution_result.process_context;
+    // codegen_context = prelude_compile_result.codegen_result.codegen_context;
 
     let file_to_exec = args.file;
     let source = fs::read_to_string(file_to_exec.to_string()).expect("Unable to read file");
 
+    let mut full_source = prelude_source.clone();
+    full_source.push_str(&source);
+
     let result = compiler.compile_and_exec(
         file_to_exec.to_string(),
         CompilerFlags {
-            init_builtins: false,
+            init_builtins: true,
             dump_bytecode: args.dump_bytecode,
         },
-        source,
+        full_source,
         config,
         Some(codegen_context),
         Some(environment),
@@ -245,11 +251,12 @@ fn do_test(args: Args) {
 
     let config = Config {
         max_memory: 100_000,
+        gc_threshold: 0.9,
     };
     let mut shared_execution_context = SharedExecutionContext {
         heap: Heap {
-            live_slots: vec![],
-            dead_objects: vec![],
+            live_slots: HashMap::new(),
+            dead_objects: HashMap::new(),
         },
         gila_abis_dlls: vec![],
     };

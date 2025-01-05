@@ -4,6 +4,7 @@ use core::panic;
 use deepsize::DeepSizeOf;
 use libloading::{Library, Symbol};
 use std::hash::Hash;
+use std::ops::Deref;
 use std::os::windows::thread;
 use std::sync::Arc;
 use std::{collections::HashMap, fmt::format, fs::File, rc::Rc};
@@ -207,6 +208,71 @@ pub enum Object {
 }
 
 impl Object {
+    pub fn mark(
+        self,
+        shared_execution_context: &mut SharedExecutionContext,
+    ) -> Result<(), RuntimeError> {
+        match self {
+            Self::GC_REF(gc_ref) => {
+                // println!("marking {}", gc_ref.index);
+                shared_execution_context
+                    .heap
+                    .dead_objects
+                    .remove(&gc_ref.index);
+
+                let derefed = shared_execution_context.heap.deref(&gc_ref);
+                if derefed.is_err() {
+                    return Err(derefed.err().unwrap());
+                }
+                match derefed.unwrap() {
+                    GCRefData::FN(f) => {
+                        if f.bounded_object.is_some() {
+                            shared_execution_context
+                                .heap
+                                .dead_objects
+                                .remove(&f.bounded_object.unwrap().index);
+                        }
+
+                        for constant in f.chunk.constant_pool {
+                            let res = constant.mark(shared_execution_context);
+                            if res.is_err() {
+                                return Err(res.err().unwrap());
+                            }
+                        }
+                    }
+                    GCRefData::DYNAMIC_OBJECT(d) => {
+                        for (_, value) in d.fields {
+                            let res = value.mark(shared_execution_context);
+                            if res.is_err() {
+                                return Err(res.err().unwrap());
+                            }
+                        }
+                    }
+                    GCRefData::SLICE(s) => {
+                        for value in s.s {
+                            let res = value.mark(shared_execution_context);
+                            if res.is_err() {
+                                return Err(res.err().unwrap());
+                            }
+                        }
+                    }
+                    GCRefData::TUPLE(t) => {
+                        for value in t {
+                            let res = value.mark(shared_execution_context);
+                            if res.is_err() {
+                                return Err(res.err().unwrap());
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+
+                return Ok(());
+            }
+            _ => return Ok(()),
+        }
+    }
+
     pub fn create_slice(
         shared_execution_context: &mut SharedExecutionContext,
         config: &Config,
@@ -761,8 +827,8 @@ pub struct StackFrame {
 #[derive(Clone, Debug, DeepSizeOf)]
 pub struct Heap {
     // linked list of objects
-    pub live_slots: Vec<GCRefData>,
-    pub dead_objects: Vec<usize>,
+    pub live_slots: HashMap<usize, GCRefData>,
+    pub dead_objects: HashMap<usize, GCRefData>,
 }
 
 #[derive(Debug, Clone, DeepSizeOf)]
@@ -772,6 +838,12 @@ pub struct GCRef {
 }
 
 impl Heap {
+    pub fn should_gc(&self, max_capacity: usize, gc_threshold: f64) -> bool {
+        let capacity = self.deep_size_of();
+        let percentage = capacity as f64 / max_capacity as f64;
+        return percentage > gc_threshold;
+    }
+
     pub fn alloc(&mut self, gc_ref_dat: GCRefData, config: &Config) -> Result<GCRef, RuntimeError> {
         if self.free_space_available_bytes() >= config.max_memory {
             return Err(RuntimeError::OUT_OF_MEMORY);
@@ -779,7 +851,7 @@ impl Heap {
 
         // todo for now just push to end
         let index = self.live_slots.len();
-        self.live_slots.push(gc_ref_dat);
+        self.live_slots.insert(index, gc_ref_dat);
         Ok(GCRef {
             index,
             marked: false,
@@ -788,14 +860,18 @@ impl Heap {
 
     pub fn deref(&self, gc_ref: &GCRef) -> Result<GCRefData, RuntimeError> {
         if gc_ref.index >= self.live_slots.len() {
-            self.dump_heap();
+            // self.dump_heap();
             return Err(RuntimeError::INVALID_GC_REF);
         }
-        return Ok(self.live_slots[gc_ref.index].clone());
+        let derefed = self.live_slots.get(&gc_ref.index);
+        if derefed.is_none() {
+            return Err(RuntimeError::INVALID_GC_REF);
+        }
+        return Ok(derefed.unwrap().clone());
     }
 
     pub fn set(&mut self, gc_ref: &GCRef, value: GCRefData) -> Result<(), RuntimeError> {
-        self.live_slots[gc_ref.index] = value;
+        self.live_slots.insert(gc_ref.index, value);
         Ok(())
     }
 
@@ -1057,6 +1133,8 @@ impl ExecutionEngine {
             self.zero_stack();
             self.init_constants();
         } else {
+            // todo this is causing an issue with garbage collection, because we are losing the old
+            // stack frame root
             self.environment.stack_frames[self.environment.stack_frame_pointer]
                 .fn_object
                 .chunk = bytecode;
@@ -1071,10 +1149,10 @@ impl ExecutionEngine {
 
         self.init_builtins(self.config.clone());
 
-        // println!("{:#?}", self.environment.stack_frames);
-
         let mut reg = 0;
         while self.running {
+            // check if we should mark and sweep
+
             let instr = {
                 let current_frame =
                     &self.environment.stack_frames[self.environment.stack_frame_pointer];
@@ -1105,6 +1183,14 @@ impl ExecutionEngine {
                 self.running = false;
                 self.environment.stack_frames[self.environment.stack_frame_pointer]
                     .instruction_pointer = 0;
+            }
+
+            if self
+                .shared_execution_context
+                .heap
+                .should_gc(self.config.max_memory, self.config.gc_threshold)
+            {
+                self.mark_and_sweep();
             }
         }
 
@@ -2052,7 +2138,6 @@ impl ExecutionEngine {
                 &current_frame.fn_object.chunk.instructions[current_frame.instruction_pointer]
                     .clone()
             };
-            // println!("doing instr {:?}", instr);
 
             let reg_result = self.exec_instr(instr);
 
@@ -2171,7 +2256,6 @@ impl ExecutionEngine {
 
     fn exec_build_fn(&mut self, instr: &Instruction) -> Result<u8, RuntimeError> {
         let fn_ref = stack_access!(self, instr.arg_0).clone();
-
         let fn_result = fn_ref.as_fn(&self.shared_execution_context);
 
         if fn_result.is_err() {
@@ -2671,32 +2755,68 @@ impl ExecutionEngine {
         }
     }
 
-    fn mark_and_sweep(&mut self) {
-        // https://ceronman.com/2021/07/22/my-experience-crafting-an-interpreter-with-rust/
+    fn mark(&mut self) -> Result<(), RuntimeError> {
+        // trace all routes
 
-        // // todo
-        // // 1. mark every object
-        // // 2. sweep
+        self.shared_execution_context.heap.dead_objects.clear();
+        for (slot, data) in &self.shared_execution_context.heap.live_slots {
+            self.shared_execution_context
+                .heap
+                .dead_objects
+                .insert(*slot, data.clone());
+        }
 
-        // // lets go through the stack first
-        // let current_frame = &self.environment.stack_frames[self.environment.stack_frame_pointer];
-        // for obj in current_frame.stack.iter() {
-        //     match obj {
-        //         _ => continue,
-        //         Object::HEAP_OBJECT(heap_object) => {
-        //             // lets check if its reachable on the heap
-        //             // todo probably have object ids?
+        for frame in &self.environment.stack_frames {
+            for slot in &frame.stack {
+                let res = slot.clone().mark(&mut self.shared_execution_context);
+                if res.is_err() {
+                    return Err(res.err().unwrap());
+                }
+            }
+            for constant in &frame.fn_object.chunk.constant_pool {
+                let res = constant.clone().mark(&mut self.shared_execution_context);
+                if res.is_err() {
+                    return Err(res.err().unwrap());
+                }
+            }
+        }
 
-        //             if self.environment.heap.objects.is_none() {
-        //                 return;
-        //             }
-        //             let mut next = self.environment.heap.objects.as_ref().unwrap();
-        //             while true {
-        //                 break;
-        //                 // if next == heap_object.data
-        //             }
-        //         }
-        //     }
-        // }
+        Ok(())
+    }
+
+    fn sweep(&mut self) -> Result<(), RuntimeError> {
+        // now we have only the dead objects in the dead list
+
+        // todo the sweeping seems to be somewhat broken
+        // i think we are sweeping a live slot, and then re-allocating and crashing
+
+        for (dead_slot, _) in &self.shared_execution_context.heap.dead_objects {
+            let val = self.shared_execution_context.heap.deref(&GCRef {
+                index: *dead_slot,
+                marked: false,
+            });
+            println!("sweeping {} {:?}", dead_slot, val.unwrap());
+            self.shared_execution_context
+                .heap
+                .live_slots
+                .remove(&dead_slot);
+        }
+        self.shared_execution_context.heap.dead_objects.clear();
+
+        Ok(())
+    }
+
+    fn mark_and_sweep(&mut self) -> Result<(), RuntimeError> {
+        // println!("!!! marking...");
+        let res = self.mark();
+        if res.is_err() {
+            return Err(res.err().unwrap());
+        }
+        // println!("!!! sweeping...");
+        let res = self.sweep();
+        if res.is_err() {
+            return Err(res.err().unwrap());
+        }
+        Ok(())
     }
 }
