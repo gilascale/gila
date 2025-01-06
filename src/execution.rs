@@ -640,6 +640,36 @@ impl Object {
                         }
                         _ => return Ok(false),
                     },
+                    GCRefData::SLICE(s) => match other {
+                        Object::GC_REF(other_gc_ref) => {
+                            let other_res = shared_execution_context.heap.deref(&other_gc_ref);
+                            if other_res.is_err() {
+                                return Err(other_res.err().unwrap());
+                            }
+                            match other_res.unwrap() {
+                                GCRefData::SLICE(other_s) => {
+                                    if s.s.len() != other_s.s.len() {
+                                        return Ok(false);
+                                    }
+                                    let mut i = 0;
+                                    for item in s.s {
+                                        let eq_res = item
+                                            .equals(shared_execution_context, other_s.s[i].clone());
+                                        if eq_res.is_err() {
+                                            return Err(eq_res.err().unwrap());
+                                        }
+                                        if eq_res.unwrap() {
+                                            return Ok(false);
+                                        }
+                                        i += 1;
+                                    }
+                                    return Ok(true);
+                                }
+                                _ => return Ok(false),
+                            }
+                        }
+                        _ => return Ok(false),
+                    },
                     _ => todo!(),
                 }
                 Ok(true)
