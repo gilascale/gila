@@ -41,3 +41,8 @@ end
 length fn(self:List) -> i64 return len(self.s)
 
 __create_iter fn(self:List) -> SliceIterator return SliceIterator(counter=0,s=self.s)
+
+InfiniteIterator type
+end
+
+__iter fn(self:InfiniteIterator) -> bool return false

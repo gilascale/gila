@@ -58,6 +58,7 @@ v.display()
 
 ### Bugs
 
+- this will crash the GC `x = 0 for i in 0..10_000 do print("x="+x) x=x+1 end`
 - a method with the name of another function (i.e. len) will crash
 - fix the define vs assign issue at the moment, at the moment they are the same
   thing
