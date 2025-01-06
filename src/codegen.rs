@@ -933,16 +933,44 @@ impl BytecodeGenerator {
             registers.push(self.visit(annotation_context.clone(), item));
         }
 
+        let new_arg_registers = find_contiguous_slots!(self, &registers);
+        for i in 0..registers.len() {
+            let current_arg_reg = registers[i];
+            let new_reg = new_arg_registers[i];
+
+            if current_arg_reg != new_reg {
+                // allocate the slot and do a MOV
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::MOV,
+                        arg_0: current_arg_reg,
+                        arg_1: new_reg,
+                        arg_2: 0,
+                    },
+                    position.line as usize,
+                );
+            }
+        }
+
         let dest = alloc_slot!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::BUILD_TUPLE,
-                arg_0: registers[0],
-                arg_1: registers.len() as u8,
+                arg_0: new_arg_registers[0],
+                arg_1: new_arg_registers.len() as u8,
                 arg_2: dest,
             },
             position.line as usize,
         );
+
+        for reg in registers {
+            free_slot!(self, reg);
+        }
+
+        for reg in new_arg_registers {
+            free_slot!(self, reg);
+        }
+
         dest
     }
 
@@ -2117,20 +2145,48 @@ impl BytecodeGenerator {
         items: &Vec<ASTNode>,
     ) -> u8 {
         let mut registers: Vec<u8> = vec![];
+        // todo contiguous registers
         for item in items {
             registers.push(self.visit(annotation_context.clone(), item));
+        }
+
+        let new_arg_registers = find_contiguous_slots!(self, &registers);
+        for i in 0..registers.len() {
+            let current_arg_reg = registers[i];
+            let new_reg = new_arg_registers[i];
+
+            if current_arg_reg != new_reg {
+                // allocate the slot and do a MOV
+                self.push_instruction(
+                    Instruction {
+                        op_instruction: OpInstruction::MOV,
+                        arg_0: current_arg_reg,
+                        arg_1: new_reg,
+                        arg_2: 0,
+                    },
+                    pos.line as usize,
+                );
+            }
         }
 
         let dest = alloc_slot!(self);
         self.push_instruction(
             Instruction {
                 op_instruction: OpInstruction::BUILD_SLICE,
-                arg_0: registers[0],
-                arg_1: registers.len() as u8,
+                arg_0: new_arg_registers[0],
+                arg_1: new_arg_registers.len() as u8,
                 arg_2: dest,
             },
             pos.line as usize,
         );
+
+        for reg in registers {
+            free_slot!(self, reg);
+        }
+        for reg in new_arg_registers {
+            free_slot!(self, reg);
+        }
+
         dest
     }
 

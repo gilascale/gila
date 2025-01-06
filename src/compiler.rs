@@ -117,8 +117,8 @@ impl Compiler {
         if compiler_flags.dump_bytecode {
             let mut file = OpenOptions::new()
                 .write(true) // Open for writing
-                .create(true) // Create the file if it doesn't exist
-                .append(false) // Append to the file if it exists
+                .create(true)
+                .truncate(true) // Append to the file if it exists
                 // todo extract the filename from here
                 .open(format!("./gila-build/{}.gilab", "main"))
                 .unwrap();
