@@ -58,6 +58,7 @@ v.display()
 
 ### Bugs
 
+- a method with the name of another function (i.e. len) will crash
 - fix the define vs assign issue at the moment, at the moment they are the same
   thing
 - creating 2 long lists causes the first list to be an element of the second
@@ -97,6 +98,8 @@ v.display()
 
 ### Language Features
 
+- function overloading
+- custom to_string function
 - setting a value outside a scope
   - i.e. iterating a variable in a function doesn't work
 - implicit returns
