@@ -58,6 +58,8 @@ v.display()
 
 ### Bugs
 
+- fix the define vs assign issue at the moment, at the moment they are the same
+  thing
 - creating 2 long lists causes the first list to be an element of the second
   list?
 - fix tuple parsing...
@@ -95,12 +97,8 @@ v.display()
 
 ### Language Features
 
-- garbage collection
-  - bug is with the compilation of prelude included, we are executing the
-    prelude twice
-  - i think a fix for this is changing how its loaded up... we need to do an
-    'import' of the prelude into the global scope
-- ranges can be parsed anywhere
+- setting a value outside a scope
+  - i.e. iterating a variable in a function doesn't work
 - implicit returns
 - void types
 - tuple unpacking

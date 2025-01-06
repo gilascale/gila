@@ -1332,20 +1332,18 @@ impl BytecodeGenerator {
         panic!()
     }
 
-    // todo we need a map or something to map these to registers
-    fn gen_variable(
+    fn lookup_variable_recursively(
         &mut self,
         annotation_context: AnnotationContext,
-        pos: Position,
+        pos: &Position,
         t: &Token,
-    ) -> u8 {
-        // todo we assume it exists so return the map
+    ) -> Option<u8> {
         let result = self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .get(&t.as_identifier());
 
         if let Some(v) = result {
-            return *v;
+            return Some(*v);
         } else {
             let reg = alloc_slot!(self);
             let mut counter = self.codegen_context.current_chunk_pointer;
@@ -1363,16 +1361,29 @@ impl BytecodeGenerator {
                         },
                         pos.line as usize,
                     );
-                    return reg;
+                    return Some(reg);
                 }
                 if counter == 0 {
-                    break;
+                    return None;
                 }
                 counter -= 1;
             }
         }
+    }
 
-        panic!("variable not found in any scope {:?}", t)
+    // todo we need a map or something to map these to registers
+    fn gen_variable(
+        &mut self,
+        annotation_context: AnnotationContext,
+        pos: Position,
+        t: &Token,
+    ) -> u8 {
+        // todo we assume it exists so return the map
+        let res = self.lookup_variable_recursively(annotation_context, &pos, t);
+        if res.is_some() {
+            return res.unwrap();
+        }
+        panic!();
     }
 
     fn get_variable(
@@ -1404,9 +1415,14 @@ impl BytecodeGenerator {
 
         match value {
             Some(v) => {
-                let location = self.visit(annotation_context, &v);
+                let location = self.visit(annotation_context.clone(), &v);
 
-                let var_location = alloc_perm_slot!(self);
+                let existing_var = self.lookup_variable_recursively(annotation_context, &pos, var);
+                let var_location = if existing_var.is_some() {
+                    existing_var.unwrap()
+                } else {
+                    alloc_perm_slot!(self)
+                };
 
                 self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
                     .variable_map
