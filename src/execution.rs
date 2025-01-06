@@ -88,17 +88,19 @@ pub enum GilaABIFunctionObject {
 impl GilaABIFunctionObject {
     pub unsafe fn invoke(
         &self,
-        shared_execution_context: SharedExecutionContext,
-        process_context: ProcessContext,
+        shared_execution_context: &mut SharedExecutionContext,
+        process_context: &mut ProcessContext,
         args: Vec<Object>,
     ) -> Object {
         match self {
             Self::RUST_CALL_CONVENTION(rust_version) => {
                 rust_version(shared_execution_context, process_context, args)
             }
-            Self::C_CALL_CONVENTION(c_version) => {
-                (*c_version)(shared_execution_context, process_context, args)
-            }
+            Self::C_CALL_CONVENTION(c_version) => (*c_version)(
+                shared_execution_context.clone(),
+                process_context.clone(),
+                args,
+            ),
         }
     }
 }
@@ -919,7 +921,8 @@ impl Heap {
 }
 
 // todo return a new context
-type GilaABINativeFnType = fn(SharedExecutionContext, ProcessContext, Vec<Object>) -> Object;
+type GilaABINativeFnType =
+    fn(&mut SharedExecutionContext, &mut ProcessContext, Vec<Object>) -> Object;
 type CABIGilaABINativeFnType =
     unsafe extern "C" fn(SharedExecutionContext, ProcessContext, Vec<Object>) -> Object;
 
@@ -956,8 +959,8 @@ impl ProcessContext {
 
 #[no_mangle]
 pub fn native_print(
-    shared_execution_context: SharedExecutionContext,
-    execution_context: ProcessContext,
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
     args: Vec<Object>,
 ) -> Object {
     println!("{}", args[0].print(&shared_execution_context));
@@ -966,11 +969,11 @@ pub fn native_print(
 
 // return the new contexts
 fn native_len(
-    shared_execution_context: SharedExecutionContext,
-    execution_context: ProcessContext,
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
     args: Vec<Object>,
 ) -> Object {
-    let s: String = match &args[0] {
+    match &args[0] {
         Object::GC_REF(gc_ref) => {
             let res = shared_execution_context.heap.deref(&gc_ref);
             if res.is_err() {
@@ -988,10 +991,40 @@ fn native_len(
     };
 }
 
+fn native_append(
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
+    args: Vec<Object>,
+) -> Object {
+    match &args[0] {
+        Object::GC_REF(gc_ref) => {
+            let res = shared_execution_context.heap.deref(&gc_ref);
+            if res.is_err() {
+                panic!();
+            }
+            let unwrapped = res.unwrap();
+            let slice = unwrapped.as_slice();
+            if slice.is_err() {
+                panic!();
+            }
+
+            let mut cloned = slice.unwrap().clone();
+            cloned.s.push(args[1].clone());
+
+            shared_execution_context
+                .heap
+                .set(gc_ref, GCRefData::SLICE(cloned));
+
+            return args[0].clone();
+        }
+        _ => panic!(),
+    };
+}
+
 // return the new contexts
 fn native_load_gila_abi_dll(
-    shared_execution_context: SharedExecutionContext,
-    execution_context: ProcessContext,
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
     args: Vec<Object>,
 ) -> Object {
     // let path = args[0].as_string(&shared_execution_context);
@@ -1002,8 +1035,8 @@ fn native_load_gila_abi_dll(
 }
 
 fn native_open_windows(
-    shared_execution_context: SharedExecutionContext,
-    execution_context: ProcessContext,
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
     args: Vec<Object>,
 ) -> Object {
     // if let Object::GC_REF(gc_ref) = &args[0] {
@@ -1021,8 +1054,8 @@ fn native_open_windows(
 
 // todo return context
 fn native_load_c_abi_dll(
-    shared_execution_context: SharedExecutionContext,
-    execution_context: ProcessContext,
+    shared_execution_context: &mut SharedExecutionContext,
+    execution_context: &mut ProcessContext,
     args: Vec<Object>,
 ) -> Object {
     // let path = args[0].as_string(&shared_execution_context);
@@ -1092,6 +1125,20 @@ impl ExecutionEngine {
         self.environment.stack_frames[self.environment.stack_frame_pointer].stack[1] =
             Object::GC_REF(alloc);
 
+        ///
+        let alloc_res = self.shared_execution_context.heap.alloc(
+            GCRefData::GILA_ABI_FUNCTION_OBJECT(GilaABIFunctionObject::RUST_CALL_CONVENTION(
+                native_append,
+            )),
+            &config,
+        );
+        if alloc_res.is_err() {
+            return Err(alloc_res.err().unwrap());
+        }
+        let alloc = alloc_res.unwrap();
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[2] =
+            Object::GC_REF(alloc);
+
         //
 
         let alloc_res = self.shared_execution_context.heap.alloc(
@@ -1104,7 +1151,7 @@ impl ExecutionEngine {
             return Err(alloc_res.err().unwrap());
         }
         let alloc = alloc_res.unwrap();
-        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[2] =
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[3] =
             Object::GC_REF(alloc);
 
         let alloc_res = self.shared_execution_context.heap.alloc(
@@ -1117,7 +1164,7 @@ impl ExecutionEngine {
             return Err(alloc_res.err().unwrap());
         }
         let alloc = alloc_res.unwrap();
-        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[3] =
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[4] =
             Object::GC_REF(alloc);
 
         ///
@@ -1131,7 +1178,7 @@ impl ExecutionEngine {
             return Err(alloc_res.err().unwrap());
         }
         let alloc = alloc_res.unwrap();
-        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[4] =
+        self.environment.stack_frames[self.environment.stack_frame_pointer].stack[5] =
             Object::GC_REF(alloc);
 
         Ok(())
@@ -1917,8 +1964,8 @@ impl ExecutionEngine {
 
                 let result = unsafe {
                     native_fn.invoke(
-                        self.shared_execution_context.clone(),
-                        self.environment.clone(),
+                        &mut self.shared_execution_context,
+                        &mut self.environment,
                         args,
                     )
                 };
@@ -1962,8 +2009,8 @@ impl ExecutionEngine {
                 }
 
                 let result = native_fn(
-                    self.shared_execution_context.clone(),
-                    self.environment.clone(),
+                    &mut self.shared_execution_context.clone(),
+                    &mut self.environment.clone(),
                     args,
                 );
 

@@ -752,6 +752,10 @@ impl BytecodeGenerator {
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
             .variable_map
             .insert(Rc::new("len".to_string()), len_reg);
+        let append_reg = alloc_perm_slot!(self);
+        self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
+            .variable_map
+            .insert(Rc::new("append".to_string()), append_reg);
 
         let load_gila_abi_dll_perm_slot = alloc_perm_slot!(self);
         self.codegen_context.chunks[self.codegen_context.current_chunk_pointer]
