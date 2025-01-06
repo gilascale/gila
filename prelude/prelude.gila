@@ -29,6 +29,15 @@ SliceIterator type
 end
 
 __iter fn(self: SliceIterator) -> bool do
+    res = self.counter == len(self.s)
     self.counter = self.counter + 1
-    return self.counter == len(self.s)
+    return res
 end
+
+List type
+    s: any[]
+end
+
+length fn(self:List) -> i64 return len(self.s)
+
+__create_iter fn(self:List) -> SliceIterator return SliceIterator(counter=0,s=self.s)
