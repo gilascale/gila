@@ -332,7 +332,7 @@ impl Lexer {
                 'o' => {
                     if chars[self.counter as usize + 1] == 'r'
                     // todo implement this end check
-                        && !chars[self.counter as usize + 2].is_alphabetic()
+                        && chars[self.counter as usize + 2].is_whitespace()
                     {
                         v.push(Token {
                             typ: Type::OR,
@@ -376,7 +376,7 @@ impl Lexer {
                         && chars[self.counter as usize + 2] == 't'
                         && chars[self.counter as usize + 3] == 'c'
                         && chars[self.counter as usize + 4] == 'h'
-                        && !chars[self.counter as usize + 5].is_alphabetic()
+                        && chars[self.counter as usize + 5].is_whitespace()
                     {
                         v.push(Token {
                             typ: Type::MATCH,
@@ -471,7 +471,7 @@ impl Lexer {
                         self.counter += 1;
                         self.index += 1;
                     } else if chars[self.counter as usize + 1] == 'n'
-                        && !chars[self.counter as usize + 2].is_alphabetic()
+                        && chars[self.counter as usize + 2].is_whitespace()
                     {
                         v.push(Token {
                             typ: Type::IN,
@@ -489,7 +489,7 @@ impl Lexer {
                         && chars[self.counter as usize + 3] == 'o'
                         && chars[self.counter as usize + 4] == 'r'
                         && chars[self.counter as usize + 5] == 't'
-                        && !chars[self.counter as usize + 6].is_alphabetic()
+                        && chars[self.counter as usize + 6].is_whitespace()
                     {
                         v.push(Token {
                             typ: Type::IMPORT,
@@ -693,7 +693,7 @@ impl Lexer {
                     } else if chars[self.counter as usize + 1] == 'y'
                         && chars[self.counter as usize + 2] == 'p'
                         && chars[self.counter as usize + 3] == 'e'
-                        && !chars[self.counter as usize + 4].is_alphabetic()
+                        && chars[self.counter as usize + 4].is_whitespace()
                     {
                         v.push(Token {
                             typ: Type::TYPE,
